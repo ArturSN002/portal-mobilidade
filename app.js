@@ -3,7 +3,7 @@
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxVK21GigqB_Y54iIO9emdNaCBY6lvf5xCobMaMzXfan8Aw6bvw017MJkM_4JGpTHOV/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwa_-9flq7RL0PRrZWh4lnbX01jKDzCSpflWsTDpPU1jlRtp11F2yM4FzS2K4xwKncJ/exec";
 
 /**
  * O "Estafeta" Universal do Maestro V9. 
