@@ -1,0 +1,814 @@
+// ========================================================================
+// 0. CONFIGURAÇÕES DA API V9 (HEADLESS REST)
+// ========================================================================
+
+// ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxVK21GigqB_Y54iIO9emdNaCBY6lvf5xCobMaMzXfan8Aw6bvw017MJkM_4JGpTHOV/exec";
+
+/**
+ * O "Estafeta" Universal do Maestro V9. 
+ * Envia os dados para o Google Apps Script via Fetch e lida com a segurança.
+ */
+async function apiCall(action, payload = {}) {
+  const token = localStorage.getItem("MAESTRO_OP_TOKEN");
+  
+  try {
+    const response = await fetch(GAS_URL, {
+      method: "POST",
+      // 'text/plain' é obrigatório para evitar o bloqueio de CORS da Google
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: action, payload: payload, token: token })
+    });
+    
+    const data = await response.json();
+    
+    // Middleware Global: Se o servidor disser que a sessão caducou (401), auto-cura!
+    if (data.status === 401) {
+      encerrarSessaoOperador(true);
+      showToast(data.erro || "Sessão expirada. A redirecionar...", "error");
+      throw new Error("Sessão Expirada");
+    }
+    
+    return data;
+  } catch (err) {
+    console.error("Falha na API Maestro:", err);
+    throw err;
+  }
+}
+
+// ========================================================================
+// 1. MOTOR PWA & ARRANQUE DINÂMICO (BOOTSTRAP)
+// ========================================================================
+
+let deferredPrompt; 
+
+async function bootSystem() {
+  showToast("A sincronizar com a Secretaria...", "info");
+  
+  try {
+    // Vai buscar as configurações visuais à Planilha via API
+    const res = await apiCall("getConfiguracoesPWA");
+    
+    if (res.sucesso) {
+      window.PWA_NOME = res.pwa.NOME;
+      window.PWA_ICONE = res.pwa.ICONE;
+      window.THEME_COLOR = res.ui.COR_PRIMARIA;
+      window.BG_COLOR = res.ui.COR_SECUNDARIA;
+      
+      // Pinta as variáveis de CSS dinamicamente
+      document.documentElement.style.setProperty('--primary', res.ui.COR_PRIMARIA);
+      document.documentElement.style.setProperty('--secondary', res.ui.COR_SECUNDARIA);
+      document.documentElement.style.setProperty('--accent', res.ui.COR_DE_DESTAQUE);
+
+      // Preenche os textos no HTML
+      if (res.ui.LOGO && res.ui.LOGO !== "") {
+        const logoEl = document.getElementById('ui-logo');
+        if (logoEl) { logoEl.src = res.ui.LOGO; logoEl.style.display = 'inline-block'; }
+      }
+      
+      const elNome = document.getElementById('ui-nome-sistema');
+      if (elNome) elNome.innerText = res.ui.NOME_SISTEMA;
+      
+      const elSetor = document.getElementById('ui-nome-setor');
+      if (elSetor) elSetor.innerText = res.ui.NOME_SETOR;
+
+      const elEnd = document.getElementById('ui-endereco');
+      if (elEnd && res.contato.ENDERECO) { elEnd.innerText = res.contato.ENDERECO; elEnd.style.display = 'block'; }
+      
+      const elEmail = document.getElementById('ui-email');
+      if (elEmail && res.contato.EMAIL) { elEmail.innerText = res.contato.EMAIL; elEmail.style.display = 'block'; }
+      
+      const elCnpj = document.getElementById('ui-cnpj');
+      if (elCnpj && res.contato.CNPJ) { elCnpj.innerText = "CNPJ: " + res.contato.CNPJ; elCnpj.style.display = 'block'; }
+      
+      initPWA();
+    }
+  } catch(e) {
+    console.warn("A arrancar em modo offline persistente.");
+  }
+  
+  carregarAvisosSMEB(); 
+  verificarSessaoAtiva();
+}
+
+function initPWA() {
+  if(!window.PWA_NOME) return; 
+
+  const manifestJSON = {
+    "name": window.PWA_NOME,
+    "short_name": window.PWA_NOME.split(' ')[1] || window.PWA_NOME,
+    "description": "Portal Oficial de Mobilidade e Identidade Estudantil",
+    "start_url": window.location.href, 
+    "display": "standalone", 
+    "orientation": "portrait",
+    "background_color": window.BG_COLOR || "#F8F9FA",
+    "theme_color": window.THEME_COLOR || "#0A3D6B",
+    "icons": [{ "src": window.PWA_ICONE, "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+  };
+
+  const blob = new Blob([JSON.stringify(manifestJSON)], { type: 'application/json' });
+  document.getElementById('dynamic-manifest').setAttribute('href', URL.createObjectURL(blob));
+
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      self.addEventListener('install', (e) => { self.skipWaiting(); });
+      self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+      self.addEventListener('fetch', (e) => { });
+    `;
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob))
+      .then(reg => console.log('Service Worker V9 Registado'))
+      .catch(err => console.log('Erro no SW:', err));
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.style.display = 'block';
+  });
+}
+
+function instalarPWA() {
+  if (!deferredPrompt) {
+    showToast("Não é possível instalar neste dispositivo ou já está instalado.", "info");
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') {
+      document.getElementById('pwa-install-banner').style.display = 'none';
+      showToast("App instalada! Procure o ícone no seu ecrã principal.", "success");
+    }
+    deferredPrompt = null; 
+  });
+}
+
+// ========================================================================
+// 2. MOTOR DE NAVEGAÇÃO SPA E AVISOS
+// ========================================================================
+function switchView(viewId) {
+  const views = document.querySelectorAll('.view-section');
+  views.forEach(v => {
+    v.classList.remove('active-view');
+    v.style.display = 'none';
+  });
+  
+  const target = document.getElementById(viewId);
+  if (target) {
+    target.style.display = 'block';
+    setTimeout(() => target.classList.add('active-view'), 10);
+  }
+
+  const muralAvisos = document.getElementById('mural-avisos');
+  const muralHeader = document.getElementById('mural-avisos-header');
+  
+  if (muralAvisos && muralAvisos.innerHTML.trim() !== '') {
+    if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu') {
+      muralAvisos.style.display = 'block';
+      if (muralHeader) muralHeader.style.display = 'block';
+    } else {
+      muralAvisos.style.display = 'none';
+      if (muralHeader) muralHeader.style.display = 'none';
+    }
+  }
+}
+
+async function carregarAvisosSMEB() {
+  try {
+    const res = await apiCall("getAvisosAtivos");
+    const container = document.getElementById('mural-avisos');
+    const header = document.getElementById('mural-avisos-header');
+    const avisos = res.avisos;
+    
+    if (!avisos || avisos.length === 0) {
+      container.style.display = 'none';
+      if (header) header.style.display = 'none';
+      return;
+    }
+
+    let html = '';
+    avisos.forEach(function(aviso) {
+      let classeTipo = 'aviso-geral';
+      const tipoNormalizado = aviso.tipo.toLowerCase().trim();
+      if (tipoNormalizado === 'urgente') classeTipo = 'aviso-urgente';
+      if (tipoNormalizado === 'transporte') classeTipo = 'aviso-transporte';
+
+      html += `<div class="aviso-card ${classeTipo}">`;
+      if (aviso.imagem) html += `<img src="${aviso.imagem}" class="aviso-imagem" alt="Aviso">`;
+      html += `<span class="aviso-tag">${aviso.tipo}</span>`;
+      html += `<h4 class="aviso-titulo">${aviso.titulo}</h4>`;
+      if (aviso.assunto) html += `<p class="aviso-texto">${aviso.assunto}</p>`;
+      if (aviso.anexo) html += `<a href="${aviso.anexo}" target="_blank" class="aviso-btn-anexo">📄 Baixar Documento</a>`;
+      html += `</div>`;
+    });
+
+    container.innerHTML = html;
+    container.style.display = 'block'; 
+    if (header) header.style.display = 'block';
+  } catch(e) {
+     console.log("Avisos não carregados:", e);
+  }
+}
+
+// ========================================================================
+// 3. MÓDULO DE SEGURANÇA SAAS E AUTO-CURA (V9)
+// ========================================================================
+const TOKEN_KEY = "MAESTRO_OP_TOKEN";
+const CACHE_LISTA_KEY = "MAESTRO_CACHE_FISCAL"; 
+let timeoutSessaoID = null;
+
+async function fazerLoginOperador() {
+  const email = document.getElementById('fiscal-email').value.trim();
+  const senha = document.getElementById('fiscal-senha').value.trim();
+  const btn = document.getElementById('btn-login-fiscal');
+  const resBox = document.getElementById('res-login-fiscal');
+
+  if (!email || !senha) {
+    resBox.innerText = "Preencha o e-mail e a palavra-passe.";
+    resBox.style.display = "block";
+    return;
+  }
+
+  btn.innerText = "A VALIDAR...";
+  btn.disabled = true;
+  resBox.style.display = "none";
+
+  try {
+    const resAuth = await apiCall("fazerLoginOperador", { email: email, senha: senha });
+    
+    if (!resAuth.sucesso) {
+      btn.innerText = "ENTRAR NO SISTEMA";
+      btn.disabled = false;
+      resBox.innerText = resAuth.erro;
+      resBox.style.display = "block";
+      return;
+    }
+
+    localStorage.setItem(TOKEN_KEY, resAuth.token);
+    document.getElementById('nome-operador-logado').innerText = resAuth.nome;
+    
+    btn.innerText = "A BAIXAR CACHE (OFFLINE)...";
+
+    const resCache = await apiCall("sincronizarCacheFiscal");
+    if (resCache.sucesso) {
+       localStorage.setItem(CACHE_LISTA_KEY, JSON.stringify(resCache.dados));
+       
+       btn.innerText = "ENTRAR NO SISTEMA";
+       btn.disabled = false;
+       document.getElementById('fiscal-email').value = "";
+       document.getElementById('fiscal-senha').value = "";
+       
+       armarRelogioSessaoLocal();
+       
+       switchView('view-admin-hub');
+       showToast("Sessão iniciada. Cache Offline Carregado.", "success");
+    }
+
+  } catch(err) {
+    btn.innerText = "ENTRAR NO SISTEMA";
+    btn.disabled = false;
+    resBox.innerText = "Erro de conexão com a API.";
+    resBox.style.display = "block";
+  }
+}
+
+async function verificarSessaoAtiva() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+
+  try {
+    const sessao = await apiCall("validarTokenSessao");
+    if (sessao.sucesso && sessao.valido) {
+      armarRelogioSessaoLocal();
+      
+      if(document.getElementById('id-fiscal') && document.getElementById('id-fiscal').value !== "") {
+        switchView('view-fiscal'); 
+        validarFiscal();
+      } else {
+        switchView('view-admin-hub'); 
+      }
+    }
+  } catch(e) {
+     // Auto-cura é gerida globalmente no apiCall
+  }
+}
+
+function armarRelogioSessaoLocal() {
+   if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
+   timeoutSessaoID = setTimeout(() => {
+      encerrarSessaoOperador(true);
+      showToast("Sessão encerrada por limite de tempo (8h).", "info");
+   }, 28800000);
+}
+
+async function encerrarSessaoOperador(silencioso = false) {
+  try { 
+    await apiCall("invalidarTokenSessao"); 
+  } catch(e) { /* Ignora erro offline */ }
+  
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(CACHE_LISTA_KEY);
+  if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
+  fecharScanner();
+  
+  document.getElementById('nome-operador-logado').innerText = "Fiscal";
+  document.getElementById('res-fiscal').style.display = "none";
+  document.getElementById('id-fiscal').value = "";
+  
+  switchView('view-hub');
+  if(!silencioso) showToast("Sessão encerrada e cofre limpo.", "info");
+}
+
+// ========================================================================
+// 4. FLUXO DE CONSULTA DO ESTUDANTE (TIMELINE)
+// ========================================================================
+async function consultarEstudante() {
+  const alvo = document.getElementById('id-estudante').value.trim();
+  if (!alvo) { showToast("Informe o CPF.", "error"); return; }
+
+  const btn = document.getElementById('btn-estudante');
+  const resBox = document.getElementById('res-estudante');
+  
+  btn.innerText = "A CONSULTAR...";
+  btn.disabled = true;
+  resBox.style.display = "none";
+
+  try {
+    const res = await apiCall("consultarStatusCPF", { cpf: alvo });
+    btn.innerText = "CONSULTAR STATUS";
+    btn.disabled = false;
+    
+    if (!res.encontrado) {
+      mostrarErroEstudante("Inscrição Não Encontrada", "Verifique o CPF ou submissão.");
+      return;
+    }
+    renderizarTimelineEstudante(res, resBox);
+  } catch(err) {
+    btn.innerText = "CONSULTAR STATUS";
+    btn.disabled = false;
+    mostrarErroEstudante("Erro na API", "Tente novamente mais tarde.");
+  }
+}
+
+function renderizarTimelineEstudante(dados, container) {
+  const nomeLimpo = formatarNome(dados.nome).split(' ')[0];
+  let html = `<h3 style="margin:0 0 15px 0; color:var(--primary);">Olá, ${nomeLimpo}!</h3>`;
+  html += `<div class="timeline">`;
+  
+  html += `<div class="timeline-item active-blue" style="border-color: var(--primary);">
+             <strong style="color: var(--primary);">1. Formulário Recebido</strong><br>
+             <span class="desc-xs">Os seus dados deram entrada no sistema.</span>
+           </div>`;
+
+  const sOCR = String(dados.statusOCR || "").trim().toUpperCase();
+  const sDocs = String(dados.statusDocs || "").trim().toUpperCase();
+  const sAtividade = String(dados.statusAtividade || "").trim().toUpperCase();
+
+  if (sAtividade === "CANCELADO") {
+    html += `<div class="timeline-item active-red" style="color:var(--danger); border-color:var(--danger);"><strong>2. Emissão Interrompida</strong></div>`;
+    html += `<div class="timeline-item active-red" style="color:var(--danger); border-color:var(--danger);"><strong>3. Inscrição Cancelada</strong><br><span class="desc-xs" style="color:inherit; font-weight:600;">O acesso ao transporte foi cancelado.</span></div>`;
+  } else if (sAtividade === "SUSPENSO") {
+    html += `<div class="timeline-item active-orange" style="color:var(--accent); border-color:var(--accent);"><strong>2. Emissão Interrompida</strong></div>`;
+    html += `<div class="timeline-item active-orange" style="color:var(--accent); border-color:var(--accent);"><strong>3. Inscrição Suspensa</strong><br><span class="desc-xs" style="color:inherit; font-weight:600;">O acesso foi desativado temporariamente.</span></div>`;
+  } else {
+    if (sOCR === "PENDENTE" || sOCR === "") {
+      html += `<div class="timeline-item"><strong>2. Em Auditoria</strong><br><span class="desc-xs">A aguardar análise documental.</span></div>`;
+      html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
+    } else if (sOCR === "ANALISE_HUMANA" || sOCR === "PENDENCIA") {
+      html += `<div class="timeline-item active-yellow" style="color:#d97706; border-color:#d97706;"><strong>2. Pendência Documental</strong><br><span class="desc-xs" style="color:inherit; font-weight:600;">Ação necessária para prosseguir.</span></div>`;
+      html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
+    } else {
+      html += `<div class="timeline-item active-green" style="color:#059669; border-color:#059669;"><strong>2. Documentos Validados</strong></div>`;
+      
+      if (sDocs === "EMITIDO" || sDocs === "EMITIDO_NOTIFICADO" || sDocs === "GERADO") {
+        html += `<div class="timeline-item active-green" style="color:#059669; border-color:#059669;"><strong>3. Carteira Ativa!</strong><br><span class="desc-xs">A sua identidade estudantil já pode ser utilizada.</span></div>`;
+        
+        if (dados.idAcesso) {
+           html += `
+           <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #16a34a; border-radius: 8px; text-align: center;">
+             <span style="font-size: 12px; color: #15803d; display:block; margin-bottom:5px; text-transform: uppercase; font-weight:bold;">Seu ID de Acesso é:</span>
+             <strong style="font-size: 20px; color: #166534; letter-spacing: 2px; font-family: monospace;">${dados.idAcesso}</strong>
+             <p style="font-size: 12px; color: #15803d; margin: 8px 0 0 0;">Use este ID e os 4 últimos dígitos do seu CPF para abrir a sua carteira digital.</p>
+             <button class="btn-link" style="color:var(--primary); font-weight:bold; margin-top:10px; font-size:14px;" onclick="switchView('view-login')">Ir para o Cofre Seguro ➔</button>
+           </div>`;
+        }
+      } else {
+        html += `<div class="timeline-item active-blue" style="border-color: var(--primary);">
+                   <strong style="color: var(--primary);">3. A Aguardar Emissão</strong><br>
+                   <span class="desc-xs">A sua carteira digital está em processamento.</span>
+                 </div>`;
+      }
+    }
+  }
+
+  html += `</div>`; 
+  container.innerHTML = html;
+  container.style.display = "block";
+}
+
+function mostrarErroEstudante(titulo, mensagem) {
+  const resBox = document.getElementById('res-estudante');
+  resBox.innerHTML = `
+    <div style="text-align:center;">
+      <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ${titulo}</h3>
+      <p style="color:var(--text-sub); font-size:14px; margin:0;">${mensagem}</p>
+    </div>`;
+  resBox.style.display = "block";
+}
+
+// ========================================================================
+// 5. FLUXO DA CARTEIRA DIGITAL (O COFRE)
+// ========================================================================
+let currentWalletId = "";
+let currentWalletSenha = "";
+
+async function loginCarteira() {
+  const id = document.getElementById('login-id').value.trim();
+  const senha = document.getElementById('login-senha').value.trim();
+  const btn = document.getElementById('btn-login');
+  const resBox = document.getElementById('res-login');
+
+  if (!id || !senha) {
+    resBox.innerHTML = "<span style='color:var(--danger); font-size:13px; font-weight:bold;'>Preencha o ID e a Senha.</span>";
+    resBox.style.display = "block";
+    return;
+  }
+
+  btn.innerText = "A AUTENTICAR...";
+  btn.disabled = true;
+  resBox.style.display = "none";
+
+  try {
+    const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
+    btn.innerText = "ENTRAR NA CARTEIRA";
+    btn.disabled = false;
+
+    if (res.erro) {
+      resBox.innerHTML = `<span style='color:var(--danger); font-size:13px; font-weight:bold;'>⚠️ ${res.erro}</span>`;
+      resBox.style.display = "block";
+    } else if (res.sucesso) {
+      currentWalletId = id;
+      currentWalletSenha = senha;
+      renderizarCarteira(res);
+      switchView('view-wallet');
+      document.getElementById('login-id').value = '';
+      document.getElementById('login-senha').value = '';
+    }
+  } catch(err) {
+    btn.innerText = "ENTRAR NA CARTEIRA";
+    btn.disabled = false;
+    resBox.innerHTML = "<span style='color:var(--danger);'>⚠️ Erro na API.</span>";
+    resBox.style.display = "block";
+  }
+}
+
+function renderizarCarteira(dados) {
+  const container = document.getElementById('wallet-container');
+  const nomeTratado = formatarNome(dados.nome);
+  const fotoHTML = dados.fotoUrl ? `<img src="${dados.fotoUrl}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem<br>Foto</div>`;
+  
+  let html = `
+  <div class="wallet-card">
+    <div class="wallet-header"><h4 class="wallet-header-title">IDENTIDADE UNIVERSITÁRIA</h4></div>
+    <div class="wallet-body">
+      ${fotoHTML}
+      <div class="wallet-info">
+        <div class="w-group"><span class="w-label">Estudante</span><span class="w-value highlight">${nomeTratado}</span></div>
+        <div class="w-group"><span class="w-label">CPF</span><span class="w-value">${dados.cpfMascarado}</span></div>
+        <div class="w-group"><span class="w-label">ID da Carteira</span><span class="w-value" style="font-family:monospace; font-size:13px; color:var(--text-sub);">${dados.idCarteira}</span></div>
+      </div>
+    </div>
+    <div class="wallet-footer">
+      <div class="w-row">
+        <div class="w-group"><span class="w-label">Instituição</span><span class="w-value" style="font-weight:700;">${dados.instituicao}</span></div>
+        <div class="w-group" style="text-align:right;"><span class="w-label">Turno</span><span class="w-value">${dados.turno}</span></div>
+      </div>
+      <div class="w-row"><div class="w-group"><span class="w-label">Rota de Transporte</span><span class="w-value">${dados.rota}</span></div></div>
+      <div class="w-row" style="margin-bottom:0; justify-content:center; padding-top:10px; border-top:1px dashed var(--border);">
+         <span style="font-size:11px; color:var(--text-sub);">Válido em ${dados.cidade} até <strong>${dados.validade}</strong></span>
+      </div>
+      <div class="anti-print-bar" id="wallet-clock">A iniciar relógio...</div>
+    </div>
+  </div>
+  <div class="action-bar" style="display:flex; gap:10px; margin-top:20px;">
+      <button id="btn-dw-carteira" class="btn btn-primary" style="flex:1;" onclick="baixarDocumento('CARTEIRA')"><span style="font-size:16px;">🪪</span> Baixar Carteira</button>
+      <button id="btn-dw-declaracao" class="btn btn-secondary" style="flex:1;" onclick="baixarDocumento('DECLARACAO')"><span style="font-size:16px;">📄</span> Declaração</button>
+  </div>`;
+  
+  container.innerHTML = html;
+  iniciarRelogioAntiPrint('wallet-clock');
+}
+
+async function baixarDocumento(tipo, tentativa = 1) {
+  const MAX_TENTATIVAS = 3;
+  const btnId = tipo === 'CARTEIRA' ? 'btn-dw-carteira' : 'btn-dw-declaracao';
+  const btn = document.getElementById(btnId);
+  
+  const textoOriginal = btn.getAttribute('data-original-text') || btn.innerHTML;
+  if (tentativa === 1) btn.setAttribute('data-original-text', textoOriginal);
+
+  btn.innerHTML = tentativa === 1 ? `⏳ A transferir...` : `🔄 Tentativa ${tentativa}/${MAX_TENTATIVAS}...`;
+  btn.disabled = true;
+
+  try {
+    const res = await apiCall("baixarDocumentoSeguro", { id: currentWalletId, senha: currentWalletSenha, tipo: tipo });
+    
+    if (res.erro) {
+      btn.innerHTML = textoOriginal;
+      btn.disabled = false;
+      showToast(res.erro, "error");
+    } else if (res.sucesso && res.arquivoBase64) {
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${res.arquivoBase64}`;
+      link.download = res.arquivoNome || `Documento_${tipo}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`Download de ${tipo} concluído!`, "success");
+      btn.innerHTML = `⏳ Aguarde...`;
+      setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 10000); 
+    }
+  } catch(err) {
+    if (tentativa < MAX_TENTATIVAS) {
+      showToast(`Servidor ocupado. A tentar novamente...`, "info");
+      setTimeout(() => { baixarDocumento(tipo, tentativa + 1); }, tentativa * 2000);
+    } else {
+      btn.innerHTML = textoOriginal;
+      btn.disabled = false;
+      showToast("Falha de conexão com a API.", "error");
+    }
+  }
+}
+
+function sairCarteira() {
+  if (clockInterval) clearInterval(clockInterval);
+  document.getElementById('wallet-container').innerHTML = ''; 
+  currentWalletId = "";
+  currentWalletSenha = "";
+  switchView('view-aluno-menu'); 
+}
+
+// ========================================================================
+// 6. MODO FISCAL - OMNI-SCANNER E LAZY LOADING (V9 HEADLESS)
+// ========================================================================
+let html5QrcodeScanner = null;
+
+function iniciarScanner() {
+  document.getElementById('leitor-qr-container').style.display = 'block';
+  document.getElementById('btn-scanner').style.display = 'none';
+  document.getElementById('btn-scanner-nativo').style.display = 'none'; 
+  
+  if (html5QrcodeScanner) html5QrcodeScanner.clear();
+
+  html5QrcodeScanner = new Html5QrcodeScanner("leitor-qr", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+  html5QrcodeScanner.render(aoLerQRCode, (e) => {});
+}
+
+function fecharScanner() {
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear();
+    html5QrcodeScanner = null;
+  }
+  document.getElementById('leitor-qr-container').style.display = 'none';
+  document.getElementById('btn-scanner').style.display = 'flex';
+  document.getElementById('btn-scanner-nativo').style.display = 'flex'; 
+}
+
+function aoLerQRCode(textoLido) {
+  let idLimpo = textoLido;
+  let matchId = textoLido.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+  if (matchId) idLimpo = matchId[1];
+  
+  document.getElementById('id-fiscal').value = idLimpo;
+  fecharScanner();
+  validarFiscal();
+}
+
+function lerQRCodePorFoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  showToast("A processar imagem do QR Code...", "info");
+  document.getElementById('btn-scanner-nativo').innerHTML = `⏳ A LER CÓDIGO...`;
+
+  const html5QrCode = new Html5Qrcode("leitor-qr"); 
+
+  html5QrCode.scanFile(file, true)
+    .then(textoLido => {
+      let idLimpo = textoLido;
+      let matchId = textoLido.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+      if (matchId) idLimpo = matchId[1];
+      
+      document.getElementById('id-fiscal').value = idLimpo;
+      document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> CÂMARA NATIVA`;
+      validarFiscal();
+    })
+    .catch(err => {
+      showToast("QR Code não detetado. Tente focar melhor a imagem.", "error");
+      document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> CÂMARA NATIVA`;
+    });
+    
+  event.target.value = '';
+}
+
+function fecharModoFiscalizacao() {
+  fecharScanner();
+  switchView('view-admin-hub');
+}
+
+async function validarFiscal() {
+  const idCarteira = document.getElementById('id-fiscal').value.trim().toUpperCase();
+  if (!idCarteira) return;
+
+  const btn = document.getElementById('btn-fiscal');
+  const resBox = document.getElementById('res-fiscal');
+  
+  btn.innerText = "A VERIFICAR...";
+  resBox.style.display = "none";
+
+  let alunoBase = null;
+  const cacheListRaw = localStorage.getItem(CACHE_LISTA_KEY);
+  if (cacheListRaw) {
+    const cacheList = JSON.parse(cacheListRaw);
+    alunoBase = cacheList.find(a => a.id === idCarteira);
+  }
+
+  if (!alunoBase) {
+     btn.innerText = "VERIFICAR";
+     resBox.innerHTML = `<div class="status-badge" style="background:#4A0000; color:#FFB4B4; margin-top:0;">❌ ID INVÁLIDO OU NÃO ENCONTRADO</div>`;
+     resBox.style.display = "block";
+     return;
+  }
+
+  resBox.innerHTML = gerarHtmlFiscal(alunoBase.nome, "A carregar...", "...", "...", `<div class="wallet-photo skeleton-box"></div>`, alunoBase.status);
+  resBox.style.display = "block";
+
+  try {
+    const res = await apiCall("consultarEstudantePorId", { idEstudante: idCarteira });
+    btn.innerText = "VERIFICAR";
+    if (!res.encontrado) return; 
+    
+    resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, `<div class="wallet-photo skeleton-box"></div>`, res.statusAtividade);
+    
+    // Paralelo
+    apiCall("getFotoEstudanteBase64", { idEstudante: idCarteira }).then(resFoto => {
+       const imgHtml = resFoto.fotoBase64 ? `<img src="${resFoto.fotoBase64}" class="wallet-photo" style="border-color:#333;">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#666; background:#222; border-color:#333;">Sem Foto</div>`;
+       resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, imgHtml, res.statusAtividade);
+       if (res.statusAtividade === "ATIVO") iniciarRelogioAntiPrint('fiscal-clock');
+    }).catch(err => console.log("Erro ao carregar a foto do estudante da API."));
+
+  } catch(err) {
+    btn.innerText = "VERIFICAR";
+    showToast("Erro na API ao sincronizar detalhes.", "error");
+  }
+}
+
+function gerarHtmlFiscal(nome, inst, rota, turno, fotoComponente, statusReal) {
+    let statusBadge = "";
+    let relogioAntiPrint = "";
+    let corFundoHeader = "#333";
+    const nomeTratado = formatarNome(nome);
+    
+    if (statusReal === "ATIVO") {
+      corFundoHeader = "var(--success)";
+      statusBadge = `<div class="status-badge" style="background:#0D3B1A; color:#A4F4B8; margin-bottom: 10px;">✅ LIBERADO</div>`;
+      relogioAntiPrint = `<div class="anti-print-bar" id="fiscal-clock" style="margin-top:0;"></div>`;
+    } else if (statusReal === "CANCELADO") {
+      corFundoHeader = "var(--danger)";
+      statusBadge = `<div class="status-badge" style="background:#4A0000; color:#FFB4B4;">❌ CANCELADO</div>`;
+    } else if (statusReal === "SUSPENSO") {
+      corFundoHeader = "var(--accent)";
+      statusBadge = `<div class="status-badge" style="background:#4A1D00; color:#FFD1A4;">⚠️ SUSPENSO</div>`;
+    } else {
+      corFundoHeader = "var(--warning)";
+      statusBadge = `<div class="status-badge" style="background:#4A3F00; color:#FFF0A4;">⏳ PENDENTE</div>`;
+    }
+
+    return `
+    <div class="wallet-card" style="background: #1E1E1E; border-color: #333;">
+      <div class="wallet-header" style="background: ${corFundoHeader}; padding: 10px;">
+        <h4 class="wallet-header-title" style="color: white; font-size: 11px;">MODO FISCALIZAÇÃO</h4>
+      </div>
+      <div class="wallet-body" style="padding: 15px; text-align: left;">
+        ${fotoComponente}
+        <div class="wallet-info">
+          <div class="w-group"><span class="w-label" style="color:#aaa;">Estudante</span><span class="w-value highlight" style="color:white; font-size:15px;">${nomeTratado}</span></div>
+          <div class="w-group"><span class="w-label" style="color:#aaa;">Instituição</span><span class="w-value" style="color:#ddd;">${inst}</span></div>
+          <div class="w-group"><span class="w-label" style="color:#aaa;">Rota / Turno</span><span class="w-value" style="color:var(--accent); font-weight:700;">${rota} • ${turno}</span></div>
+        </div>
+      </div>
+      <div class="wallet-footer" style="background: #121212; border-top-color: #333; padding: 15px;">${statusBadge}${relogioAntiPrint}</div>
+    </div>`;
+}
+
+// ========================================================================
+// 7. MOTOR DO DASHBOARD ANALÍTICO
+// ========================================================================
+let myCharts = {}; 
+
+function mudarAbaDashboard(aba) {
+  ['logistica', 'noturno', 'inclusao'].forEach(t => {
+    document.getElementById('tab-' + t).classList.remove('active');
+    document.getElementById('dash-area-' + t).style.display = 'none';
+  });
+  document.getElementById('tab-' + aba).classList.add('active');
+  document.getElementById('dash-area-' + aba).style.display = 'block';
+}
+
+async function carregarDashboard() {
+  showToast("A extrair dados em tempo real...", "info");
+  
+  try {
+    const res = await apiCall("getDashboardStats");
+    const stats = res.stats;
+
+    document.getElementById('kpi-ativos').innerText = stats.kpis.ativos;
+    document.getElementById('kpi-pendentes').innerText = stats.kpis.pendentes;
+    document.getElementById('kpi-retidos').innerText = stats.kpis.retidos;
+    document.getElementById('kpi-suspensos').innerText = stats.kpis.suspensos;
+
+    const pctIA = Math.round((stats.consumo.iaUsado / stats.consumo.iaLimite) * 100);
+    const barraIA = document.getElementById('bar-ia-usage');
+    document.getElementById('kpi-ia-text').innerText = `${stats.consumo.iaUsado} / ${stats.consumo.iaLimite}`;
+    barraIA.style.width = Math.min(pctIA, 100) + "%";
+    barraIA.style.background = pctIA > 80 ? "var(--danger)" : "var(--accent)";
+
+    desenharGraficos(stats.graficos);
+    switchView('view-dashboard');
+  } catch(err) {
+    showToast("Falha da API ao carregar métricas.", "error");
+  }
+}
+
+function renderChart(canvasId, type, labels, data, colors, options = {}) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (myCharts[canvasId]) myCharts[canvasId].destroy();
+  
+  Chart.defaults.color = '#aaaaaa';
+  Chart.defaults.borderColor = '#333333';
+
+  myCharts[canvasId] = new Chart(ctx, {
+    type: type,
+    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderRadius: (type === 'bar' ? 4 : 0), borderWidth: 0 }] },
+    options: Object.assign({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }, options)
+  });
+}
+
+function extrairEOrdenar(obj) {
+  const arr = Object.keys(obj).map(key => ({ label: key, value: obj[key] }));
+  arr.sort((a, b) => b.value - a.value);
+  return { labels: arr.map(item => item.label), data: arr.map(item => item.value) };
+}
+
+function desenharGraficos(graficos) {
+  const baseColor = '#3B82F6'; 
+  const st = graficos.status;
+  renderChart('chart-status', 'doughnut', ["Ativos", "Pendentes", "Retidos (Humana)", "Cancelados/Suspensos"], [st["Ativos"]||0, st["Pendentes"]||0, st["Retidos (Humana)"]||0, st["Cancelados/Suspensos"]||0], ['#10B981', '#FBBF24', '#F97316', '#EF4444'], { plugins: { legend: { display: true, position: 'right', labels: {color: '#ddd', boxWidth: 12} } } });
+  const inst = extrairEOrdenar(graficos.instituicoes); renderChart('chart-instituicoes', 'bar', inst.labels, inst.data, baseColor, { indexAxis: 'y' });
+  const dias = extrairEOrdenar(graficos.dias); renderChart('chart-dias', 'bar', dias.labels, dias.data, baseColor, { indexAxis: 'y' });
+  const rotas = extrairEOrdenar(graficos.rotas); renderChart('chart-rotas', 'bar', rotas.labels, rotas.data, baseColor, { indexAxis: 'y' });
+  const turnos = extrairEOrdenar(graficos.turnos); renderChart('chart-turnos', 'bar', turnos.labels, turnos.data, baseColor); 
+
+  if(graficos.noturno) {
+    const adesao = extrairEOrdenar(graficos.noturno.adesao); renderChart('chart-adesao-23h', 'doughnut', adesao.labels, adesao.data, ['#FBBF24', '#333333'], { plugins: { legend: { display: true, position: 'bottom', labels: {color: '#ddd', boxWidth: 12} } } });
+    const bairros = extrairEOrdenar(graficos.noturno.bairros); renderChart('chart-bairros-23h', 'bar', bairros.labels, bairros.data, '#F97316', { indexAxis: 'y' }); 
+  }
+
+  const renderInclusao = (canvas, objData) => renderChart(canvas, 'bar', ['Sim', 'Não'], [objData['Sim'] || 0, objData['Não'] || 0], ['#10B981', '#333']);
+  renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
+  renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
+}
+
+// ========================================================================
+// 8. FUNÇÕES UTILITÁRIAS GERAIS E TOASTS
+// ========================================================================
+function showToast(message, type = "info") {
+  const toast = document.getElementById("toast");
+  toast.innerText = message;
+  toast.style.background = type === "error" ? "var(--danger)" : (type === "success" ? "var(--success)" : "#333");
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 3500);
+}
+
+let clockInterval;
+function iniciarRelogioAntiPrint(elementId) {
+  if (clockInterval) clearInterval(clockInterval);
+  const clockDiv = document.getElementById(elementId);
+  if (!clockDiv) return;
+  const update = () => clockDiv.innerText = `⏳ Autenticado: ${new Date().toLocaleTimeString('pt-BR')}`;
+  update();
+  clockInterval = setInterval(update, 1000);
+}
+
+function formatarNome(nome) {
+  if (!nome) return "";
+  const excepcoes = ['de', 'da', 'do', 'das', 'dos'];
+  return nome.toLowerCase().split(' ').map((palavra, i) => (excepcoes.includes(palavra) && i !== 0) ? palavra : palavra.charAt(0).toUpperCase() + palavra.slice(1)).join(' ');
+}
+
+window.onload = function() {
+  bootSystem(); // Arranca a V9 via Fetch!
+};
