@@ -1,12 +1,12 @@
 // ========================================================================
-// 0. CONFIGURAÇÕES DA API V9 (HEADLESS REST)
+// 0. CONFIGURAÇÕES DA API V9.1 (HEADLESS REST)
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwa_-9flq7RL0PRrZWh4lnbX01jKDzCSpflWsTDpPU1jlRtp11F2yM4FzS2K4xwKncJ/exec";
 
 /**
- * O "Estafeta" Universal do Maestro V9. 
+ * O "Estafeta" Universal do Maestro V9.1. 
  * Envia os dados para o Google Apps Script via Fetch e lida com a segurança.
  */
 async function apiCall(action, payload = {}) {
@@ -22,11 +22,16 @@ async function apiCall(action, payload = {}) {
     
     const data = await response.json();
     
-    // Middleware Global: Se o servidor disser que a sessão caducou (401), auto-cura!
+    // Middleware Global V9.1: Auto-cura, mas com bypass para o logout
     if (data.status === 401) {
-      encerrarSessaoOperador(true);
-      showToast(data.erro || "Sessão expirada. A redirecionar...", "error");
-      throw new Error("Sessão Expirada");
+      if (action === "invalidarTokenSessao") {
+        // Se já estávamos a tentar sair, ignora o erro e devolve sucesso vazio
+        return { sucesso: true };
+      } else {
+        encerrarSessaoOperador(true);
+        showToast(data.erro || "Sessão expirada. A redirecionar...", "error");
+        throw new Error("Sessão Expirada");
+      }
     }
     
     return data;
@@ -305,7 +310,7 @@ function armarRelogioSessaoLocal() {
 async function encerrarSessaoOperador(silencioso = false) {
   try { 
     await apiCall("invalidarTokenSessao"); 
-  } catch(e) { /* Ignora erro offline */ }
+  } catch(e) { /* Ignora erro offline e erros de token ausente (resolvido na linha 30) */ }
   
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(CACHE_LISTA_KEY);
@@ -722,6 +727,13 @@ async function carregarDashboard() {
   
   try {
     const res = await apiCall("getDashboardStats");
+    
+    // Se o servidor devolver sucesso mas tiver um erro lógico dentro (ex: Planilha falhou)
+    if (!res.sucesso) {
+        showToast(res.erro || "O servidor não conseguiu compilar o Dashboard.", "error");
+        return;
+    }
+
     const stats = res.stats;
 
     document.getElementById('kpi-ativos').innerText = stats.kpis.ativos;
@@ -782,33 +794,7 @@ function desenharGraficos(graficos) {
   renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
 
-// ========================================================================
-// 8. FUNÇÕES UTILITÁRIAS GERAIS E TOASTS
-// ========================================================================
-function showToast(message, type = "info") {
-  const toast = document.getElementById("toast");
-  toast.innerText = message;
-  toast.style.background = type === "error" ? "var(--danger)" : (type === "success" ? "var(--success)" : "#333");
-  toast.style.display = "block";
-  setTimeout(() => { toast.style.display = "none"; }, 3500);
-}
-
-let clockInterval;
-function iniciarRelogioAntiPrint(elementId) {
-  if (clockInterval) clearInterval(clockInterval);
-  const clockDiv = document.getElementById(elementId);
-  if (!clockDiv) return;
-  const update = () => clockDiv.innerText = `⏳ Autenticado: ${new Date().toLocaleTimeString('pt-BR')}`;
-  update();
-  clockInterval = setInterval(update, 1000);
-}
-
-function formatarNome(nome) {
-  if (!nome) return "";
-  const excepcoes = ['de', 'da', 'do', 'das', 'dos'];
-  return nome.toLowerCase().split(' ').map((palavra, i) => (excepcoes.includes(palavra) && i !== 0) ? palavra : palavra.charAt(0).toUpperCase() + palavra.slice(1)).join(' ');
-}
-
+// O bloco de utilitários foi movido para o js_global.js
 window.onload = function() {
-  bootSystem(); // Arranca a V9 via Fetch!
+  bootSystem(); // Arranca a V9.1 via Fetch!
 };
