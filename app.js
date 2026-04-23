@@ -1,31 +1,24 @@
 // ========================================================================
-// 0. CONFIGURAÇÕES DA API V9.1 (HEADLESS REST)
+// 0. CONFIGURAÇÕES DA API V10 (HEADLESS REST)
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwa_-9flq7RL0PRrZWh4lnbX01jKDzCSpflWsTDpPU1jlRtp11F2yM4FzS2K4xwKncJ/exec";
 
-/**
- * O "Estafeta" Universal do Maestro V9.1. 
- * Envia os dados para o Google Apps Script via Fetch e lida com a segurança.
- */
 async function apiCall(action, payload = {}) {
   const token = localStorage.getItem("MAESTRO_OP_TOKEN");
   
   try {
     const response = await fetch(GAS_URL, {
       method: "POST",
-      // 'text/plain' é obrigatório para evitar o bloqueio de CORS da Google
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: action, payload: payload, token: token })
     });
     
     const data = await response.json();
     
-    // Middleware Global V9.1: Auto-cura, mas com bypass para o logout
     if (data.status === 401) {
       if (action === "invalidarTokenSessao") {
-        // Se já estávamos a tentar sair, ignora o erro e devolve sucesso vazio
         return { sucesso: true };
       } else {
         encerrarSessaoOperador(true);
@@ -51,7 +44,6 @@ async function bootSystem() {
   showToast("A sincronizar com a Secretaria...", "info");
   
   try {
-    // Vai buscar as configurações visuais à Planilha via API
     const res = await apiCall("getConfiguracoesPWA");
     
     if (res.sucesso) {
@@ -60,15 +52,13 @@ async function bootSystem() {
       window.THEME_COLOR = res.ui.COR_PRIMARIA;
       window.BG_COLOR = res.ui.COR_SECUNDARIA;
       
-      // Pinta as variáveis de CSS dinamicamente
       document.documentElement.style.setProperty('--primary', res.ui.COR_PRIMARIA);
       document.documentElement.style.setProperty('--secondary', res.ui.COR_SECUNDARIA);
       document.documentElement.style.setProperty('--accent', res.ui.COR_DE_DESTAQUE);
 
-      // Preenche os textos no HTML
       if (res.ui.LOGO && res.ui.LOGO !== "") {
         const logoEl = document.getElementById('ui-logo');
-        if (logoEl) { logoEl.src = res.ui.LOGO; logoEl.style.display = 'inline-block'; }
+        if (logoEl) { logoEl.src = res.ui.LOGO; logoEl.classList.remove('hidden'); }
       }
       
       const elNome = document.getElementById('ui-nome-sistema');
@@ -78,13 +68,13 @@ async function bootSystem() {
       if (elSetor) elSetor.innerText = res.ui.NOME_SETOR;
 
       const elEnd = document.getElementById('ui-endereco');
-      if (elEnd && res.contato.ENDERECO) { elEnd.innerText = res.contato.ENDERECO; elEnd.style.display = 'block'; }
+      if (elEnd && res.contato.ENDERECO) { elEnd.innerText = res.contato.ENDERECO; elEnd.classList.remove('hidden'); }
       
       const elEmail = document.getElementById('ui-email');
-      if (elEmail && res.contato.EMAIL) { elEmail.innerText = res.contato.EMAIL; elEmail.style.display = 'block'; }
+      if (elEmail && res.contato.EMAIL) { elEmail.innerText = res.contato.EMAIL; elEmail.classList.remove('hidden'); }
       
       const elCnpj = document.getElementById('ui-cnpj');
-      if (elCnpj && res.contato.CNPJ) { elCnpj.innerText = "CNPJ: " + res.contato.CNPJ; elCnpj.style.display = 'block'; }
+      if (elCnpj && res.contato.CNPJ) { elCnpj.innerText = "CNPJ: " + res.contato.CNPJ; elCnpj.classList.remove('hidden'); }
       
       initPWA();
     }
@@ -122,7 +112,7 @@ function initPWA() {
     `;
     const swBlob = new Blob([swCode], { type: 'application/javascript' });
     navigator.serviceWorker.register(URL.createObjectURL(swBlob))
-      .then(reg => console.log('Service Worker V9 Registado'))
+      .then(reg => console.log('Service Worker V10 Registado'))
       .catch(err => console.log('Erro no SW:', err));
   }
 
@@ -130,7 +120,7 @@ function initPWA() {
     e.preventDefault();
     deferredPrompt = e;
     const banner = document.getElementById('pwa-install-banner');
-    if (banner) banner.style.display = 'block';
+    if (banner) banner.classList.remove('hidden');
   });
 }
 
@@ -142,7 +132,7 @@ function instalarPWA() {
   deferredPrompt.prompt();
   deferredPrompt.userChoice.then((choiceResult) => {
     if (choiceResult.outcome === 'accepted') {
-      document.getElementById('pwa-install-banner').style.display = 'none';
+      document.getElementById('pwa-install-banner').classList.add('hidden');
       showToast("App instalada! Procure o ícone no seu ecrã principal.", "success");
     }
     deferredPrompt = null; 
@@ -170,11 +160,11 @@ function switchView(viewId) {
   
   if (muralAvisos && muralAvisos.innerHTML.trim() !== '') {
     if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu') {
-      muralAvisos.style.display = 'block';
-      if (muralHeader) muralHeader.style.display = 'block';
+      muralAvisos.classList.remove('hidden');
+      if (muralHeader) muralHeader.classList.remove('hidden');
     } else {
-      muralAvisos.style.display = 'none';
-      if (muralHeader) muralHeader.style.display = 'none';
+      muralAvisos.classList.add('hidden');
+      if (muralHeader) muralHeader.classList.add('hidden');
     }
   }
 }
@@ -187,8 +177,8 @@ async function carregarAvisosSMEB() {
     const avisos = res.avisos;
     
     if (!avisos || avisos.length === 0) {
-      container.style.display = 'none';
-      if (header) header.style.display = 'none';
+      container.classList.add('hidden');
+      if (header) header.classList.add('hidden');
       return;
     }
 
@@ -209,15 +199,15 @@ async function carregarAvisosSMEB() {
     });
 
     container.innerHTML = html;
-    container.style.display = 'block'; 
-    if (header) header.style.display = 'block';
+    container.classList.remove('hidden'); 
+    if (header) header.classList.remove('hidden');
   } catch(e) {
-     console.log("Avisos não carregados:", e);
+     console.log("Avisos não carregados.");
   }
 }
 
 // ========================================================================
-// 3. MÓDULO DE SEGURANÇA SAAS E AUTO-CURA (V9)
+// 3. MÓDULO DE SEGURANÇA SAAS E AUTO-CURA
 // ========================================================================
 const TOKEN_KEY = "MAESTRO_OP_TOKEN";
 const CACHE_LISTA_KEY = "MAESTRO_CACHE_FISCAL"; 
@@ -231,50 +221,49 @@ async function fazerLoginOperador() {
 
   if (!email || !senha) {
     resBox.innerText = "Preencha o e-mail e a palavra-passe.";
-    resBox.style.display = "block";
+    resBox.classList.remove('hidden');
     return;
   }
 
   btn.innerText = "A VALIDAR...";
   btn.disabled = true;
-  resBox.style.display = "none";
+  resBox.classList.add('hidden');
 
   try {
     const resAuth = await apiCall("fazerLoginOperador", { email: email, senha: senha });
     
     if (!resAuth.sucesso) {
-      btn.innerText = "ENTRAR NO SISTEMA";
+      btn.innerText = "AUTENTICAR";
       btn.disabled = false;
       resBox.innerText = resAuth.erro;
-      resBox.style.display = "block";
+      resBox.classList.remove('hidden');
       return;
     }
 
     localStorage.setItem(TOKEN_KEY, resAuth.token);
     document.getElementById('nome-operador-logado').innerText = resAuth.nome;
     
-    btn.innerText = "A BAIXAR CACHE (OFFLINE)...";
+    btn.innerText = "A BAIXAR DADOS...";
 
     const resCache = await apiCall("sincronizarCacheFiscal");
     if (resCache.sucesso) {
        localStorage.setItem(CACHE_LISTA_KEY, JSON.stringify(resCache.dados));
        
-       btn.innerText = "ENTRAR NO SISTEMA";
+       btn.innerText = "AUTENTICAR";
        btn.disabled = false;
        document.getElementById('fiscal-email').value = "";
        document.getElementById('fiscal-senha').value = "";
        
        armarRelogioSessaoLocal();
-       
        switchView('view-admin-hub');
-       showToast("Sessão iniciada. Cache Offline Carregado.", "success");
+       showToast("Sessão iniciada.", "success");
     }
 
   } catch(err) {
-    btn.innerText = "ENTRAR NO SISTEMA";
+    btn.innerText = "AUTENTICAR";
     btn.disabled = false;
     resBox.innerText = "Erro de conexão com a API.";
-    resBox.style.display = "block";
+    resBox.classList.remove('hidden');
   }
 }
 
@@ -286,7 +275,6 @@ async function verificarSessaoAtiva() {
     const sessao = await apiCall("validarTokenSessao");
     if (sessao.sucesso && sessao.valido) {
       armarRelogioSessaoLocal();
-      
       if(document.getElementById('id-fiscal') && document.getElementById('id-fiscal').value !== "") {
         switchView('view-fiscal'); 
         validarFiscal();
@@ -294,35 +282,31 @@ async function verificarSessaoAtiva() {
         switchView('view-admin-hub'); 
       }
     }
-  } catch(e) {
-     // Auto-cura é gerida globalmente no apiCall
-  }
+  } catch(e) {}
 }
 
 function armarRelogioSessaoLocal() {
    if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
    timeoutSessaoID = setTimeout(() => {
       encerrarSessaoOperador(true);
-      showToast("Sessão encerrada por limite de tempo (8h).", "info");
+      showToast("Sessão encerrada (8h limite).", "info");
    }, 28800000);
 }
 
 async function encerrarSessaoOperador(silencioso = false) {
-  try { 
-    await apiCall("invalidarTokenSessao"); 
-  } catch(e) { /* Ignora erro offline e erros de token ausente (resolvido na linha 30) */ }
+  try { await apiCall("invalidarTokenSessao"); } catch(e) {}
   
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(CACHE_LISTA_KEY);
   if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
   fecharScanner();
   
-  document.getElementById('nome-operador-logado').innerText = "Fiscal";
-  document.getElementById('res-fiscal').style.display = "none";
+  document.getElementById('nome-operador-logado').innerText = "Operador";
+  document.getElementById('res-fiscal').innerHTML = "";
   document.getElementById('id-fiscal').value = "";
   
   switchView('view-hub');
-  if(!silencioso) showToast("Sessão encerrada e cofre limpo.", "info");
+  if(!silencioso) showToast("Sessão encerrada.", "info");
 }
 
 // ========================================================================
@@ -337,7 +321,7 @@ async function consultarEstudante() {
   
   btn.innerText = "A CONSULTAR...";
   btn.disabled = true;
-  resBox.style.display = "none";
+  resBox.classList.add('hidden');
 
   try {
     const res = await apiCall("consultarStatusCPF", { cpf: alvo });
@@ -345,7 +329,7 @@ async function consultarEstudante() {
     btn.disabled = false;
     
     if (!res.encontrado) {
-      mostrarErroEstudante("Inscrição Não Encontrada", "Verifique o CPF ou submissão.");
+      mostrarErroEstudante("Não Encontrado", "Verifique o CPF ou submissão.");
       return;
     }
     renderizarTimelineEstudante(res, resBox);
@@ -361,65 +345,58 @@ function renderizarTimelineEstudante(dados, container) {
   let html = `<h3 style="margin:0 0 15px 0; color:var(--primary);">Olá, ${nomeLimpo}!</h3>`;
   html += `<div class="timeline">`;
   
-  html += `<div class="timeline-item active-blue" style="border-color: var(--primary);">
+  html += `<div class="timeline-item active-blue">
              <strong style="color: var(--primary);">1. Formulário Recebido</strong><br>
-             <span class="desc-xs">Os seus dados deram entrada no sistema.</span>
+             <span style="color:var(--text-sub); font-size:11px;">Os seus dados deram entrada no sistema.</span>
            </div>`;
 
   const sOCR = String(dados.statusOCR || "").trim().toUpperCase();
   const sDocs = String(dados.statusDocs || "").trim().toUpperCase();
-  const sAtividade = String(dados.statusAtividade || "").trim().toUpperCase();
+  const sAtiv = String(dados.statusAtividade || "").trim().toUpperCase();
 
-  if (sAtividade === "CANCELADO") {
-    html += `<div class="timeline-item active-red" style="color:var(--danger); border-color:var(--danger);"><strong>2. Emissão Interrompida</strong></div>`;
-    html += `<div class="timeline-item active-red" style="color:var(--danger); border-color:var(--danger);"><strong>3. Inscrição Cancelada</strong><br><span class="desc-xs" style="color:inherit; font-weight:600;">O acesso ao transporte foi cancelado.</span></div>`;
-  } else if (sAtividade === "SUSPENSO") {
-    html += `<div class="timeline-item active-orange" style="color:var(--accent); border-color:var(--accent);"><strong>2. Emissão Interrompida</strong></div>`;
-    html += `<div class="timeline-item active-orange" style="color:var(--accent); border-color:var(--accent);"><strong>3. Inscrição Suspensa</strong><br><span class="desc-xs" style="color:inherit; font-weight:600;">O acesso foi desativado temporariamente.</span></div>`;
+  if (sAtiv === "CANCELADO") {
+    html += `<div class="timeline-item active-red"><strong style="color:var(--danger);">2. Emissão Interrompida</strong></div>`;
+    html += `<div class="timeline-item active-red"><strong style="color:var(--danger);">3. Inscrição Cancelada</strong><br><span style="color:var(--danger); font-size:11px; font-weight:600;">O acesso ao transporte foi cancelado.</span></div>`;
+  } else if (sAtiv === "SUSPENSO") {
+    html += `<div class="timeline-item active-orange"><strong style="color:var(--accent);">2. Emissão Interrompida</strong></div>`;
+    html += `<div class="timeline-item active-orange"><strong style="color:var(--accent);">3. Inscrição Suspensa</strong><br><span style="color:var(--accent); font-size:11px; font-weight:600;">O acesso foi desativado temporariamente.</span></div>`;
   } else {
     if (sOCR === "PENDENTE" || sOCR === "") {
-      html += `<div class="timeline-item"><strong>2. Em Auditoria</strong><br><span class="desc-xs">A aguardar análise documental.</span></div>`;
+      html += `<div class="timeline-item"><strong>2. Em Auditoria</strong><br><span style="color:var(--text-sub); font-size:11px;">A aguardar análise documental.</span></div>`;
       html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
     } else if (sOCR === "ANALISE_HUMANA" || sOCR === "PENDENCIA") {
-      html += `<div class="timeline-item active-yellow" style="color:#d97706; border-color:#d97706;"><strong>2. Pendência Documental</strong><br><span class="desc-xs" style="color:inherit; font-weight:600;">Ação necessária para prosseguir.</span></div>`;
+      html += `<div class="timeline-item active-yellow"><strong style="color:#FBBF24;">2. Pendência Documental</strong><br><span style="color:#D97706; font-size:11px; font-weight:600;">Ação necessária para prosseguir.</span></div>`;
       html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
     } else {
-      html += `<div class="timeline-item active-green" style="color:#059669; border-color:#059669;"><strong>2. Documentos Validados</strong></div>`;
+      html += `<div class="timeline-item active-green"><strong style="color:var(--success);">2. Documentos Validados</strong></div>`;
       
       if (sDocs === "EMITIDO" || sDocs === "EMITIDO_NOTIFICADO" || sDocs === "GERADO") {
-        html += `<div class="timeline-item active-green" style="color:#059669; border-color:#059669;"><strong>3. Carteira Ativa!</strong><br><span class="desc-xs">A sua identidade estudantil já pode ser utilizada.</span></div>`;
+        html += `<div class="timeline-item active-green"><strong style="color:var(--success);">3. Carteira Ativa!</strong><br><span style="color:var(--text-sub); font-size:11px;">A sua identidade estudantil já pode ser utilizada.</span></div>`;
         
         if (dados.idAcesso) {
            html += `
-           <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px dashed #16a34a; border-radius: 8px; text-align: center;">
-             <span style="font-size: 12px; color: #15803d; display:block; margin-bottom:5px; text-transform: uppercase; font-weight:bold;">Seu ID de Acesso é:</span>
-             <strong style="font-size: 20px; color: #166534; letter-spacing: 2px; font-family: monospace;">${dados.idAcesso}</strong>
-             <p style="font-size: 12px; color: #15803d; margin: 8px 0 0 0;">Use este ID e os 4 últimos dígitos do seu CPF para abrir a sua carteira digital.</p>
-             <button class="btn-link" style="color:var(--primary); font-weight:bold; margin-top:10px; font-size:14px;" onclick="switchView('view-login')">Ir para o Cofre Seguro ➔</button>
+           <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px solid var(--success); border-radius: 8px; text-align: center;">
+             <span style="font-size: 11px; color: var(--success); display:block; margin-bottom:5px; text-transform: uppercase; font-weight:700;">O seu ID de Acesso é:</span>
+             <strong style="font-size: 22px; color: #065F46; letter-spacing: 2px; font-family: monospace;">${dados.idAcesso}</strong>
+             <p style="font-size: 11px; color: #065F46; margin: 8px 0 0 0;">Use este ID e os 4 últimos dígitos do seu CPF para abrir o cofre digital.</p>
+             <button class="btn-solid" style="margin-top:15px;" onclick="switchView('view-login')">IR PARA O COFRE</button>
            </div>`;
         }
       } else {
-        html += `<div class="timeline-item active-blue" style="border-color: var(--primary);">
-                   <strong style="color: var(--primary);">3. A Aguardar Emissão</strong><br>
-                   <span class="desc-xs">A sua carteira digital está em processamento.</span>
-                 </div>`;
+        html += `<div class="timeline-item active-blue"><strong style="color: var(--primary);">3. A Aguardar Emissão</strong><br><span style="color:var(--text-sub); font-size:11px;">A sua carteira digital está em processamento.</span></div>`;
       }
     }
   }
 
   html += `</div>`; 
   container.innerHTML = html;
-  container.style.display = "block";
+  container.classList.remove('hidden');
 }
 
 function mostrarErroEstudante(titulo, mensagem) {
   const resBox = document.getElementById('res-estudante');
-  resBox.innerHTML = `
-    <div style="text-align:center;">
-      <h3 style="color:var(--danger); margin:0 0 10px 0;">⚠️ ${titulo}</h3>
-      <p style="color:var(--text-sub); font-size:14px; margin:0;">${mensagem}</p>
-    </div>`;
-  resBox.style.display = "block";
+  resBox.innerHTML = `<div class="error-box"><strong>${titulo}</strong><br>${mensagem}</div>`;
+  resBox.classList.remove('hidden');
 }
 
 // ========================================================================
@@ -435,23 +412,23 @@ async function loginCarteira() {
   const resBox = document.getElementById('res-login');
 
   if (!id || !senha) {
-    resBox.innerHTML = "<span style='color:var(--danger); font-size:13px; font-weight:bold;'>Preencha o ID e a Senha.</span>";
-    resBox.style.display = "block";
+    resBox.innerText = "Preencha o ID e a Senha.";
+    resBox.classList.remove('hidden');
     return;
   }
 
   btn.innerText = "A AUTENTICAR...";
   btn.disabled = true;
-  resBox.style.display = "none";
+  resBox.classList.add('hidden');
 
   try {
     const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
-    btn.innerText = "ENTRAR NA CARTEIRA";
+    btn.innerText = "ENTRAR NO COFRE";
     btn.disabled = false;
 
     if (res.erro) {
-      resBox.innerHTML = `<span style='color:var(--danger); font-size:13px; font-weight:bold;'>⚠️ ${res.erro}</span>`;
-      resBox.style.display = "block";
+      resBox.innerText = res.erro;
+      resBox.classList.remove('hidden');
     } else if (res.sucesso) {
       currentWalletId = id;
       currentWalletSenha = senha;
@@ -461,44 +438,45 @@ async function loginCarteira() {
       document.getElementById('login-senha').value = '';
     }
   } catch(err) {
-    btn.innerText = "ENTRAR NA CARTEIRA";
+    btn.innerText = "ENTRAR NO COFRE";
     btn.disabled = false;
-    resBox.innerHTML = "<span style='color:var(--danger);'>⚠️ Erro na API.</span>";
-    resBox.style.display = "block";
+    resBox.innerText = "Erro na API.";
+    resBox.classList.remove('hidden');
   }
 }
 
 function renderizarCarteira(dados) {
   const container = document.getElementById('wallet-container');
   const nomeTratado = formatarNome(dados.nome);
-  const fotoHTML = dados.fotoUrl ? `<img src="${dados.fotoUrl}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem<br>Foto</div>`;
+  const fotoHTML = dados.fotoUrl ? `<img src="${dados.fotoUrl}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem Foto</div>`;
   
   let html = `
   <div class="wallet-card">
-    <div class="wallet-header"><h4 class="wallet-header-title">IDENTIDADE UNIVERSITÁRIA</h4></div>
+    <div class="wallet-header">IDENTIDADE UNIVERSITÁRIA</div>
     <div class="wallet-body">
       ${fotoHTML}
       <div class="wallet-info">
-        <div class="w-group"><span class="w-label">Estudante</span><span class="w-value highlight">${nomeTratado}</span></div>
-        <div class="w-group"><span class="w-label">CPF</span><span class="w-value">${dados.cpfMascarado}</span></div>
-        <div class="w-group"><span class="w-label">ID da Carteira</span><span class="w-value" style="font-family:monospace; font-size:13px; color:var(--text-sub);">${dados.idCarteira}</span></div>
+        <div class="w-group"><span>Estudante</span><span class="highlight">${nomeTratado}</span></div>
+        <div class="w-group"><span>CPF</span><span>${dados.cpfMascarado}</span></div>
+        <div class="w-group"><span>ID da Carteira</span><span style="font-family:monospace; font-size:12px;">${dados.idCarteira}</span></div>
       </div>
     </div>
     <div class="wallet-footer">
       <div class="w-row">
-        <div class="w-group"><span class="w-label">Instituição</span><span class="w-value" style="font-weight:700;">${dados.instituicao}</span></div>
-        <div class="w-group" style="text-align:right;"><span class="w-label">Turno</span><span class="w-value">${dados.turno}</span></div>
+        <div class="w-group"><span>Instituição</span><span style="font-weight:700;">${dados.instituicao}</span></div>
+        <div class="w-group" style="text-align:right;"><span>Turno</span><span>${dados.turno}</span></div>
       </div>
-      <div class="w-row"><div class="w-group"><span class="w-label">Rota de Transporte</span><span class="w-value">${dados.rota}</span></div></div>
-      <div class="w-row" style="margin-bottom:0; justify-content:center; padding-top:10px; border-top:1px dashed var(--border);">
-         <span style="font-size:11px; color:var(--text-sub);">Válido em ${dados.cidade} até <strong>${dados.validade}</strong></span>
+      <div class="w-row"><div class="w-group"><span>Rota de Transporte</span><span>${dados.rota}</span></div></div>
+      <div class="text-center" style="margin-top:10px; border-top:1px dashed var(--border); padding-top:10px;">
+         <span style="font-size:10px; color:var(--text-sub);">Válido em ${dados.cidade} até <strong>${dados.validade}</strong></span>
       </div>
-      <div class="anti-print-bar" id="wallet-clock">A iniciar relógio...</div>
+      <div class="anti-print-bar" id="wallet-clock">Relógio Seguro...</div>
     </div>
   </div>
-  <div class="action-bar" style="display:flex; gap:10px; margin-top:20px;">
-      <button id="btn-dw-carteira" class="btn btn-primary" style="flex:1;" onclick="baixarDocumento('CARTEIRA')"><span style="font-size:16px;">🪪</span> Baixar Carteira</button>
-      <button id="btn-dw-declaracao" class="btn btn-secondary" style="flex:1;" onclick="baixarDocumento('DECLARACAO')"><span style="font-size:16px;">📄</span> Declaração</button>
+  
+  <div style="display:flex; gap:10px; margin-top:20px;">
+      <button id="btn-dw-carteira" class="btn-solid" style="flex:1; margin:0;" onclick="baixarDocumento('CARTEIRA')">🪪 Baixar ID</button>
+      <button id="btn-dw-declaracao" class="btn-solid dark-bg" style="flex:1; margin:0;" onclick="baixarDocumento('DECLARACAO')">📄 Declaração</button>
   </div>`;
   
   container.innerHTML = html;
@@ -537,7 +515,7 @@ async function baixarDocumento(tipo, tentativa = 1) {
     }
   } catch(err) {
     if (tentativa < MAX_TENTATIVAS) {
-      showToast(`Servidor ocupado. A tentar novamente...`, "info");
+      showToast(`Servidor ocupado. A tentar...`, "info");
       setTimeout(() => { baixarDocumento(tipo, tentativa + 1); }, tentativa * 2000);
     } else {
       btn.innerHTML = textoOriginal;
@@ -556,14 +534,14 @@ function sairCarteira() {
 }
 
 // ========================================================================
-// 6. MODO FISCAL - OMNI-SCANNER E LAZY LOADING (V9 HEADLESS)
+// 6. MODO FISCAL - OMNI-SCANNER E LAZY LOADING (V10 HEADLESS)
 // ========================================================================
 let html5QrcodeScanner = null;
 
 function iniciarScanner() {
-  document.getElementById('leitor-qr-container').style.display = 'block';
-  document.getElementById('btn-scanner').style.display = 'none';
-  document.getElementById('btn-scanner-nativo').style.display = 'none'; 
+  document.getElementById('leitor-qr-container').classList.remove('hidden');
+  document.getElementById('btn-scanner').classList.add('hidden');
+  document.getElementById('btn-scanner-nativo').classList.add('hidden'); 
   
   if (html5QrcodeScanner) html5QrcodeScanner.clear();
 
@@ -576,9 +554,9 @@ function fecharScanner() {
     html5QrcodeScanner.clear();
     html5QrcodeScanner = null;
   }
-  document.getElementById('leitor-qr-container').style.display = 'none';
-  document.getElementById('btn-scanner').style.display = 'flex';
-  document.getElementById('btn-scanner-nativo').style.display = 'flex'; 
+  document.getElementById('leitor-qr-container').classList.add('hidden');
+  document.getElementById('btn-scanner').classList.remove('hidden');
+  document.getElementById('btn-scanner-nativo').classList.remove('hidden'); 
 }
 
 function aoLerQRCode(textoLido) {
@@ -595,8 +573,8 @@ function lerQRCodePorFoto(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  showToast("A processar imagem do QR Code...", "info");
-  document.getElementById('btn-scanner-nativo').innerHTML = `⏳ A LER CÓDIGO...`;
+  showToast("A processar imagem...", "info");
+  document.getElementById('btn-scanner-nativo').innerHTML = `⏳ A LER...`;
 
   const html5QrCode = new Html5Qrcode("leitor-qr"); 
 
@@ -607,12 +585,12 @@ function lerQRCodePorFoto(event) {
       if (matchId) idLimpo = matchId[1];
       
       document.getElementById('id-fiscal').value = idLimpo;
-      document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> CÂMARA NATIVA`;
+      document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> USAR CÂMARA NATIVA`;
       validarFiscal();
     })
     .catch(err => {
-      showToast("QR Code não detetado. Tente focar melhor a imagem.", "error");
-      document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> CÂMARA NATIVA`;
+      showToast("QR Code não detetado.", "error");
+      document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> USAR CÂMARA NATIVA`;
     });
     
   event.target.value = '';
@@ -631,7 +609,7 @@ async function validarFiscal() {
   const resBox = document.getElementById('res-fiscal');
   
   btn.innerText = "A VERIFICAR...";
-  resBox.style.display = "none";
+  resBox.innerHTML = "";
 
   let alunoBase = null;
   const cacheListRaw = localStorage.getItem(CACHE_LISTA_KEY);
@@ -641,70 +619,60 @@ async function validarFiscal() {
   }
 
   if (!alunoBase) {
-     btn.innerText = "VERIFICAR";
-     resBox.innerHTML = `<div class="status-badge" style="background:#4A0000; color:#FFB4B4; margin-top:0;">❌ ID INVÁLIDO OU NÃO ENCONTRADO</div>`;
-     resBox.style.display = "block";
+     btn.innerText = "VERIFICAR ESTUDANTE";
+     resBox.innerHTML = `<div class="error-box">❌ ID INVÁLIDO OU NÃO ENCONTRADO</div>`;
      return;
   }
 
   resBox.innerHTML = gerarHtmlFiscal(alunoBase.nome, "A carregar...", "...", "...", `<div class="wallet-photo skeleton-box"></div>`, alunoBase.status);
-  resBox.style.display = "block";
 
   try {
     const res = await apiCall("consultarEstudantePorId", { idEstudante: idCarteira });
-    btn.innerText = "VERIFICAR";
+    btn.innerText = "VERIFICAR ESTUDANTE";
     if (!res.encontrado) return; 
     
     resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, `<div class="wallet-photo skeleton-box"></div>`, res.statusAtividade);
     
-    // Paralelo
     apiCall("getFotoEstudanteBase64", { idEstudante: idCarteira }).then(resFoto => {
-       const imgHtml = resFoto.fotoBase64 ? `<img src="${resFoto.fotoBase64}" class="wallet-photo" style="border-color:#333;">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#666; background:#222; border-color:#333;">Sem Foto</div>`;
+       const imgHtml = resFoto.fotoBase64 ? `<img src="${resFoto.fotoBase64}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#666; background:#222; border-color:#333;">Sem Foto</div>`;
        resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, imgHtml, res.statusAtividade);
        if (res.statusAtividade === "ATIVO") iniciarRelogioAntiPrint('fiscal-clock');
-    }).catch(err => console.log("Erro ao carregar a foto do estudante da API."));
+    }).catch(err => console.log("Erro foto da API."));
 
   } catch(err) {
-    btn.innerText = "VERIFICAR";
-    showToast("Erro na API ao sincronizar detalhes.", "error");
+    btn.innerText = "VERIFICAR ESTUDANTE";
+    showToast("Erro na API.", "error");
   }
 }
 
 function gerarHtmlFiscal(nome, inst, rota, turno, fotoComponente, statusReal) {
     let statusBadge = "";
     let relogioAntiPrint = "";
-    let corFundoHeader = "#333";
     const nomeTratado = formatarNome(nome);
     
     if (statusReal === "ATIVO") {
-      corFundoHeader = "var(--success)";
-      statusBadge = `<div class="status-badge" style="background:#0D3B1A; color:#A4F4B8; margin-bottom: 10px;">✅ LIBERADO</div>`;
+      statusBadge = `<div style="background:var(--success); color:white; padding:10px; border-radius:6px; text-align:center; font-weight:700; letter-spacing:1px; margin-bottom:10px;">✅ LIBERADO</div>`;
       relogioAntiPrint = `<div class="anti-print-bar" id="fiscal-clock" style="margin-top:0;"></div>`;
     } else if (statusReal === "CANCELADO") {
-      corFundoHeader = "var(--danger)";
-      statusBadge = `<div class="status-badge" style="background:#4A0000; color:#FFB4B4;">❌ CANCELADO</div>`;
+      statusBadge = `<div style="background:var(--danger); color:white; padding:10px; border-radius:6px; text-align:center; font-weight:700; letter-spacing:1px;">❌ CANCELADO</div>`;
     } else if (statusReal === "SUSPENSO") {
-      corFundoHeader = "var(--accent)";
-      statusBadge = `<div class="status-badge" style="background:#4A1D00; color:#FFD1A4;">⚠️ SUSPENSO</div>`;
+      statusBadge = `<div style="background:var(--accent); color:white; padding:10px; border-radius:6px; text-align:center; font-weight:700; letter-spacing:1px;">⚠️ SUSPENSO</div>`;
     } else {
-      corFundoHeader = "var(--warning)";
-      statusBadge = `<div class="status-badge" style="background:#4A3F00; color:#FFF0A4;">⏳ PENDENTE</div>`;
+      statusBadge = `<div style="background:#FBBF24; color:#333; padding:10px; border-radius:6px; text-align:center; font-weight:700; letter-spacing:1px;">⏳ PENDENTE</div>`;
     }
 
     return `
-    <div class="wallet-card" style="background: #1E1E1E; border-color: #333;">
-      <div class="wallet-header" style="background: ${corFundoHeader}; padding: 10px;">
-        <h4 class="wallet-header-title" style="color: white; font-size: 11px;">MODO FISCALIZAÇÃO</h4>
-      </div>
-      <div class="wallet-body" style="padding: 15px; text-align: left;">
+    <div class="wallet-card dark">
+      <div class="wallet-header">FISCALIZAÇÃO DE IDENTIDADE</div>
+      <div class="wallet-body">
         ${fotoComponente}
         <div class="wallet-info">
-          <div class="w-group"><span class="w-label" style="color:#aaa;">Estudante</span><span class="w-value highlight" style="color:white; font-size:15px;">${nomeTratado}</span></div>
-          <div class="w-group"><span class="w-label" style="color:#aaa;">Instituição</span><span class="w-value" style="color:#ddd;">${inst}</span></div>
-          <div class="w-group"><span class="w-label" style="color:#aaa;">Rota / Turno</span><span class="w-value" style="color:var(--accent); font-weight:700;">${rota} • ${turno}</span></div>
+          <div class="w-group"><span>Estudante</span><span class="highlight">${nomeTratado}</span></div>
+          <div class="w-group"><span>Instituição</span><span>${inst}</span></div>
+          <div class="w-group"><span>Rota / Turno</span><span style="color:var(--accent); font-weight:700;">${rota} • ${turno}</span></div>
         </div>
       </div>
-      <div class="wallet-footer" style="background: #121212; border-top-color: #333; padding: 15px;">${statusBadge}${relogioAntiPrint}</div>
+      <div class="wallet-footer">${statusBadge}${relogioAntiPrint}</div>
     </div>`;
 }
 
@@ -716,21 +684,20 @@ let myCharts = {};
 function mudarAbaDashboard(aba) {
   ['logistica', 'noturno', 'inclusao'].forEach(t => {
     document.getElementById('tab-' + t).classList.remove('active');
-    document.getElementById('dash-area-' + t).style.display = 'none';
+    document.getElementById('dash-area-' + t).classList.add('hidden');
   });
   document.getElementById('tab-' + aba).classList.add('active');
-  document.getElementById('dash-area-' + aba).style.display = 'block';
+  document.getElementById('dash-area-' + aba).classList.remove('hidden');
 }
 
 async function carregarDashboard() {
-  showToast("A extrair dados em tempo real...", "info");
+  showToast("A extrair dados...", "info");
   
   try {
     const res = await apiCall("getDashboardStats");
     
-    // Se o servidor devolver sucesso mas tiver um erro lógico dentro (ex: Planilha falhou)
     if (!res.sucesso) {
-        showToast(res.erro || "O servidor não conseguiu compilar o Dashboard.", "error");
+        showToast(res.erro || "Falha ao compilar Dashboard.", "error");
         return;
     }
 
@@ -750,7 +717,7 @@ async function carregarDashboard() {
     desenharGraficos(stats.graficos);
     switchView('view-dashboard');
   } catch(err) {
-    showToast("Falha da API ao carregar métricas.", "error");
+    showToast("Falha de conexão.", "error");
   }
 }
 
@@ -794,7 +761,6 @@ function desenharGraficos(graficos) {
   renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
 
-// O bloco de utilitários foi movido para o js_global.js
 window.onload = function() {
-  bootSystem(); // Arranca a V9.1 via Fetch!
+  bootSystem(); 
 };
