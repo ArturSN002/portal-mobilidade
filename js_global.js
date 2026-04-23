@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * UTILITÁRIOS GERAIS DO SISTEMA (V9)
+ * UTILITÁRIOS GERAIS DO SISTEMA (V9.1)
  * ============================================================================
  */
 
@@ -39,9 +39,12 @@ function showToast(msg, type = 'info') {
  */
 function formatarNome(nome) {
   if (!nome) return "";
-  const preposicoes = ["da", "de", "do", "das", "dos", "e"];
-  return nome.toLowerCase().split(' ').map(palavra => {
-    if (preposicoes.includes(palavra)) return palavra;
+  const excepcoes = ["da", "de", "do", "das", "dos", "e"];
+  
+  return nome.toLowerCase().split(' ').map((palavra, i) => {
+    // Se for uma exceção E não for a primeira palavra, mantém minúscula
+    if (excepcoes.includes(palavra) && i !== 0) return palavra;
+    // Caso contrário, capitaliza a primeira letra
     return palavra.charAt(0).toUpperCase() + palavra.slice(1);
   }).join(' ');
 }
