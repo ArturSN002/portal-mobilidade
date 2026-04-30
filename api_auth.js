@@ -3,7 +3,66 @@
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzYoS9nAqRCCnBSYum9-8rgROWEziq25nBO2ynsPLMWy0xXaOr6oeUr7CmImRPwnt3n/exec";
+let GAS_URL = "";
+
+const CLIENT_DIRECTORY = {
+  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbzYoS9nAqRCCnBSYum9-8rgROWEziq25nBO2ynsPLMWy0xXaOr6oeUr7CmImRPwnt3n/exec",
+  "Município Demonstração": "URL_B"
+};
+
+async function checkClientGateway() {
+  const savedUrl = localStorage.getItem("MAESTRO_CLIENT_URL");
+  if (savedUrl) {
+    GAS_URL = savedUrl;
+    if (typeof bootSystem === "function") bootSystem();
+  } else {
+    const splash = document.getElementById("splash-screen");
+    if (splash) splash.classList.add("hidden");
+    
+    document.querySelectorAll(".view-section").forEach(sec => {
+      sec.classList.remove("active-view");
+      sec.style.display = "none";
+    });
+    
+    const gateway = document.getElementById("view-gateway");
+    if (gateway) {
+      gateway.style.display = "block";
+      setTimeout(() => gateway.classList.add("active-view"), 10);
+    }
+    
+    const select = document.getElementById("client-select");
+    if (select) {
+      select.innerHTML = "";
+      for (const client in CLIENT_DIRECTORY) {
+        const option = document.createElement("option");
+        option.value = CLIENT_DIRECTORY[client];
+        option.textContent = client;
+        select.appendChild(option);
+      }
+    }
+  }
+}
+
+function salvarCliente() {
+  const select = document.getElementById("client-select");
+  if (!select) return;
+  const selectedUrl = select.value;
+  if (!selectedUrl) return;
+
+  localStorage.setItem("MAESTRO_CLIENT_URL", selectedUrl);
+  GAS_URL = selectedUrl;
+
+  const gateway = document.getElementById("view-gateway");
+  if (gateway) {
+    gateway.classList.remove("active-view");
+    gateway.style.display = "none";
+  }
+  
+  const splash = document.getElementById("splash-screen");
+  if (splash) splash.classList.remove("hidden");
+  
+  if (typeof bootSystem === "function") bootSystem();
+}
 
 async function apiCall(action, payload = {}) {
   let tokenToUse = localStorage.getItem("MAESTRO_OP_TOKEN");
