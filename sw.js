@@ -24,13 +24,16 @@ try {
   console.log("Firebase SW já inicializado ou erro na configuração.");
 }
 
-// V9.2.6: NOME ATUALIZADO PARA FORÇAR DOWNLOAD DA NOVA INTERFACE WEB
-const CACHE_NAME = 'maestro-cache-v9.2.6'; 
+// V9.2.8: NOME ATUALIZADO PARA FORÇAR DOWNLOAD DA NOVA INTERFACE WEB
+const CACHE_NAME = 'maestro-cache-v9.2.8'; 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
-  './app.js',
+  './api_auth.js',
+  './main_core.js',
+  './operacao.js',
+  './estudante.js',
   './js_global.js',
   './icone.png',
   './manifest.json'
