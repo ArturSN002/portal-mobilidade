@@ -175,7 +175,7 @@ async function gravarDecisaoAuditoria() {
     }
 }
 
-function acionarIAParaEmail() {
+async function acionarIAParaEmail() {
     const notasTexto = document.getElementById('rx-notas').value.trim();
     if (!notasTexto) {
         showToast("Escreva o motivo da retenção nas notas primeiro.", "error");
@@ -187,33 +187,33 @@ function acionarIAParaEmail() {
     btnIa.innerText = "A Redigir... ⏳";
     btnIa.disabled = true;
     
-    apiCall("enviarParecerOperador", { linhaEstudante: linhaBase, textoRevisado: notasTexto })
-        .then(res => {
-            if (res.sucesso) {
-                showToast("E-mail disparado para o estudante!", "success");
-            } else {
-                showToast(res.erro, "error");
-            }
-            btnIa.innerText = "✨ Gerar E-mail IA";
-            btnIa.disabled = false;
-        }).catch(e => {
-            showToast("Falha ao comunicar com motor de E-mails.", "error");
-            btnIa.innerText = "✨ Gerar E-mail IA";
-            btnIa.disabled = false;
-        });
+    try {
+        const res = await apiCall("enviarParecerOperador", { linhaEstudante: linhaBase, textoRevisado: notasTexto });
+        if (res.sucesso) {
+            showToast("E-mail disparado para o estudante!", "success");
+        } else {
+            showToast(res.erro, "error");
+        }
+    } catch(e) {
+        showToast("Falha ao comunicar com motor de E-mails.", "error");
+    } finally {
+        btnIa.innerText = "✨ Gerar E-mail IA";
+        btnIa.disabled = false;
+    }
 }
 
 // ========================================================================
 // 5. MÓDULO DO MODERADOR (SALA DAS MÁQUINAS V9.2.8)
 // ========================================================================
 
-function abrirPainelModerador() {
+async function abrirPainelModerador() {
     switchView('view-moderador');
     const loader = document.getElementById('loader-sincronizacao-motores');
     
     if (loader) loader.classList.remove('hidden');
     
-    apiCall("getStatusMotores").then(res => {
+    try {
+        const res = await apiCall("getStatusMotores");
         if (res.sucesso && res.estados) {
             const toggleETL = document.getElementById('toggle-motor-etl');
             const toggleOCR = document.getElementById('toggle-motor-ocr');
@@ -225,15 +225,15 @@ function abrirPainelModerador() {
             if (toggleDOCS) toggleDOCS.checked = res.estados.DOCS;
             if (toggleEMAIL) toggleEMAIL.checked = res.estados.EMAIL;
         }
-        if (loader) loader.classList.add('hidden');
-    }).catch(err => {
+    } catch (err) {
         showToast("Não foi possível ler o estado dos motores.", "error");
+    } finally {
         if (loader) loader.classList.add('hidden');
-    });
+    }
 }
 
 async function forcarMotor(motorId) {
-    showToast(`A enviar sinal para o motor ${motorId}...`, "info");
+    showToast(`A enviar sinal para o motor ${motorId}...`, "loading");
     try {
         const res = await apiCall("forcarExecucaoMotor", { motorId: motorId });
         if (res.sucesso) showToast(res.msg, "success");
@@ -244,7 +244,7 @@ async function forcarMotor(motorId) {
 }
 
 async function alterarMotor(motorId, isLigado) {
-    showToast(`A alterar configurações de ${motorId}...`, "info");
+    showToast(`A alterar configurações de ${motorId}...`, "loading");
     try {
         const res = await apiCall("alterarEstadoMotor", { motorId: motorId, ligado: isLigado });
         if (res.sucesso) showToast(res.msg, "success");
@@ -265,7 +265,9 @@ function iniciarScanner() {
   document.getElementById('btn-scanner').classList.add('hidden');
   document.getElementById('btn-scanner-nativo').classList.add('hidden'); 
   
-  if (html5QrcodeScanner) html5QrcodeScanner.clear();
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear().catch(() => {});
+  }
 
   html5QrcodeScanner = new Html5QrcodeScanner("leitor-qr", { fps: 10, qrbox: {width: 250, height: 250} }, false);
   html5QrcodeScanner.render(aoLerQRCode, (e) => {});
@@ -273,7 +275,7 @@ function iniciarScanner() {
 
 function fecharScanner() {
   if (html5QrcodeScanner) {
-    html5QrcodeScanner.clear();
+    html5QrcodeScanner.clear().catch(() => {});
     html5QrcodeScanner = null;
   }
   document.getElementById('leitor-qr-container').classList.add('hidden');
@@ -315,24 +317,23 @@ function aoLerQRCode(textoLido) {
   validarFiscal();
 }
 
-function lerQRCodePorFoto(event) {
+async function lerQRCodePorFoto(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  showToast("A processar imagem...", "info");
+  showToast("A processar imagem...", "loading");
   document.getElementById('btn-scanner-nativo').innerHTML = `⏳ A LER...`;
 
   const html5QrCode = new Html5Qrcode("leitor-qr"); 
 
-  html5QrCode.scanFile(file, true)
-    .then(textoLido => {
+  try {
+      const textoLido = await html5QrCode.scanFile(file, true);
       document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> USAR CÂMARA NATIVA`;
-      aoLerQRCode(textoLido); 
-    })
-    .catch(err => {
+      aoLerQRCode(textoLido);
+  } catch (err) {
       showToast("QR Code não detetado.", "error");
       document.getElementById('btn-scanner-nativo').innerHTML = `<span style="font-size: 20px;">📱</span> USAR CÂMARA NATIVA`;
-    });
+  }
     
   event.target.value = '';
 }
@@ -350,6 +351,7 @@ async function validarFiscal() {
   const resBox = document.getElementById('res-fiscal');
   
   btn.innerText = "A VERIFICAR...";
+  btn.disabled = true;
   resBox.innerHTML = "";
 
   let alunoBase = null;
@@ -367,24 +369,27 @@ async function validarFiscal() {
 
   try {
     const res = await apiCall("consultarEstudantePorId", { idEstudante: idCarteira });
-    btn.innerText = "VERIFICAR ESTUDANTE";
     
     if (!res.encontrado) {
        resBox.innerHTML = `<div class="error-box">❌ ID INVÁLIDO OU NÃO ENCONTRADO</div>`;
-       return; 
+    } else {
+        resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, `<div class="wallet-photo skeleton-box"></div>`, res.statusAtividade, res.obsCompleta);
+        
+        try {
+            const resFoto = await apiCall("getFotoEstudanteBase64", { idEstudante: idCarteira });
+            const imgHtml = resFoto.fotoBase64 ? `<img src="${resFoto.fotoBase64}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#666; background:#222; border-color:#333;">Sem Foto</div>`;
+            resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, imgHtml, res.statusAtividade, res.obsCompleta);
+            if (res.statusAtividade === "ATIVO") iniciarRelogioAntiPrint('fiscal-clock');
+        } catch (errFoto) {
+            // Silencioso, falha da foto não impede a validação
+        }
     }
-    
-    resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, `<div class="wallet-photo skeleton-box"></div>`, res.statusAtividade, res.obsCompleta);
-    
-    apiCall("getFotoEstudanteBase64", { idEstudante: idCarteira }).then(resFoto => {
-       const imgHtml = resFoto.fotoBase64 ? `<img src="${resFoto.fotoBase64}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#666; background:#222; border-color:#333;">Sem Foto</div>`;
-       resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, imgHtml, res.statusAtividade, res.obsCompleta);
-       if (res.statusAtividade === "ATIVO") iniciarRelogioAntiPrint('fiscal-clock');
-    }).catch(err => console.log("Erro foto da API."));
 
   } catch(err) {
-    btn.innerText = "VERIFICAR ESTUDANTE";
     showToast("Erro de conexão com o servidor.", "error");
+  } finally {
+    btn.innerText = "VERIFICAR ESTUDANTE";
+    btn.disabled = false;
   }
 }
 
@@ -480,13 +485,14 @@ async function dispararEncerramentoRota() {
             fecharModalEncerrarRota();
         } else {
             showToast(res.erro || "Falha ao encerrar a rota.", "error");
-            btn.innerHTML = 'TENTAR NOVAMENTE';
-            btn.disabled = false;
         }
     } catch(e) {
         showToast("Erro de ligação com a base de dados.", "error");
-        btn.innerHTML = 'TENTAR NOVAMENTE';
-        btn.disabled = false;
+    } finally {
+        if (!document.getElementById('modal-encerrar-rota').classList.contains('hidden')) {
+            btn.innerHTML = 'TENTAR NOVAMENTE';
+            btn.disabled = false;
+        }
     }
 }
 
@@ -661,7 +667,7 @@ async function carregarFiltrosParaPush() {
             selectInst.innerHTML = htmlInst;
         }
     } catch(e) {
-        console.warn("Filtros falharam ao carregar.");
+        // Silencioso
     }
 }
 
@@ -815,7 +821,7 @@ async function abrirMuralDaSemana() {
     }
 }
 
-function votarNoMural(idMensagem, tipoVoto) {
+async function votarNoMural(idMensagem, tipoVoto) {
     if (!currentWalletId || !localStorage.getItem("MAESTRO_EST_TOKEN")) {
         showToast("É necessário aceder ao Cofre Digital para votar.", "warning");
         return;
@@ -827,7 +833,8 @@ function votarNoMural(idMensagem, tipoVoto) {
     if (btnUp) { btnUp.style.pointerEvents = 'none'; btnUp.style.opacity = '0.5'; }
     if (btnDown) { btnDown.style.pointerEvents = 'none'; btnDown.style.opacity = '0.5'; }
     
-    apiCall("votarMensagemMural", { idEstudante: currentWalletId, idMensagem: idMensagem, tipoVoto: tipoVoto }).then(res => {
+    try {
+        const res = await apiCall("votarMensagemMural", { idEstudante: currentWalletId, idMensagem: idMensagem, tipoVoto: tipoVoto });
         if (res.sucesso) {
             setTimeout(abrirMuralDaSemana, 1000);
         } else {
@@ -835,10 +842,10 @@ function votarNoMural(idMensagem, tipoVoto) {
             if (btnUp) { btnUp.style.pointerEvents = 'auto'; btnUp.style.opacity = '1'; }
             if (btnDown) { btnDown.style.pointerEvents = 'auto'; btnDown.style.opacity = '1'; }
         }
-    }).catch(e => {
+    } catch (e) {
         if (btnUp) { btnUp.style.pointerEvents = 'auto'; btnUp.style.opacity = '1'; }
         if (btnDown) { btnDown.style.pointerEvents = 'auto'; btnDown.style.opacity = '1'; }
-    });
+    }
 }
 
 // ========================================================================
@@ -877,7 +884,9 @@ async function carregarDashboard() {
             gerarChipsDinamicos(); 
             if (document.getElementById('tab-analise').classList.contains('active')) renderizarDashboardBI();
         }
-    }).catch(e => console.log("Atualização falhou."));
+    }).catch(e => {
+        // Silencioso
+    });
   } else {
     showToast("A extrair dados para o Dashboard...", "info");
     try {
@@ -1021,7 +1030,9 @@ function renderizarDashboardBI() {
 function renderChart(canvasId, type, labels, data, colors, options = {}) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
-  if (myCharts[canvasId]) myCharts[canvasId].destroy();
+  if (myCharts[canvasId]) {
+      myCharts[canvasId].destroy();
+  }
   
   Chart.defaults.color = '#aaaaaa';
   Chart.defaults.borderColor = '#333333';
@@ -1054,4 +1065,3 @@ function desenharGraficos(graficos) {
   renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
   renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
-
