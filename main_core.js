@@ -227,5 +227,5 @@ async function registrarTokenPush(token) {
 }
 
 window.onload = function() {
-  bootSystem(); 
+  checkClientGateway(); 
 };
