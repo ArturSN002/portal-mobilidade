@@ -1,6 +1,6 @@
 {
-  "name": "Maestro SMEB",
-  "short_name": "Maestro",
+  "name": "Portal Maestro",
+  "short_name": "Portal Maestro",
   "description": "Portal Oficial de Mobilidade",
   "start_url": "./",
   "display": "standalone",
