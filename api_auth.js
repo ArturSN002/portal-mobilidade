@@ -3,7 +3,7 @@
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
-let GAS_URL = "";
+let GAS_URL = "https://script.google.com/macros/s/AKfycbx_9ST-odqjNuLp52fgM4TI3J4ZAf_QoSHVSzjqhRIvtmNjEsMXXma8MUXsmCQC_SSO/exec";
 
 const CLIENT_DIRECTORY = {
   "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbwPW-6D2tYZ5QL6uKLuBFEsHQBvxKgDK5mqtjpDSUMkDsswQLBeL8dEVvmv_06TA7l28A/exec",
