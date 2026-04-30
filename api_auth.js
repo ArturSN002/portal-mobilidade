@@ -6,8 +6,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "MaestroCore (Cliente)": "https://script.google.com/macros/s/AKfycbwYus7xI_WFb8r2YrAkKwYx4t8t7fxCKRjEsBf7eJOkLnDsYPMnXDEoVdhQiEBYN7sKlA/exec",
-  "Biblioteca Central (Dev)": "https://script.google.com/macros/s/AKfycbwdEB1miMfdX6i_Z1Wc2Z1xn6GGUaM-wCTU-taksl7XVZdGITY-hClzaUUCneo8VtbW/exec"
+  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbwYus7xI_WFb8r2YrAkKwYx4t8t7fxCKRjEsBf7eJOkLnDsYPMnXDEoVdhQiEBYN7sKlA/exec"
 };
 
 async function checkClientGateway() {
