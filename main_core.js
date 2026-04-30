@@ -56,6 +56,7 @@ async function bootSystem() {
   }
   
   ocultarSplashScreen();
+  switchView('view-hub');
   carregarAvisosSMEB(); 
   verificarSessaoAtiva();
   restaurarSessaoEstudante();
