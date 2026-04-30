@@ -3,10 +3,10 @@
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
-let GAS_URL = "https://script.google.com/macros/s/AKfycbx_9ST-odqjNuLp52fgM4TI3J4ZAf_QoSHVSzjqhRIvtmNjEsMXXma8MUXsmCQC_SSO/exec";
+let GAS_URL = "https://script.google.com/macros/s/AKfycbwdEB1miMfdX6i_Z1Wc2Z1xn6GGUaM-wCTU-taksl7XVZdGITY-hClzaUUCneo8VtbW/exec";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbwPW-6D2tYZ5QL6uKLuBFEsHQBvxKgDK5mqtjpDSUMkDsswQLBeL8dEVvmv_06TA7l28A/exec",
+  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbzzmZSTDFyFuP2iTnYwPpq4dZlFX3e1PGUFZTmmeZ8mjO6l55UIRwtQQc21OJ8EAjAtcQ/exec",
   "Município Demonstração": "URL_B"
 };
 
