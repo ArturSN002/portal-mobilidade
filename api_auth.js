@@ -6,7 +6,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbzYoS9nAqRCCnBSYum9-8rgROWEziq25nBO2ynsPLMWy0xXaOr6oeUr7CmImRPwnt3n/exec",
+  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbx_9ST-odqjNuLp52fgM4TI3J4ZAf_QoSHVSzjqhRIvtmNjEsMXXma8MUXsmCQC_SSO/exec",
   "Município Demonstração": "URL_B"
 };
 
