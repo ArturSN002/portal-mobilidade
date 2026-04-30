@@ -15,8 +15,6 @@ async function consultarEstudante() {
 
   try {
     const res = await apiCall("consultarStatusCPF", { cpf: alvo });
-    btn.innerText = "CONSULTAR STATUS";
-    btn.disabled = false;
     
     if (!res.encontrado) {
       mostrarErroEstudante("Não Encontrado", "Verifique o CPF ou submissão.");
@@ -29,9 +27,10 @@ async function consultarEstudante() {
     
     renderizarTimelineEstudante(res, resBox);
   } catch(err) {
+    mostrarErroEstudante("Erro na API", "Tente novamente mais tarde.");
+  } finally {
     btn.innerText = "CONSULTAR STATUS";
     btn.disabled = false;
-    mostrarErroEstudante("Erro na API", "Tente novamente mais tarde.");
   }
 }
 
@@ -47,7 +46,7 @@ async function solicitarConsentimentoPushAnonimo(cpf) {
       }
     }
   } catch (error) {
-    console.log("Push anónimo falhou ou foi bloqueado.", error);
+    console.warn("Push anónimo falhou ou foi bloqueado.", error);
   }
 }
 
@@ -282,13 +281,14 @@ async function enviarArquivosResgate() {
             consultarEstudante(); 
         } else {
             showToast(res.erro || "Falha ao enviar os documentos.", "error");
-            btn.innerHTML = "TENTAR NOVAMENTE";
-            btn.disabled = false;
         }
     } catch(e) {
         showToast("Erro de ligação com a Secretaria.", "error");
-        btn.innerHTML = "TENTAR NOVAMENTE";
-        btn.disabled = false;
+    } finally {
+        if (!document.getElementById('view-resgate').classList.contains('hidden')) {
+            btn.innerHTML = "TENTAR NOVAMENTE";
+            btn.disabled = false;
+        }
     }
 }
 
@@ -316,7 +316,7 @@ function restaurarSessaoEstudante() {
             armarRelogioSessaoEstudante();
             abrirTelaCofreOuEntrarDireto();
         } catch(e) {
-            console.log("Erro ao restaurar sessão de estudante na RAM.");
+            console.warn("Erro ao restaurar sessão de estudante na RAM.");
         }
     }
 }
@@ -356,8 +356,6 @@ async function loginCarteira() {
 
   try {
     const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
-    btn.innerText = "ENTRAR NO COFRE";
-    btn.disabled = false;
 
     if (res.erro) {
       resBox.innerText = res.erro;
@@ -380,9 +378,6 @@ async function loginCarteira() {
       setTimeout(inicializarPushNotifications, 2000); 
     }
   } catch(err) {
-    btn.innerText = "ENTRAR NO COFRE";
-    btn.disabled = false;
-    
     const cachedData = localStorage.getItem("MAESTRO_WALLET_CACHE");
     const cachedCreds = localStorage.getItem("MAESTRO_WALLET_CREDS");
     
@@ -403,6 +398,11 @@ async function loginCarteira() {
     }
     resBox.innerText = "Falha de ligação. Necessita de internet.";
     resBox.classList.remove('hidden');
+  } finally {
+    if (!document.getElementById('view-login').classList.contains('hidden')) {
+      btn.innerText = "ENTRAR NO COFRE";
+      btn.disabled = false;
+    }
   }
 }
 
@@ -777,7 +777,7 @@ async function atualizarRadarDinamico() {
             `;
         }
     } catch(e) {
-        console.warn("Falha silenciosa ao ler radar.");
+        // Silencioso
     }
 }
 
@@ -849,11 +849,13 @@ function enviarCoordenadaSegura(lat, lng) {
         lng: lng 
     }).then(res => {
         if (res && !res.sucesso) {
-            console.log("Servidor rejeitou o GPS (Timeout ou Roubo): " + res.erro);
+            console.warn("Servidor rejeitou o GPS (Timeout ou Roubo): " + res.erro);
             pararTransmissaoGpsE_Radar();
             atualizarRadarDinamico(); 
         }
-    }).catch(e => console.log("Falha silenciosa no ping GPS."));
+    }).catch(e => {
+        // Silencioso
+    });
 }
 
 async function abdicarSerGuia() {
@@ -873,4 +875,3 @@ function pararTransmissaoGpsE_Radar(matarRadarTambem = true) {
     if (matarRadarTambem && idIntervaloRadar) { clearInterval(idIntervaloRadar); idIntervaloRadar = null; }
     if (wakeLockAtivo) { wakeLockAtivo.release().then(() => wakeLockAtivo = null); }
 }
-
