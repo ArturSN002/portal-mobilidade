@@ -222,7 +222,20 @@
       <div id="mural-avisos-header" class="section-title hidden">📌 AVISOS DA SEMANA</div>
       <div id="mural-avisos" class="avisos-container hidden"></div>
 
-      <section id="view-hub" class="view-section active-view">
+      <section id="view-gateway" class="view-section active-view">
+        <div class="welcome-text">Bem-vindo ao Maestro</div>
+        <div class="form-card" style="margin-top: 20px;">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">🏢</span>
+            <h2>Selecione o seu Município</h2>
+            <p>Escolha a sua instituição para carregar o sistema</p>
+          </div>
+          <select id="client-select" class="input-field" style="margin-bottom: 15px;"></select>
+          <button class="btn-solid" onclick="salvarCliente()">Acessar Sistema</button>
+        </div>
+      </section>
+
+      <section id="view-hub" class="view-section">
         <div class="welcome-text">Selecione o seu perfil de acesso</div>
         
         <div id="pwa-install-banner" class="banner-pwa hidden" onclick="instalarPWA()">
