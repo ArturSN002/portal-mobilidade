@@ -11,19 +11,34 @@ const CLIENT_DIRECTORY = {
 
 async function checkClientGateway() {
   const savedUrl = localStorage.getItem("MAESTRO_CLIENT_URL");
+  const splash = document.getElementById("splash-screen");
+  const gateway = document.getElementById("view-gateway");
+
   if (savedUrl) {
+    // 1. User already has a saved client. Force splash screen to stay/be visible.
+    if (splash) {
+      splash.style.display = "flex";
+      splash.style.opacity = "1";
+      splash.classList.remove("hidden");
+    }
+    if (gateway) {
+      gateway.style.display = "none";
+      gateway.classList.remove("active-view");
+    }
     GAS_URL = savedUrl;
     if (typeof bootSystem === "function") bootSystem();
   } else {
-    const splash = document.getElementById("splash-screen");
-    if (splash) splash.classList.add("hidden");
+    // 2. New user. Smoothly hide splash and show gateway selector.
+    if (splash) {
+      splash.style.opacity = "0";
+      setTimeout(() => { splash.style.display = "none"; }, 300);
+    }
     
     document.querySelectorAll(".view-section").forEach(sec => {
       sec.classList.remove("active-view");
       sec.style.display = "none";
     });
     
-    const gateway = document.getElementById("view-gateway");
     if (gateway) {
       gateway.style.display = "block";
       setTimeout(() => gateway.classList.add("active-view"), 10);
