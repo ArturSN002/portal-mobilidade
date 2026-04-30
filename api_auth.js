@@ -6,7 +6,7 @@
 let GAS_URL = "https://script.google.com/macros/s/AKfycbwdEB1miMfdX6i_Z1Wc2Z1xn6GGUaM-wCTU-taksl7XVZdGITY-hClzaUUCneo8VtbW/exec";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbzzmZSTDFyFuP2iTnYwPpq4dZlFX3e1PGUFZTmmeZ8mjO6l55UIRwtQQc21OJ8EAjAtcQ/exec",
+  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbwYus7xI_WFb8r2YrAkKwYx4t8t7fxCKRjEsBf7eJOkLnDsYPMnXDEoVdhQiEBYN7sKlA/exec",
   "Município Demonstração": "URL_B"
 };
 
