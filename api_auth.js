@@ -3,11 +3,11 @@
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
-let GAS_URL = "https://script.google.com/macros/s/AKfycbwdEB1miMfdX6i_Z1Wc2Z1xn6GGUaM-wCTU-taksl7XVZdGITY-hClzaUUCneo8VtbW/exec";
+let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim - SMEB": "https://script.google.com/macros/s/AKfycbwYus7xI_WFb8r2YrAkKwYx4t8t7fxCKRjEsBf7eJOkLnDsYPMnXDEoVdhQiEBYN7sKlA/exec",
-  "Município Demonstração": "URL_B"
+  "MaestroCore (Cliente)": "https://script.google.com/macros/s/AKfycbwYus7xI_WFb8r2YrAkKwYx4t8t7fxCKRjEsBf7eJOkLnDsYPMnXDEoVdhQiEBYN7sKlA/exec",
+  "Biblioteca Central (Dev)": "https://script.google.com/macros/s/AKfycbwdEB1miMfdX6i_Z1Wc2Z1xn6GGUaM-wCTU-taksl7XVZdGITY-hClzaUUCneo8VtbW/exec"
 };
 
 async function checkClientGateway() {
@@ -107,7 +107,12 @@ async function apiCall(action, payload = {}) {
     
     return data;
   } catch (err) {
-    console.error("Falha na chamada da API Maestro:", err);
+    if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+      console.error("❌ ERRO FATAL DE CORS OU CONEXÃO: O Google Apps Script bloqueou a requisição ou falhou internamente. Verifique se o deploy está como 'Executar como: Eu' e 'Acesso: Qualquer pessoa', ou se a Biblioteca MaestroCore está conectada corretamente no script host.");
+      if (typeof showToast === 'function') showToast("Falha de conexão com o servidor. Verifique o console.", "error");
+    } else {
+      console.error("Falha na chamada da API Maestro:", err);
+    }
     throw err;
   }
 }
