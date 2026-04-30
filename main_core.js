@@ -2,27 +2,27 @@
 // 1. MOTOR PWA & ARRANQUE DINÂMICO (BOOTSTRAP)
 // ========================================================================
 
-let deferredPrompt; 
+let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.classList.remove('hidden');
+  // Apenas mostramos o banner após a App ter carregado com sucesso (evita spam no boot).
+  // Movido para dentro do bootSystem() na via de sucesso.
 });
 
 async function bootSystem() {
   try {
     const res = await apiCall("getConfiguracoesPWA");
-    
+
     if (res.sucesso) {
       window.PWA_NOME = res.pwa.NOME;
       window.PWA_ICONE = res.pwa.ICONE;
       window.THEME_COLOR = res.ui.COR_PRIMARIA;
       window.BG_COLOR = res.ui.COR_SECUNDARIA;
-      
+
       document.title = window.PWA_NOME;
-      
+
       document.documentElement.style.setProperty('--primary', res.ui.COR_PRIMARIA);
       document.documentElement.style.setProperty('--secondary', res.ui.COR_SECUNDARIA);
       document.documentElement.style.setProperty('--accent', res.ui.COR_DE_DESTAQUE);
@@ -33,31 +33,38 @@ async function bootSystem() {
         if (logoEl) { logoEl.src = res.ui.LOGO; logoEl.classList.remove('hidden'); }
         if (splashLogo) { splashLogo.src = res.ui.LOGO; splashLogo.classList.remove('hidden'); }
       }
-      
+
       const elNome = document.getElementById('ui-nome-sistema');
       if (elNome) elNome.innerText = window.PWA_NOME.toUpperCase();
-      
+
       const elSetor = document.getElementById('ui-nome-setor');
       if (elSetor) elSetor.innerText = res.ui.NOME_SISTEMA;
 
       const elEnd = document.getElementById('ui-endereco');
       if (elEnd && res.contato.ENDERECO) { elEnd.innerText = res.contato.ENDERECO; elEnd.classList.remove('hidden'); }
-      
+
       const elEmail = document.getElementById('ui-email');
       if (elEmail && res.contato.EMAIL) { elEmail.innerText = res.contato.EMAIL; elEmail.classList.remove('hidden'); }
-      
+
       const elCnpj = document.getElementById('ui-cnpj');
       if (elCnpj && res.contato.CNPJ) { elCnpj.innerText = "CNPJ: " + res.contato.CNPJ; elCnpj.classList.remove('hidden'); }
-      
+
       initPWA();
+      
+      // UX: Apenas sugere a instalação se tudo carregou com sucesso e o banner existe
+      if (deferredPrompt) {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.classList.remove('hidden');
+      }
+      
+      carregarAvisosSMEB();
     }
-  } catch(e) {
-    console.warn("A arrancar em modo offline persistente.");
+  } catch (e) {
+    // Falha silenciosa amigável, permite o uso da PWA no modo offline
   }
-  
+
   ocultarSplashScreen();
   switchView('view-hub');
-  carregarAvisosSMEB(); 
   verificarSessaoAtiva();
   restaurarSessaoEstudante();
 }
@@ -71,12 +78,13 @@ function ocultarSplashScreen() {
 }
 
 function initPWA() {
-  if(!window.PWA_NOME) return; 
+  if (!window.PWA_NOME) return;
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker Registado.'))
-      .catch(err => console.log('Erro no SW:', err));
+      .catch(err => {
+         // Silencia erros de SW em produção
+      });
   }
 }
 
@@ -88,10 +96,11 @@ function instalarPWA() {
   deferredPrompt.prompt();
   deferredPrompt.userChoice.then((choiceResult) => {
     if (choiceResult.outcome === 'accepted') {
-      document.getElementById('pwa-install-banner').classList.add('hidden');
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.add('hidden');
       showToast("App instalada! Procure o ícone no seu ecrã principal.", "success");
     }
-    deferredPrompt = null; 
+    deferredPrompt = null;
   });
 }
 
@@ -101,7 +110,7 @@ function switchView(viewId) {
     v.classList.remove('active-view');
     v.style.display = 'none';
   });
-  
+
   const target = document.getElementById(viewId);
   if (target) {
     target.style.display = 'block';
@@ -110,7 +119,7 @@ function switchView(viewId) {
 
   const muralAvisos = document.getElementById('mural-avisos');
   const muralHeader = document.getElementById('mural-avisos-header');
-  
+
   if (muralAvisos && muralAvisos.innerHTML.trim() !== '') {
     if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu') {
       muralAvisos.classList.remove('hidden');
@@ -127,16 +136,15 @@ async function carregarAvisosSMEB() {
     const res = await apiCall("getAvisosAtivos");
     const container = document.getElementById('mural-avisos');
     const header = document.getElementById('mural-avisos-header');
-    const avisos = res.avisos;
-    
-    if (!avisos || avisos.length === 0) {
-      container.classList.add('hidden');
+
+    if (!res || !res.avisos || res.avisos.length === 0) {
+      if (container) container.classList.add('hidden');
       if (header) header.classList.add('hidden');
       return;
     }
 
     let html = '';
-    avisos.forEach(function(aviso) {
+    res.avisos.forEach(function (aviso) {
       let classeTipo = 'aviso-geral';
       const tipoNormalizado = aviso.tipo.toLowerCase().trim();
       if (tipoNormalizado === 'urgente') classeTipo = 'aviso-urgente';
@@ -151,11 +159,13 @@ async function carregarAvisosSMEB() {
       html += `</div>`;
     });
 
-    container.innerHTML = html;
-    container.classList.remove('hidden'); 
+    if (container) {
+      container.innerHTML = html;
+      container.classList.remove('hidden');
+    }
     if (header) header.classList.remove('hidden');
-  } catch(e) {
-     console.log("Avisos não carregados.");
+  } catch (e) {
+    // Silencia se offline
   }
 }
 
@@ -166,14 +176,16 @@ async function carregarAvisosSMEB() {
 let toastTimeout;
 function showToast(msg, type = 'info') {
   const toast = document.getElementById('toast');
+  if (!toast) return;
   toast.innerText = msg;
   toast.style.background = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : type === 'warning' ? '#f59e0b' : '#333';
   toast.style.display = 'block';
-  
-  if(toastTimeout) clearTimeout(toastTimeout);
+
+  if (toastTimeout) clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 3500);
 }
 
+// Inicialização das Push Notifications foi adaptada para ser chamada após consentimento (no estudante.js)
 async function inicializarPushNotifications() {
   const firebaseConfig = {
     apiKey: "COLE_SUA_API_KEY",
@@ -188,45 +200,45 @@ async function inicializarPushNotifications() {
     if (typeof firebase !== 'undefined' && !firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
-  } catch(e) { console.warn("Firebase Init falhou:", e); return; }
+  } catch (e) { return; }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof firebase === 'undefined') {
-     console.log("Push não suportado ou Firebase não carregado.");
-     return;
+    return;
   }
 
+  // Só permite Push se a app estiver instalada como PWA (standalone)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (!isStandalone) return; 
+  if (!isStandalone) return;
 
   try {
     const messaging = firebase.messaging();
-    const permission = await Notification.requestPermission();
     
-    if (permission === 'granted') {
+    // IMPORTANTE: Só tenta buscar token se o utilizador já tiver concedido permissão prévia
+    if (Notification.permission === 'granted') {
       const token = await messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY });
       if (token) {
-         const tokenSalvoLocal = localStorage.getItem("MAESTRO_FCM_TOKEN");
-         if (token !== tokenSalvoLocal || !localStorage.getItem("FCM_SYNCED_ID")) {
-            await registrarTokenPush(token);
-         }
+        const tokenSalvoLocal = localStorage.getItem("MAESTRO_FCM_TOKEN");
+        if (token !== tokenSalvoLocal || !localStorage.getItem("FCM_SYNCED_ID")) {
+          await registrarTokenPush(token);
+        }
       }
     }
   } catch (error) {
-    console.warn("Permissão de Push negada ou falhou:", error);
+    // Permissão não concedida ou erro
   }
 }
 
 async function registrarTokenPush(token) {
   if (!currentWalletId) return;
   try {
-     const res = await apiCall("registrarPushToken", { idEstudante: currentWalletId, pushToken: token });
-     if (res.sucesso) {
-        localStorage.setItem("MAESTRO_FCM_TOKEN", token);
-        localStorage.setItem("FCM_SYNCED_ID", currentWalletId);
-     }
-  } catch (err) {}
+    const res = await apiCall("registrarPushToken", { idEstudante: currentWalletId, pushToken: token });
+    if (res.sucesso) {
+      localStorage.setItem("MAESTRO_FCM_TOKEN", token);
+      localStorage.setItem("FCM_SYNCED_ID", currentWalletId);
+    }
+  } catch (err) { }
 }
 
-window.onload = function() {
-  checkClientGateway(); 
+window.onload = function () {
+  checkClientGateway();
 };
