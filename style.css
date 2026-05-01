@@ -311,7 +311,8 @@ input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
 
 .anti-print-bar { background: var(--success); color: white; text-align: center; padding: 10px; font-family: monospace; font-size: 13px; font-weight: bold; border-radius: 6px; margin-top: 10px; animation: pulseBg 2s infinite; }
 @keyframes pulseBg { 0% { filter: brightness(1); } 50% { filter: brightness(1.2); } 100% { filter: brightness(1); } }
-.skeleton-box { background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+.skeleton-box { background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 4px; }
+.dark .skeleton-box, .wallet-card.dark .skeleton-box { background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%); background-size: 200% 100%; }
 @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* AVISOS DO MURAL */
