@@ -12,6 +12,19 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 async function bootSystem() {
+  if (!navigator.onLine) {
+    const offlineWallet = localStorage.getItem("MAESTRO_OFFLINE_WALLET");
+    if (offlineWallet) {
+      showToast("Modo Offline Ativado. Funções limitadas.", "warning");
+      ocultarSplashScreen();
+      switchView('view-wallet');
+      if (typeof renderizarCarteiraOffline === "function") {
+        renderizarCarteiraOffline(JSON.parse(offlineWallet));
+      }
+      return;
+    }
+  }
+
   try {
     const res = await apiCall("getConfiguracoesPWA");
 
