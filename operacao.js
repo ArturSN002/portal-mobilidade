@@ -130,7 +130,7 @@ async function abrirDocumentoSeguro(linhaBase, tipoDoc) {
             const fullBase64 = `data:${res.mimeType};base64,${res.base64}`;
             
             if (res.mimeType.includes("image")) {
-                contentBox.innerHTML = `<img src="${fullBase64}" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+                contentBox.innerHTML = `<img src="${fullBase64}" class="zoom-hover" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
             } else if (res.mimeType.includes("pdf")) {
                 contentBox.innerHTML = `<embed src="${fullBase64}" width="100%" height="100%" type="application/pdf">`;
             } else {
@@ -201,6 +201,26 @@ async function acionarIAParaEmail() {
         btnIa.disabled = false;
     }
 }
+
+document.addEventListener('keydown', (e) => {
+    const modalRaioX = document.getElementById('modal-raio-x-aluno');
+    if (!modalRaioX || modalRaioX.classList.contains('hidden')) return;
+
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const key = e.key.toUpperCase();
+    if (key === 'A') {
+        e.preventDefault();
+        document.getElementById('rx-novo-status').value = 'ATIVO';
+        gravarDecisaoAuditoria();
+    } else if (key === 'R') {
+        e.preventDefault();
+        document.getElementById('rx-novo-status').value = 'CANCELADO';
+    } else if (key === 'P') {
+        e.preventDefault();
+        document.getElementById('rx-novo-status').value = 'PENDENTE';
+    }
+});
 
 // ========================================================================
 // 5. MÓDULO DO MODERADOR (SALA DAS MÁQUINAS V9.2.8)
@@ -371,8 +391,11 @@ async function validarFiscal() {
     const res = await apiCall("consultarEstudantePorId", { idEstudante: idCarteira });
     
     if (!res.encontrado) {
+       tocarBeep('error');
        resBox.innerHTML = `<div class="error-box">❌ ID INVÁLIDO OU NÃO ENCONTRADO</div>`;
     } else {
+        if (res.statusAtividade === 'ATIVO') tocarBeep('success');
+        else tocarBeep('error');
         resBox.innerHTML = gerarHtmlFiscal(res.nome, res.instituicao, res.rota, res.turno, `<div class="wallet-photo skeleton-box"></div>`, res.statusAtividade, res.obsCompleta);
         
         try {
@@ -390,6 +413,33 @@ async function validarFiscal() {
   } finally {
     btn.innerText = "VERIFICAR ESTUDANTE";
     btn.disabled = false;
+  }
+}
+
+function tocarBeep(tipo) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    if (tipo === 'success') {
+      osc.frequency.value = 800;
+      osc.type = 'sine';
+    } else {
+      osc.frequency.value = 300;
+      osc.type = 'sawtooth';
+    }
+    
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.warn("Áudio não suportado", e);
   }
 }
 
