@@ -351,3 +351,44 @@ input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
   background: var(--accent); color: white; border-color: var(--accent);
   font-weight: 600; box-shadow: 0 2px 8px rgba(242, 153, 0, 0.3);
 }
+
+/* V9.2.8: UX & Accessibility */
+body.dark-theme {
+  --secondary: #121212;
+  --text-main: #f3f4f6;
+  --form-bg: #1e1e1e;
+  --bg-dark: #121212;
+  --card-dark: #1E1E1E;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.zoom-hover {
+  transition: transform 0.2s ease-in-out;
+}
+.zoom-hover:hover {
+  transform: scale(2);
+  z-index: 100;
+  position: relative;
+}
+
+.qr-fullscreen {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  background: white;
+  filter: brightness(1.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
