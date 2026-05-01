@@ -499,7 +499,7 @@ function renderizarCarteira(dados) {
     </div>
     
     <div class="text-center" style="margin: 15px 0; padding: 15px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);">
-      <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+      <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer;" onclick="toggleFullscreenQR('wallet-qrcode')">
          <div id="wallet-qrcode"></div>
       </div>
       <div style="font-size: 11px; color: var(--primary); margin-top: 8px; font-weight: 700; letter-spacing: 1px;">VÁLIDO PARA EMBARQUE HOJE</div>
@@ -567,7 +567,7 @@ function renderizarCarteiraOffline(dados) {
     </div>
     
     <div class="text-center" style="margin: 15px 0; padding: 15px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);">
-      <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+      <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer;" onclick="toggleFullscreenQR('wallet-qrcode-offline')">
          <div id="wallet-qrcode-offline"></div>
       </div>
       <div style="font-size: 11px; color: #f59e0b; margin-top: 8px; font-weight: 700; letter-spacing: 1px;">ACESSO OFFLINE LIMITADO</div>
@@ -610,6 +610,31 @@ function renderizarCarteiraOffline(dados) {
       const semente = new Date().toISOString().split('T')[0];
       new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
   }
+}
+
+let wakeLock = null;
+async function toggleFullscreenQR(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    el.classList.toggle('qr-fullscreen');
+    const isFullscreen = el.classList.contains('qr-fullscreen');
+    
+    if (isFullscreen) {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {
+                console.warn("Wake Lock falhou:", err);
+            }
+        }
+    } else {
+        if (wakeLock !== null) {
+            wakeLock.release().then(() => {
+                wakeLock = null;
+            });
+        }
+    }
 }
 
 function iniciarRelogioAntiPrint(elementId) {
