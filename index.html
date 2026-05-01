@@ -451,7 +451,36 @@
           <input type="password" id="fiscal-senha" class="input-field" placeholder="Senha">
           <button class="btn-solid accent-bg" id="btn-login-fiscal" onclick="fazerLoginOperador()">AUTENTICAR</button>
           <div id="res-login-fiscal" class="error-box hidden" style="margin-top: 10px;"></div>
+          <button class="btn-text text-light" style="margin-top: 10px; font-size: 11px;" onclick="abrirRecuperacaoSenha()">Esqueci-me da senha</button>
           <button class="btn-text text-light" onclick="switchView('view-hub')">Cancelar</button>
+        </div>
+      </section>
+
+      <section id="view-recuperar-senha" class="view-section" style="display: none;">
+        <div class="form-card dark-form">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">📧</span>
+            <h2>Recuperação de Senha</h2>
+            <p>Insira o seu e-mail para receber o PIN de recuperação</p>
+          </div>
+          <input type="email" id="recuperar-email" class="input-field" placeholder="O seu E-mail Operacional">
+          <button class="btn-solid accent-bg" id="btn-solicitar-recuperacao" onclick="solicitarRecuperacaoSenha()">ENVIAR CÓDIGO PIN</button>
+          <button class="btn-text text-light" onclick="switchView('view-login-fiscal')">Voltar ao Login</button>
+        </div>
+      </section>
+
+      <section id="view-redefinir-senha" class="view-section" style="display: none;">
+        <div class="form-card dark-form">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">🔑</span>
+            <h2>Redefinir Senha</h2>
+            <p>Insira o PIN recebido no e-mail e a sua nova senha</p>
+          </div>
+          <input type="text" id="redefinir-pin" class="input-field uppercase text-center" placeholder="PIN de 6 dígitos" maxlength="6">
+          <input type="password" id="redefinir-nova-senha" class="input-field" placeholder="Nova Senha (Mínimo 6 caracteres)">
+          <input type="password" id="redefinir-confirmar-senha" class="input-field" placeholder="Confirmar Nova Senha">
+          <button class="btn-solid accent-bg" id="btn-confirmar-redefinicao" onclick="confirmarRedefinicaoSenha()">REDEFINIR SENHA</button>
+          <button class="btn-text text-light" onclick="switchView('view-login-fiscal')">Cancelar</button>
         </div>
       </section>
 
