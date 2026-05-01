@@ -6,7 +6,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbz1_DmpXIcIP9ztgM27mP66QGn-6UvdyXcoOC6TcGA0vLM3n67MkZ6ZbgUVn3OxUPw6Gg/exec"
+  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbwoPVdrPvtxsclcvlWxUQqoCNMmC7CgoWiOeajqbRvcozIPUlxcKPJj1Odzc8E1PlwcrQ/exec"
 };
 
 async function checkClientGateway() {
@@ -272,5 +272,99 @@ async function encerrarSessaoOperador(silencioso = false) {
   
   switchView('view-hub');
   if(!silencioso) showToast("Sessão encerrada.", "info");
+}
+
+// ========================================================================
+// 4. RECUPERAÇÃO DE SENHA (OPERADOR)
+// ========================================================================
+let emailRecuperacaoTemporario = "";
+
+function abrirRecuperacaoSenha() {
+  document.getElementById('recuperar-email').value = "";
+  switchView('view-recuperar-senha');
+}
+
+async function solicitarRecuperacaoSenha() {
+  const email = document.getElementById('recuperar-email').value.trim();
+  const btn = document.getElementById('btn-solicitar-recuperacao');
+  
+  if (!email) {
+    if (typeof showToast === 'function') showToast("Por favor, insira o seu e-mail operacional.", "error");
+    return;
+  }
+  
+  btn.innerText = "A ENVIAR...";
+  btn.disabled = true;
+  
+  try {
+    const res = await apiCall("recuperarSenhaOperador", { email: email });
+    
+    if (res.sucesso) {
+      emailRecuperacaoTemporario = email;
+      if (typeof showToast === 'function') showToast("PIN enviado para o seu e-mail com sucesso!", "success");
+      
+      document.getElementById('redefinir-pin').value = "";
+      document.getElementById('redefinir-nova-senha').value = "";
+      document.getElementById('redefinir-confirmar-senha').value = "";
+      
+      switchView('view-redefinir-senha');
+    } else {
+      if (typeof showToast === 'function') showToast(res.erro || "Erro ao solicitar recuperação.", "error");
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast("Erro de conexão ao solicitar recuperação.", "error");
+  } finally {
+    btn.innerText = "ENVIAR CÓDIGO PIN";
+    btn.disabled = false;
+  }
+}
+
+async function confirmarRedefinicaoSenha() {
+  const pin = document.getElementById('redefinir-pin').value.trim();
+  const novaSenha = document.getElementById('redefinir-nova-senha').value.trim();
+  const confirmarSenha = document.getElementById('redefinir-confirmar-senha').value.trim();
+  const btn = document.getElementById('btn-confirmar-redefinicao');
+  
+  if (!pin || !novaSenha || !confirmarSenha) {
+    if (typeof showToast === 'function') showToast("Por favor, preencha todos os campos.", "error");
+    return;
+  }
+  
+  if (novaSenha.length < 6) {
+    if (typeof showToast === 'function') showToast("A nova senha deve ter no mínimo 6 caracteres.", "error");
+    return;
+  }
+  
+  if (novaSenha !== confirmarSenha) {
+    if (typeof showToast === 'function') showToast("As senhas não coincidem.", "error");
+    return;
+  }
+  
+  btn.innerText = "A REDEFINIR...";
+  btn.disabled = true;
+  
+  try {
+    const res = await apiCall("redefinirSenhaComToken", { 
+      email: emailRecuperacaoTemporario, 
+      token: pin, 
+      novaSenha: novaSenha 
+    });
+    
+    if (res.sucesso) {
+      if (typeof showToast === 'function') showToast("Senha redefinida com sucesso! Pode entrar.", "success");
+      emailRecuperacaoTemporario = "";
+      document.getElementById('redefinir-pin').value = "";
+      document.getElementById('redefinir-nova-senha').value = "";
+      document.getElementById('redefinir-confirmar-senha').value = "";
+      switchView('view-login-fiscal');
+    } else {
+      if (typeof showToast === 'function') showToast(res.erro || "PIN inválido ou expirado.", "error");
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast("Erro de conexão ao redefinir a senha.", "error");
+  } finally {
+    btn.innerText = "REDEFINIR SENHA";
+    btn.disabled = false;
+  }
 }
 
