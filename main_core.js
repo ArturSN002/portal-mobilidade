@@ -121,13 +121,17 @@ function switchView(viewId) {
   const views = document.querySelectorAll('.view-section');
   views.forEach(v => {
     v.classList.remove('active-view');
+    v.classList.remove('slide-in-right');
     v.style.display = 'none';
   });
 
   const target = document.getElementById(viewId);
   if (target) {
     target.style.display = 'block';
-    setTimeout(() => target.classList.add('active-view'), 10);
+    setTimeout(() => {
+      target.classList.add('active-view');
+      target.classList.add('slide-in-right');
+    }, 10);
   }
 
   const muralAvisos = document.getElementById('mural-avisos');
@@ -252,6 +256,27 @@ async function registrarTokenPush(token) {
   } catch (err) { }
 }
 
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-theme');
+  const isDark = document.body.classList.contains('dark-theme');
+  localStorage.setItem('MAESTRO_DARK_MODE', isDark ? 'true' : 'false');
+}
+
 window.onload = function () {
+  if (localStorage.getItem('MAESTRO_DARK_MODE') === 'true') {
+    document.body.classList.add('dark-theme');
+  }
+
   checkClientGateway();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const idParam = urlParams.get('id');
+  const authParam = urlParams.get('auth');
+  if (idParam || authParam === 'login') {
+    setTimeout(() => {
+      switchView('view-login');
+      const loginId = document.getElementById('login-id');
+      if (loginId && idParam) loginId.value = idParam;
+    }, 500);
+  }
 };
