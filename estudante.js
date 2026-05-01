@@ -301,9 +301,15 @@ let currentStudentName = "";
 let clockInterval = null; 
 let timeoutSessaoEstudanteID = null; 
 
+function triggerVibration(ms) {
+    if ("vibrate" in navigator) {
+        navigator.vibrate(ms);
+    }
+}
+
 function restaurarSessaoEstudante() {
     const token = localStorage.getItem("MAESTRO_EST_TOKEN");
-    const cachedDataRaw = localStorage.getItem("MAESTRO_WALLET_CACHE");
+    const cachedDataRaw = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
     const credsRaw = localStorage.getItem("MAESTRO_WALLET_CREDS");
 
     if (token && cachedDataRaw && credsRaw) {
@@ -323,9 +329,14 @@ function restaurarSessaoEstudante() {
 
 function abrirTelaCofreOuEntrarDireto() {
     if (currentWalletId && localStorage.getItem("MAESTRO_EST_TOKEN")) {
-        const cachedDataRaw = localStorage.getItem("MAESTRO_WALLET_CACHE");
+        const cachedDataRaw = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
         if (cachedDataRaw) {
-            renderizarCarteira(JSON.parse(cachedDataRaw));
+            const dados = JSON.parse(cachedDataRaw);
+            if (dados.themePrimary) {
+                renderizarCarteiraOffline(dados);
+            } else {
+                renderizarCarteira(dados);
+            }
             switchView('view-wallet');
             return;
         }
@@ -338,6 +349,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnCarteira) btnCarteira.onclick = abrirTelaCofreOuEntrarDireto;
 });
 
+function mostrarSkeletonWallet() {
+    const container = document.getElementById('wallet-container');
+    const actions = document.getElementById('wallet-actions');
+    if (actions) actions.classList.add('hidden');
+    
+    container.innerHTML = `
+    <div class="wallet-card">
+        <div class="wallet-header skeleton-box" style="color: transparent;">IDENTIDADE UNIVERSITÁRIA</div>
+        <div class="wallet-body">
+            <div class="wallet-photo skeleton-box"></div>
+            <div class="wallet-info" style="width: 100%;">
+                <div class="skeleton-box" style="height: 15px; width: 60%; margin-bottom: 5px; border-radius: 4px;"></div>
+                <div class="skeleton-box" style="height: 20px; width: 80%; margin-bottom: 15px; border-radius: 4px;"></div>
+                
+                <div class="skeleton-box" style="height: 15px; width: 40%; margin-bottom: 5px; border-radius: 4px;"></div>
+                <div class="skeleton-box" style="height: 15px; width: 70%; margin-bottom: 15px; border-radius: 4px;"></div>
+                
+                <div class="skeleton-box" style="height: 15px; width: 50%; margin-bottom: 5px; border-radius: 4px;"></div>
+                <div class="skeleton-box" style="height: 15px; width: 60%; border-radius: 4px;"></div>
+            </div>
+        </div>
+        <div class="text-center" style="margin: 15px 0; padding: 15px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);">
+            <div class="skeleton-box" style="width: 160px; height: 160px; margin: 0 auto; border-radius: 8px;"></div>
+        </div>
+    </div>`;
+}
+
 async function loginCarteira() {
   const id = document.getElementById('login-id').value.trim();
   const senha = document.getElementById('login-senha').value.trim();
@@ -347,30 +385,52 @@ async function loginCarteira() {
   if (!id || !senha) {
     resBox.innerText = "Preencha o ID e a Senha.";
     resBox.classList.remove('hidden');
+    triggerVibration([50, 50]);
     return;
   }
 
   btn.innerText = "A AUTENTICAR...";
   btn.disabled = true;
   resBox.classList.add('hidden');
+  
+  switchView('view-wallet');
+  mostrarSkeletonWallet();
 
   try {
     const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
 
     if (res.erro) {
+      switchView('view-login');
       resBox.innerText = res.erro;
       resBox.classList.remove('hidden');
+      triggerVibration([50, 50, 50]);
     } else if (res.sucesso) {
       currentWalletId = id;
       currentWalletSenha = senha;
       currentStudentName = res.nome;
       
+      triggerVibration(50);
+      
       if (res.token) localStorage.setItem("MAESTRO_EST_TOKEN", res.token);
-      localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
       localStorage.setItem("MAESTRO_WALLET_CREDS", JSON.stringify({id: id, senha: senha}));
+      
+      const offlineWallet = {
+          nome: res.nome,
+          cpfMascarado: res.cpfMascarado,
+          instituicao: res.instituicao,
+          turno: res.turno,
+          rota: res.rota,
+          fotoBase64: res.fotoUrl,
+          idCarteira: res.idCarteira || id,
+          validade: res.validade,
+          themePrimary: window.THEME_COLOR || "#0A3D6B",
+          themeSecondary: window.BG_COLOR || "#f0f0f0",
+          cidade: res.cidade
+      };
+      localStorage.setItem("MAESTRO_OFFLINE_WALLET", JSON.stringify(offlineWallet));
+      localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
 
       renderizarCarteira(res);
-      switchView('view-wallet');
       document.getElementById('login-id').value = '';
       document.getElementById('login-senha').value = '';
       
@@ -378,7 +438,7 @@ async function loginCarteira() {
       setTimeout(inicializarPushNotifications, 2000); 
     }
   } catch(err) {
-    const cachedData = localStorage.getItem("MAESTRO_WALLET_CACHE");
+    const cachedData = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
     const cachedCreds = localStorage.getItem("MAESTRO_WALLET_CREDS");
     
     if (cachedData && cachedCreds) {
@@ -389,15 +449,21 @@ async function loginCarteira() {
           const resCached = JSON.parse(cachedData);
           currentStudentName = resCached.nome;
           
+          triggerVibration(50);
           showToast("Modo Offline Ativado. Funções limitadas.", "warning");
-          renderizarCarteira(resCached);
-          switchView('view-wallet');
+          if (resCached.themePrimary) {
+              renderizarCarteiraOffline(resCached);
+          } else {
+              renderizarCarteira(resCached);
+          }
           armarRelogioSessaoEstudante();
           return;
        }
     }
+    switchView('view-login');
     resBox.innerText = "Falha de ligação. Necessita de internet.";
     resBox.classList.remove('hidden');
+    triggerVibration([50, 50, 50]);
   } finally {
     if (!document.getElementById('view-login').classList.contains('hidden')) {
       btn.innerText = "ENTRAR NO COFRE";
@@ -478,6 +544,70 @@ function renderizarCarteira(dados) {
   if (qrContainer) {
       qrContainer.innerHTML = ""; 
       const semente = dados.sementeDia || new Date().toISOString().split('T')[0];
+      new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+  }
+}
+
+function renderizarCarteiraOffline(dados) {
+  const container = document.getElementById('wallet-container');
+  const actions = document.getElementById('wallet-actions');
+  const nomeTratado = formatarNomeProprio(dados.nome);
+  const fotoHTML = dados.fotoBase64 ? `<img src="${dados.fotoBase64}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem Foto</div>`;
+  
+  let html = `
+  <div class="wallet-card" style="border: 2px solid #f59e0b;">
+    <div class="wallet-header" style="background: #f59e0b; color: #fff;">MODO OFFLINE</div>
+    <div class="wallet-body">
+      ${fotoHTML}
+      <div class="wallet-info">
+        <div class="w-group"><span>Estudante</span><span class="highlight" style="color: ${dados.themePrimary || 'var(--primary)'};">${nomeTratado}</span></div>
+        <div class="w-group"><span>CPF</span><span>${dados.cpfMascarado}</span></div>
+        <div class="w-group"><span>ID da Carteira</span><span style="font-family:monospace; font-size:12px;">${dados.idCarteira}</span></div>
+      </div>
+    </div>
+    
+    <div class="text-center" style="margin: 15px 0; padding: 15px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);">
+      <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+         <div id="wallet-qrcode-offline"></div>
+      </div>
+      <div style="font-size: 11px; color: #f59e0b; margin-top: 8px; font-weight: 700; letter-spacing: 1px;">ACESSO OFFLINE LIMITADO</div>
+    </div>
+
+    <div class="wallet-footer">
+      <div class="w-row">
+        <div class="w-group"><span>Instituição</span><span style="font-weight:700;">${dados.instituicao}</span></div>
+        <div class="w-group" style="text-align:right;"><span>Turno</span><span>${dados.turno}</span></div>
+      </div>
+      <div class="w-row"><div class="w-group"><span>Rota de Transporte</span><span>${dados.rota}</span></div></div>
+      <div class="text-center" style="margin-top:10px; border-top:1px dashed var(--border); padding-top:10px;">
+         <span style="font-size:10px; color:var(--text-sub);">Válido em ${dados.cidade || '...'} até <strong>${dados.validade || '...'}</strong></span>
+      </div>
+      <div class="anti-print-bar" id="wallet-clock" style="background: #f59e0b;">Modo Offline Ativado</div>
+    </div>
+  </div>
+  
+  <div style="display:flex; gap:10px; margin-top:20px;">
+      <button class="btn-solid" style="flex:1; margin:0; background: #ccc; cursor: not-allowed;" disabled>🪪 Baixar ID</button>
+      <button class="btn-solid dark-bg" style="flex:1; margin:0; background: #ccc; cursor: not-allowed;" disabled>📄 Declaração</button>
+  </div>`;
+  
+  container.innerHTML = html;
+  
+  if (actions) {
+      actions.innerHTML = `
+        <div style="text-align:center;">
+           <button class="btn-text text-danger" style="font-weight: 700; font-size: 14px;" onclick="sairCarteira()">❌ Fechar Cofre Digital</button>
+        </div>
+      `;
+      actions.classList.remove('hidden');
+  }
+  
+  iniciarRelogioAntiPrint('wallet-clock');
+
+  const qrContainer = document.getElementById('wallet-qrcode-offline');
+  if (qrContainer) {
+      qrContainer.innerHTML = ""; 
+      const semente = new Date().toISOString().split('T')[0];
       new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
   }
 }
