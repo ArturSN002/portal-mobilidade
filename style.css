@@ -638,3 +638,56 @@ body.dark-theme {
   margin-top: 6px;
   display: block;
 }
+
+/* Custom File Upload — Hides ugly native input */
+.custom-file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.custom-file-upload input[type="file"] {
+  display: none;
+}
+
+.btn-file-custom {
+  background: var(--secondary);
+  border: 2px dashed var(--primary);
+  color: var(--primary);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: block;
+}
+
+.btn-file-custom:hover {
+  background: #e0e7ff;
+}
+
+.btn-file-custom.file-attached {
+  border-color: var(--success);
+  color: var(--success);
+  background: #f0fdf4;
+}
+
+.file-name-display {
+  font-size: 10px;
+  color: var(--text-sub);
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Photo Mode Toggle — Active State */
+.btn-modo-ativo {
+  background: #1e293b !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.btn-modo-inativo {
+  background: #94a3b8 !important;
+  opacity: 0.85;
+}
