@@ -378,6 +378,15 @@
             <label class="input-label">NOME COMPLETO</label>
             <input type="text" id="insc-nome" class="input-field" placeholder="Nome conforme documento">
 
+            <label class="input-label">E-MAIL DE CONTATO *</label>
+            <input type="email" id="insc-email" class="input-field" placeholder="seu@email.com">
+            
+            <label class="input-label">WHATSAPP / TELEFONE *</label>
+            <input type="tel" id="insc-contato" class="input-field" placeholder="(00) 00000-0000">
+            
+            <label class="input-label">RG (IDENTIDADE) *</label>
+            <input type="text" id="insc-rg" class="input-field" placeholder="Apenas números">
+
             <label class="input-label">INSTITUIÇÃO DE ENSINO</label>
             <select id="insc-instituicao" class="input-field" onchange="toggleCondField('cond-outra-inst', this.value === 'Outra (Não listada)')">
               <option value="" disabled selected>Selecione...</option>
@@ -436,7 +445,7 @@
             <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Utiliza o transporte das 23h (noturno)?</p>
             <div class="insc-radio-group">
               <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Sim" onchange="toggleCondField('cond-bairro', true)"> Sim</label>
-              <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Não" onchange="toggleCondField('cond-bairro', false)" checked> Não</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Não" onchange="toggleCondField('cond-bairro', false)"> Não</label>
             </div>
             <div class="cond-field" id="cond-bairro">
               <label class="input-label">BAIRRO DE DESEMBARQUE (23h)</label>
@@ -451,7 +460,7 @@
             <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Necessita de transporte para estágio?</p>
             <div class="insc-radio-group">
               <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Sim" onchange="toggleCondField('cond-estagio', true)"> Sim</label>
-              <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Não" onchange="toggleCondField('cond-estagio', false)" checked> Não</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Não" onchange="toggleCondField('cond-estagio', false)"> Não</label>
             </div>
             <div class="cond-field" id="cond-estagio">
               <label class="input-label">PARADA DO ESTÁGIO</label>
@@ -470,7 +479,7 @@
             <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Possui deficiência de mobilidade?</p>
             <div class="insc-radio-group">
               <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Sim" onchange="toggleCondField('cond-cid', true)"> Sim</label>
-              <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Não" onchange="toggleCondField('cond-cid', false)" checked> Não</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Não" onchange="toggleCondField('cond-cid', false)"> Não</label>
             </div>
             <div class="cond-field" id="cond-cid">
               <label class="input-label">CID (CLASSIFICAÇÃO)</label>
@@ -481,7 +490,7 @@
             <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">O aluno é menor de idade? (Menos de 18 anos)</p>
             <div class="insc-radio-group">
               <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Sim" onchange="toggleCondField('cond-menor', true)"> Sim</label>
-              <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Não" onchange="toggleCondField('cond-menor', false)" checked> Não</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Não" onchange="toggleCondField('cond-menor', false)"> Não</label>
             </div>
             <div class="cond-field" id="cond-menor">
               <div class="custom-file-upload" style="margin-bottom: 15px;">
@@ -500,7 +509,7 @@
             <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Viaja acompanhado de crianças?</p>
             <div class="insc-radio-group">
               <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Sim"> Sim</label>
-              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Não" checked> Não</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Não"> Não</label>
             </div>
 
             <div class="stepper-nav">
