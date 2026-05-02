@@ -272,7 +272,17 @@ window.onload = function () {
   const urlParams = new URLSearchParams(window.location.search);
   const idParam = urlParams.get('id');
   const authParam = urlParams.get('auth');
-  if (idParam || authParam === 'login') {
+  const validarParam = urlParams.get('validar');
+
+  if (validarParam) {
+    // Cartório Digital: Auto-validação via QR Code / Link direto
+    setTimeout(() => {
+      switchView('view-validador');
+      const inputHash = document.getElementById('input-hash-validador');
+      if (inputHash) inputHash.value = validarParam.toUpperCase();
+      verificarHashPublico();
+    }, 800);
+  } else if (idParam || authParam === 'login') {
     setTimeout(() => {
       switchView('view-login');
       const loginId = document.getElementById('login-id');
@@ -280,3 +290,76 @@ window.onload = function () {
     }, 500);
   }
 };
+
+// ========================================================================
+// CARTÓRIO DIGITAL — VERIFICAÇÃO PÚBLICA DE DOCUMENTOS (V10.1)
+// ========================================================================
+
+function verificarHashPublico() {
+  const input = document.getElementById('input-hash-validador');
+  const container = document.getElementById('res-validador');
+  if (!input || !container) return;
+
+  const hash = input.value.trim().toUpperCase();
+  if (!hash) {
+    showToast("Informe o código de validação.", "error");
+    return;
+  }
+
+  container.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loader" style="margin: 0 auto;"></div><p style="font-size: 12px; color: var(--text-sub); margin-top: 10px;">A verificar autenticidade...</p></div>';
+
+  apiCall("validarDocumentoPublico", { hash: hash })
+    .then(res => {
+      if (res.sucesso && res.valido) {
+        // DOCUMENTO VÁLIDO E ATIVO
+        container.innerHTML = `
+          <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 42px; margin-bottom: 8px;">✅</div>
+            <h3 style="color: #15803d; margin: 0 0 5px 0; font-size: 16px;">Documento Autêntico e Ativo</h3>
+            <p style="font-size: 11px; color: #166534; margin-bottom: 15px;">Verificação realizada com sucesso.</p>
+            <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
+              <div><strong>Nome:</strong> ${res.nome}</div>
+              <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
+              <div><strong>Instituição:</strong> ${res.instituicao}</div>
+              <div><strong>Status:</strong> <span style="color: #22c55e; font-weight: 700;">● ${res.status}</span></div>
+              <div><strong>Emissão:</strong> ${res.emissao || 'N/D'}</div>
+              <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #d1fae5;">Código: <code style="background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
+            </div>
+          </div>`;
+      } else if (res.sucesso && !res.valido) {
+        // DOCUMENTO ENCONTRADO MAS INATIVO / REVOGADO
+        const corStatus = res.status === 'CANCELADO' ? '#dc2626' : '#f59e0b';
+        const labelStatus = res.status === 'CANCELADO' ? 'Cancelado' : res.status === 'SUSPENSO' ? 'Suspenso' : 'Inativo';
+        container.innerHTML = `
+          <div style="background: #fefce8; border: 2px solid ${corStatus}; border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 42px; margin-bottom: 8px;">⚠️</div>
+            <h3 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">Documento Revogado</h3>
+            <p style="font-size: 11px; color: #78350f; margin-bottom: 15px;">Este documento não é mais válido.</p>
+            <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
+              <div><strong>Nome:</strong> ${res.nome}</div>
+              <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
+              <div><strong>Instituição:</strong> ${res.instituicao}</div>
+              <div><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: 700;">● ${labelStatus}</span></div>
+              <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #fde68a;">Código: <code style="background: #fef9c3; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
+            </div>
+          </div>`;
+      } else {
+        // HASH NÃO ENCONTRADO
+        container.innerHTML = `
+          <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 42px; margin-bottom: 8px;">❌</div>
+            <h3 style="color: #991b1b; margin: 0 0 5px 0; font-size: 16px;">Documento Não Encontrado</h3>
+            <p style="font-size: 12px; color: #7f1d1d; margin: 0;">O código informado não corresponde a nenhuma declaração válida no sistema. Verifique se digitou corretamente.</p>
+          </div>`;
+      }
+    })
+    .catch(err => {
+      console.error("Erro na validação:", err);
+      container.innerHTML = `
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="font-size: 42px; margin-bottom: 8px;">⚡</div>
+          <h3 style="color: #991b1b; margin: 0 0 5px 0; font-size: 16px;">Erro de Conexão</h3>
+          <p style="font-size: 12px; color: #7f1d1d; margin: 0;">Não foi possível contactar o servidor. Verifique a sua ligação e tente novamente.</p>
+        </div>`;
+    });
+}
