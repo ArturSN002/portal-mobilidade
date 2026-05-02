@@ -87,7 +87,13 @@ function stepperNext(current, next) {
             instOk = true;
         }
 
-        if (!nome || !email || !rg || !contato || !instOk || !mat || !rota || !inicioSem || !fimSem || !diasCheck || !turnosCheck) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showToast("E-mail inválido.", "error");
+            return;
+        }
+
+        if (!nome || !email || !contato || !instOk || !mat || !rota || !inicioSem || !fimSem || !diasCheck || !turnosCheck) {
             showToast("Preencha todos os campos obrigatórios da Rota Acadêmica.", "error");
             triggerVibration([50, 50]);
             return;
@@ -182,6 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
         });
     }
+
+    const contatoInput = document.getElementById('insc-contato');
+    if (contatoInput) {
+        contatoInput.addEventListener('input', function (e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+        });
+    }
 });
 
 async function verificarCPFInscricao() {
@@ -230,13 +244,26 @@ async function verificarCPFInscricao() {
                 _selecionarOpcaoSelect(elRota, d.rota);
             }
 
-            showToast("Cadastro encontrado! Verifique e atualize os seus dados.", "success");
+            const feedbackBox = document.getElementById('cpf-feedback-box');
+            if (feedbackBox) {
+                feedbackBox.style.background = '#ecfdf5';
+                feedbackBox.style.color = '#166534';
+                feedbackBox.innerHTML = "✅ Inscrição anterior encontrada! Os seus dados foram importados. Verifique-os na próxima etapa.";
+                feedbackBox.classList.remove('hidden');
+            }
+            triggerVibration(50);
+            setTimeout(() => { stepperNext(1, 2); }, 2000);
         } else {
-            showToast("CPF válido. Preencha os dados.", "success");
+            const feedbackBox = document.getElementById('cpf-feedback-box');
+            if (feedbackBox) {
+                feedbackBox.style.background = '#e0f2fe';
+                feedbackBox.style.color = '#0369a1';
+                feedbackBox.innerHTML = "✨ Novo Cadastro! Prossiga para preencher os seus dados.";
+                feedbackBox.classList.remove('hidden');
+            }
+            triggerVibration(50);
+            setTimeout(() => { stepperNext(1, 2); }, 1500);
         }
-
-        triggerVibration(50);
-        stepperNext(1, 2);
 
     } catch (err) {
         console.error("Erro na verificação de CPF:", err);
@@ -471,6 +498,8 @@ function pararCameraInscricao() {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
     }
+    const video = document.getElementById('camera-video');
+    if (video) video.srcObject = null;
 }
 
 // ----- Form Payload Assembly -----
