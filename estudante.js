@@ -1300,6 +1300,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
         });
     }
+
+    // Phase 03: Carregar listas dinâmicas no arranque (background fetch)
+    carregarListasInscricao();
 });
 
 async function verificarCPFInscricao() {
