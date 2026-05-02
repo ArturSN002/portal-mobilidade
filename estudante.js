@@ -1182,6 +1182,15 @@ function stepperNext(current, next) {
     if (!stepCurrent || !stepNext) return;
 
     // ---- VALIDAÇÃO POR ETAPA ----
+    if (current === 1) {
+        const cpfRaw = document.getElementById('insc-cpf').value.replace(/\D/g, '');
+        if (cpfRaw.length !== 11) {
+            showToast("CPF inválido. Informe 11 dígitos.", "error");
+            triggerVibration([50, 50]);
+            return;
+        }
+    }
+
     if (current === 2) {
         const nome = document.getElementById('insc-nome').value.trim();
         const instSelect = document.getElementById('insc-instituicao').value;
@@ -1480,7 +1489,6 @@ async function iniciarCamera3x4() {
     const viewfinder = document.getElementById('camera-viewfinder');
     const video = document.getElementById('camera-video');
     const btnCapturar = document.getElementById('btn-capturar-foto');
-    const btnAbrir = document.getElementById('btn-abrir-camera');
     const preview = document.getElementById('camera-preview');
     const btnRefazer = document.getElementById('btn-refazer-foto');
 
@@ -1505,7 +1513,6 @@ async function iniciarCamera3x4() {
         video.srcObject = cameraStream;
         viewfinder.classList.remove('hidden');
         if (btnCapturar) btnCapturar.classList.remove('hidden');
-        if (btnAbrir) btnAbrir.classList.add('hidden');
 
     } catch (err) {
         console.error("Câmara:", err);
@@ -1519,7 +1526,6 @@ function capturarFoto3x4() {
     const preview = document.getElementById('camera-preview');
     const viewfinder = document.getElementById('camera-viewfinder');
     const btnCapturar = document.getElementById('btn-capturar-foto');
-    const btnAbrir = document.getElementById('btn-abrir-camera');
     const btnRefazer = document.getElementById('btn-refazer-foto');
 
     if (!video || !canvas || !preview) return;
@@ -1567,10 +1573,6 @@ function capturarFoto3x4() {
     pararCameraInscricao();
     if (viewfinder) viewfinder.classList.add('hidden');
     if (btnCapturar) btnCapturar.classList.add('hidden');
-    if (btnAbrir) {
-        btnAbrir.classList.remove('hidden');
-        btnAbrir.innerHTML = '📷 REABRIR CÂMARA';
-    }
 
     showToast("Foto capturada com sucesso!", "success");
     triggerVibration(50);
@@ -1735,8 +1737,6 @@ function _resetarFormularioInscricao() {
     if (preview) preview.classList.add('hidden');
     const btnRefazer = document.getElementById('btn-refazer-foto');
     if (btnRefazer) btnRefazer.classList.add('hidden');
-    const btnAbrir = document.getElementById('btn-abrir-camera');
-    if (btnAbrir) { btnAbrir.classList.remove('hidden'); btnAbrir.innerHTML = '📷 ABRIR CÂMARA FRONTAL'; }
     const viewfinder = document.getElementById('camera-viewfinder');
     if (viewfinder) viewfinder.classList.add('hidden');
 
