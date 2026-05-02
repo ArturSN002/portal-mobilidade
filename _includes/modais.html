@@ -1,0 +1,181 @@
+  <div id="splash-screen" class="splash-overlay">
+    <div class="splash-content">
+      <img id="splash-logo" src="icone.png" alt="Carregando..." class="hidden">
+      <div class="loader"></div>
+      <p>A sincronizar portal...</p>
+    </div>
+  </div>
+
+  <div id="modal-novo-aviso-fiscal" class="splash-overlay hidden" style="z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);">
+    <div class="form-card" style="width: 90%; max-width: 400px; border: 2px solid var(--primary); max-height: 90vh; overflow-y: auto;">
+      <div class="form-header" style="margin-bottom: 15px;">
+         <span style="font-size: 36px; display: block; margin-bottom: 5px;">📢</span>
+         <h2 style="color: var(--primary); font-size: 18px;">CENTRAL DE AVISOS</h2>
+         <p style="font-size: 11px; line-height: 1.3;">Dispare notificações PUSH diretamente para o telemóvel dos estudantes.</p>
+      </div>
+      
+      <div class="dash-tabs" style="margin-bottom: 15px;">
+         <button class="dash-tab active" id="tab-aviso-mural" onclick="alternarTipoAviso('mural')">Mural Público</button>
+         <button class="dash-tab" id="tab-aviso-direto" onclick="alternarTipoAviso('direto')">Alerta Direcionado</button>
+      </div>
+
+      <div id="area-aviso-mural">
+         <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 15px; text-align: justify;">Esta opção cria um cartão visível no topo da app de todos os estudantes e envia um aviso Push geral.</p>
+         <label class="input-label" style="text-align: left;">TIPO DE AVISO</label>
+         <select id="aviso-tipo-mural" class="input-field">
+            <option value="Geral">Informativo Geral</option>
+            <option value="Transporte">Logística e Transporte</option>
+            <option value="Urgente">Urgente / Crítico</option>
+         </select>
+         <label class="input-label" style="text-align: left;">TÍTULO</label>
+         <input type="text" id="aviso-titulo-mural" class="input-field" placeholder="Ex: Mudança de Rota...">
+         <label class="input-label" style="text-align: left;">CORPO DA MENSAGEM</label>
+         <textarea id="aviso-msg-mural" class="input-field" rows="3" placeholder="Detalhes do aviso..."></textarea>
+         <button class="btn-solid" id="btn-publicar-aviso" style="background: var(--primary); margin-top: 10px;" onclick="dispararAvisoPublico()">PUBLICAR E NOTIFICAR</button>
+      </div>
+
+      <div id="area-aviso-direto" class="hidden">
+         <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 15px; text-align: justify;">Esta opção não fica salva no mural. Ela apita apenas nos telemóveis dos alunos que cumprem os filtros abaixo.</p>
+         
+         <label class="input-label" style="text-align: left;">ALVOS (Filtros Cruzados)</label>
+         <div style="background: var(--secondary); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+            <select id="filtro-rota-push" class="input-field" style="margin-bottom: 8px; font-size: 11px; padding: 6px;"><option value="TODAS">Qualquer Rota</option></select>
+            <select id="filtro-turno-push" class="input-field" style="margin-bottom: 8px; font-size: 11px; padding: 6px;"><option value="TODOS">Qualquer Turno</option></select>
+            <select id="filtro-inst-push" class="input-field" style="margin-bottom: 0; font-size: 11px; padding: 6px;"><option value="TODAS">Qualquer Instituição</option></select>
+         </div>
+
+         <label class="input-label" style="text-align: left;">TÍTULO DO ALERTA PUSH</label>
+         <input type="text" id="aviso-titulo-direto" class="input-field" placeholder="Ex: Autocarro 3 Atrasado">
+         <label class="input-label" style="text-align: left;">MENSAGEM (Curta)</label>
+         <textarea id="aviso-msg-direto" class="input-field" rows="2" maxlength="100" placeholder="Máximo 100 caracteres..."></textarea>
+         
+         <button class="btn-solid" id="btn-disparar-direto" style="background: #eab308; margin-top: 10px; color: #333;" onclick="dispararPushSegmentado()">DISPARAR ALERTA SILENCIOSO</button>
+      </div>
+      
+      <button class="btn-text text-light" style="margin-top: 10px;" onclick="fecharModalAvisosFiscal()">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-sos-fiscal" class="splash-overlay hidden" style="z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);">
+    <div class="form-card" style="width: 90%; max-width: 400px; border: 2px solid var(--danger);">
+      <div class="form-header" style="margin-bottom: 15px;">
+         <span style="font-size: 36px; display: block; margin-bottom: 5px;">🚨</span>
+         <h2 style="color: var(--danger); font-size: 18px;">DECLARAR EMERGÊNCIA</h2>
+         <p style="font-size: 11px; line-height: 1.3;">Isto irá inativar o autocarro, notificar os estudantes desta rota e enviar o seu GPS à coordenação.</p>
+      </div>
+      
+      <label class="input-label" style="text-align: left;">PLACA OU ROTA DO AUTOCARRO</label>
+      <input type="text" id="sos-id-onibus" class="input-field uppercase" placeholder="Ex: Rota 1 ou ABC-1234">
+      
+      <label class="input-label" style="text-align: left;">MOTIVO DA PARAGEM</label>
+      <select id="sos-motivo" class="input-field" style="height: 45px;">
+         <option value="">Selecione a avaria...</option>
+         <option value="Avaria Mecânica / Motor">Avaria Mecânica / Motor</option>
+         <option value="Pneu Furado">Pneu Furado</option>
+         <option value="Acidente de Trânsito">Acidente de Trânsito</option>
+         <option value="Estrada Bloqueada">Estrada Bloqueada</option>
+         <option value="Outros">Outros (Detalhamento Posterior)</option>
+      </select>
+      
+      <button class="btn-solid" id="btn-enviar-sos" style="background: var(--danger); margin-top: 15px;" onclick="confirmarEmergenciaGPS()">ENVIAR ALARME E MEU GPS</button>
+      <button class="btn-text text-light" onclick="fecharModalSOS()">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-encerrar-rota" class="splash-overlay hidden" style="z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);">
+    <div class="form-card" style="width: 90%; max-width: 400px; border: 2px solid var(--accent); background: #fffcf2;">
+      <div class="form-header" style="margin-bottom: 15px;">
+         <span style="font-size: 36px; display: block; margin-bottom: 5px;">🏁</span>
+         <h2 style="color: var(--accent); font-size: 18px;">FINALIZAR VIAGEM</h2>
+         <p style="font-size: 11px; line-height: 1.3; color: #92400e;">Forçar o desembarque de todos os alunos e limpar o GPS desta rota.</p>
+      </div>
+      
+      <label class="input-label" style="text-align: left;">IDENTIFICADOR (Placa ou Rota)</label>
+      <input type="text" id="input-encerrar-onibus" class="input-field uppercase text-center" placeholder="Ex: ABC-1234" style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">
+      
+      <button class="btn-solid" id="btn-enviar-encerramento" style="background: var(--accent); margin-top: 15px; color: #fff;" onclick="dispararEncerramentoRota()">CONFIRMAR FIM DE ROTA</button>
+      <button class="btn-text text-light" style="color: #666 !important;" onclick="fecharModalEncerrarRota()">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-nova-mensagem" class="splash-overlay hidden" style="z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);">
+    <div class="form-card" style="width: 90%; max-width: 400px;">
+      <div class="form-header" style="margin-bottom: 15px;">
+         <span style="font-size: 36px; display: block; margin-bottom: 5px;">🗣️</span>
+         <h2 style="color: var(--primary); font-size: 18px;">A SUA VOZ</h2>
+         <p style="font-size: 11px; line-height: 1.3;">Contribua para a comunidade. Tem o limite de 5 mensagens por semana.</p>
+      </div>
+      
+      <label class="input-label" style="text-align: left;">CATEGORIA</label>
+      <select id="mural-categoria" class="input-field" style="height: 45px;">
+         <option value="Sugestão">💡 Sugestão / Ideia</option>
+         <option value="Reclamação">⚠️ Reclamação da Rota</option>
+         <option value="Achados e Perdidos">🎒 Achados e Perdidos</option>
+         <option value="Dúvida Geral">❓ Dúvida Geral</option>
+      </select>
+      
+      <label class="input-label" style="text-align: left;">A SUA MENSAGEM (Max. 280 letras)</label>
+      <textarea id="mural-mensagem" class="input-field" rows="4" maxlength="280" placeholder="Escreva a sua contribuição de forma clara e objetiva..."></textarea>
+      
+      <button class="btn-solid" id="btn-enviar-mural" onclick="enviarMensagemParaMural()">PUBLICAR NO MURAL</button>
+      <button class="btn-text text-light" onclick="fecharModalMural()">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="modal-doc-viewer" class="splash-overlay hidden" style="z-index: 10000; background: rgba(0,0,0,0.95);">
+    <div style="width: 95%; height: 90%; max-width: 800px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #111; color: white; border-radius: 8px 8px 0 0;">
+            <span id="doc-viewer-title" style="font-size: 15px; font-weight: bold; letter-spacing: 1px;">Documento Protegido</span>
+            <button onclick="fecharModalDocViewer()" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">❌</button>
+        </div>
+        <div id="doc-viewer-content" style="flex: 1; background: #fff; overflow: auto; display: flex; justify-content: center; align-items: center; border-radius: 0 0 8px 8px;">
+            <div class="loader"></div>
+        </div>
+    </div>
+  </div>
+
+  <div id="modal-raio-x-aluno" class="splash-overlay hidden" style="z-index: 9998; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);">
+      <div class="form-card" style="width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 20px;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">
+              <div>
+                  <h2 id="rx-nome" style="color: var(--primary); margin: 0; font-size: 18px; display: inline-block; vertical-align: middle;">Nome do Aluno</h2>
+                  <span id="rx-status-badge" style="background: #eee; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block; vertical-align: middle; margin-left: 8px; margin-top: -3px;">STATUS</span>
+              </div>
+              <button onclick="fecharModalRaioX()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; margin-top: -5px;">&times;</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; font-size: 12px;">
+              <div><span class="text-light" style="display:block; font-size:10px;">CPF</span><strong id="rx-cpf">---</strong></div>
+              <div><span class="text-light" style="display:block; font-size:10px;">Matrícula</span><strong id="rx-matricula">---</strong></div>
+              <div style="grid-column: span 2;"><span class="text-light" style="display:block; font-size:10px;">E-mail de Contacto</span><strong id="rx-email">---</strong></div>
+              <div style="grid-column: span 2; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 4px;">
+                  <span class="text-light" style="display:block; font-size:10px;">Logística Solicitada</span>
+                  <strong id="rx-logistica" style="color: #3b82f6;">---</strong>
+              </div>
+          </div>
+
+          <div class="divider-text" style="margin: 10px 0; color: #9ca3af;">ANEXOS DO ESTUDANTE</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;" id="rx-documentos-grid">
+              </div>
+
+          <div class="divider-text" style="margin: 10px 0; color: #9ca3af;">PARECER E DECISÃO</div>
+          
+          <label class="input-label">MUDAR STATUS PARA:</label>
+          <select id="rx-novo-status" class="input-field" style="padding: 10px; height: auto;">
+              <option value="ATIVO">✅ ATIVO (Aprovar Carteira)</option>
+              <option value="PENDENTE">⏳ PENDENTE (Aguardar)</option>
+              <option value="SUSPENSO">⚠️ SUSPENSO (Exige Correção)</option>
+              <option value="CANCELADO">❌ CANCELADO (Rejeição Final)</option>
+          </select>
+
+          <label class="input-label">DIÁRIO DE BORDO (NOTAS PARA O ALUNO E SISTEMA)</label>
+          <textarea id="rx-notas" class="input-field" rows="4" placeholder="Se reprovar, escreva o motivo aqui para a IA usar de base..." style="background: #f1f5f9; font-family: monospace; font-size: 11px; line-height: 1.4; border-color: #cbd5e1;"></textarea>
+
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button class="btn-solid" style="background: var(--accent); flex: 1; padding: 10px; font-size: 12px;" onclick="acionarIAParaEmail()">✨ Gerar E-mail IA</button>
+              <button class="btn-solid" style="background: var(--success); flex: 1; padding: 10px; font-size: 12px;" onclick="gravarDecisaoAuditoria()">💾 GRAVAR</button>
+          </div>
+          <input type="hidden" id="rx-linha-base" value="">
+      </div>
+  </div>
