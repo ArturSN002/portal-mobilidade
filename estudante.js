@@ -889,72 +889,59 @@ async function atualizarRadarDinamico() {
     try {
         const res = await apiCall("statusRadarOnibus", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
         
+        // --- Injetar CSS de animação ---
+        if (!document.getElementById('radar-pulse-css')) {
+           const style = document.createElement('style');
+           style.id = 'radar-pulse-css';
+           style.innerHTML = `@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }`;
+           document.head.appendChild(style);
+        }
+
+        // --- UI do Guia (Transmissor Ativo) ---
         if (res.isGuia) {
             boxRadar.innerHTML = `
                 <div style="text-align:center;">
                    <div style="font-size: 40px; margin-bottom: 10px; animation: pulse 2s infinite;">📡</div>
                    <h4 style="color: var(--success); margin: 0 0 5px 0;">Transmissão Ativa</h4>
-                   <p style="font-size: 11px; color: #666; margin-bottom: 15px;">O seu GPS está a guiar os seus colegas.</p>
-                   <button onclick="abdicarSerGuia()" class="btn-solid" style="background: #ef4444; margin: 0; padding: 8px; font-size: 12px;">Parar Transmissão (Abdicar)</button>
+                   <p style="font-size: 11px; color: #666; margin-bottom: 5px;">O seu GPS está a guiar os seus colegas.</p>
+                   <span style="font-size: 10px; color: var(--primary); font-weight: 600;">${res.totalGuias || 1} guia(s) conectado(s)</span>
+                   <button onclick="abdicarSerGuia()" class="btn-solid" style="background: #ef4444; margin: 15px 0 0 0; padding: 8px; font-size: 12px;">Ajudando a comunidade (Parar)</button>
                 </div>
             `;
-            if (!document.getElementById('radar-pulse-css')) {
-               const style = document.createElement('style');
-               style.id = 'radar-pulse-css';
-               style.innerHTML = `@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }`;
-               document.head.appendChild(style);
-            }
         } 
+        // --- UI do Passageiro (com ETA Híbrido) ---
         else if (res.guiaAtivo && res.coordenadas) {
-            boxRadar.innerHTML = `<div class="loader" style="margin: 0 auto; width: 15px; height: 15px; border-width: 2px;"></div><p style="font-size: 10px; text-align: center; margin-top: 5px;">A calcular ETA...</p>`;
-            
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(posPassageiro) {
-                        const distKm = calcularDistanciaHaversine(posPassageiro.coords.latitude, posPassageiro.coords.longitude, res.coordenadas.lat, res.coordenadas.lng);
-                        const tempoAtras = calcularTempoRelativo(res.coordenadas.ts);
-                        
-                        boxRadar.innerHTML = `
-                            <div style="text-align: left;">
-                               <div style="display:flex; justify-content: space-between; align-items:center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                                  <strong style="color: var(--primary);"><span style="font-size: 14px;">📍</span> Radar ao Vivo</strong>
-                                  <span style="font-size: 10px; background: #ecfdf5; color: #065f46; padding: 3px 6px; border-radius: 4px;">Sinal Forte</span>
-                               </div>
-                               <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
-                                  <span style="font-size: 12px; color: #666;">Distância:</span>
-                                  <strong style="font-size: 12px;">${distKm.toFixed(1)} km</strong>
-                               </div>
-                               <div style="display:flex; justify-content: space-between; margin-bottom: 10px;">
-                                  <span style="font-size: 12px; color: #666;">Chega em:</span>
-                                  <strong style="font-size: 14px; color: var(--accent);">${calcularETA(distKm)}</strong>
-                               </div>
-                               <div style="text-align: right;">
-                                  <span style="font-size: 10px; color: #999;">Última atualização: ${tempoAtras}</span>
-                               </div>
-                               <button onclick="atualizarRadarDinamico()" class="btn-text" style="width: 100%; text-align: center; padding: 8px 0 0 0; margin-top: 5px; font-size: 11px;">🔄 Atualizar Agora</button>
-                            </div>
-                        `;
-                    },
-                    function(err) {
-                        const tempoAtras = calcularTempoRelativo(res.coordenadas.ts);
-                        boxRadar.innerHTML = `
-                            <div style="text-align: center;">
-                               <h4 style="color: var(--primary); margin: 0 0 5px 0;">📍 Autocarro em Movimento</h4>
-                               <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Ative a localização do seu dispositivo para ver a distância e o tempo estimado de chegada (ETA).</p>
-                               <span style="font-size: 10px; color: #999;">Último sinal do autocarro: ${tempoAtras}</span>
-                            </div>
-                        `;
-                    },
-                    { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-                );
+            // Silent Recruitment: auto-volunteer se < 5 guias
+            if (res.totalGuias === undefined || res.totalGuias < 5) {
+                solicitarSerGuia().catch(function() {});
             }
+
+            boxRadar.innerHTML = `
+                <div style="text-align: left;">
+                   <div style="display:flex; justify-content: space-between; align-items:center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                      <strong style="color: var(--primary);"><span style="font-size: 14px;">📍</span> Radar ao Vivo</strong>
+                      <span style="font-size: 10px; background: #ecfdf5; color: #065f46; padding: 3px 6px; border-radius: 4px;">${res.totalGuias || 1} guia(s)</span>
+                   </div>
+                   <div id="radar-eta-slot" style="min-height: 60px; display: flex; align-items: center; justify-content: center;">
+                      <div><div class="loader" style="margin: 0 auto; width: 15px; height: 15px; border-width: 2px;"></div><p style="font-size: 10px; text-align: center; margin-top: 5px; color: #666;">A calcular ETA...</p></div>
+                   </div>
+                   <button onclick="atualizarRadarDinamico()" class="btn-text" style="width: 100%; text-align: center; padding: 8px 0 0 0; margin-top: 5px; font-size: 11px;">🔄 Atualizar Agora</button>
+                </div>
+            `;
+            
+            // Fetch posição do passageiro e chamar ETA Híbrido
+            _buscarETAHibrido(res.coordenadas);
         } 
+        // --- Radar Inativo (sem guias) ---
         else {
+            // Silent Recruitment: auto-volunteer silenciosamente
+            solicitarSerGuia().catch(function() {});
+
             boxRadar.innerHTML = `
                 <div style="text-align: center;">
                    <div style="font-size: 30px; margin-bottom: 10px; filter: grayscale(100%); opacity: 0.5;">📡</div>
                    <h4 style="color: #666; margin: 0 0 5px 0;">Radar Inativo</h4>
-                   <p style="font-size: 11px; color: #999; margin-bottom: 15px;">Nenhum colega está a partilhar o GPS. Quer assumir o rastreamento?</p>
+                   <p style="font-size: 11px; color: #999; margin-bottom: 15px;">A tentar ligar ao radar comunitário...</p>
                    <button onclick="solicitarSerGuia()" class="btn-solid" style="background: var(--primary); margin: 0; padding: 8px; font-size: 12px;">Seja o Guia (Ligar GPS)</button>
                 </div>
             `;
@@ -964,31 +951,116 @@ async function atualizarRadarDinamico() {
     }
 }
 
-async function solicitarSerGuia() {
-    showToast("A solicitar permissão ao servidor...", "loading");
-    const boxRadar = document.getElementById('radar-dinamico-conteudo');
-    if (boxRadar) boxRadar.innerHTML = `<div class="loader" style="margin: 0 auto;"></div>`;
+/**
+ * Busca posição do passageiro via Geolocation e chama calcularETAHibrido.
+ * Renderiza o resultado no slot #radar-eta-slot com badge de método.
+ */
+function _buscarETAHibrido(coordenadasBus) {
+    const etaSlot = document.getElementById('radar-eta-slot');
+    if (!etaSlot) return;
 
+    if (!navigator.geolocation) {
+        _renderizarETAFallbackSemGPS(etaSlot, coordenadasBus);
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(posPassageiro) {
+            const latEst = posPassageiro.coords.latitude;
+            const lngEst = posPassageiro.coords.longitude;
+
+            apiCall("calcularETAHibrido", {
+                latBus: coordenadasBus.lat,
+                lngBus: coordenadasBus.lng,
+                latEstudante: latEst,
+                lngEstudante: lngEst
+            }).then(function(resEta) {
+                if (!resEta || !resEta.sucesso) {
+                    // Fallback local se API falhar
+                    const distLocal = calcularDistanciaHaversine(latEst, lngEst, coordenadasBus.lat, coordenadasBus.lng);
+                    _renderizarETANoSlot(etaSlot, distLocal, calcularETA(distLocal), "HAVERSINE_FALLBACK", coordenadasBus.ts);
+                    return;
+                }
+                const etaTexto = resEta.etaMinutos <= 2 ? "A chegar!" : `~ ${resEta.etaMinutos} min`;
+                _renderizarETANoSlot(etaSlot, resEta.distanciaKm, etaTexto, resEta.metodo, coordenadasBus.ts);
+            }).catch(function() {
+                const distLocal = calcularDistanciaHaversine(latEst, lngEst, coordenadasBus.lat, coordenadasBus.lng);
+                _renderizarETANoSlot(etaSlot, distLocal, calcularETA(distLocal), "HAVERSINE_FALLBACK", coordenadasBus.ts);
+            });
+        },
+        function() {
+            _renderizarETAFallbackSemGPS(etaSlot, coordenadasBus);
+        },
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
+}
+
+/**
+ * Renderiza ETA com badge de método no slot.
+ */
+function _renderizarETANoSlot(slot, distKm, etaTexto, metodo, tsBus) {
+    const tempoAtras = calcularTempoRelativo(tsBus);
+    let badgeHTML = '';
+    if (metodo === 'MAPS_API' || metodo === 'MAPS_CACHE') {
+        badgeHTML = '<span style="font-size: 9px; background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-weight: 600;">⚡ Tempo Real (Google)</span>';
+    } else {
+        badgeHTML = '<span style="font-size: 9px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 600;">📍 Estimativa Matemática</span>';
+    }
+
+    const distFormatada = typeof distKm === 'number' ? distKm.toFixed(1) : distKm;
+
+    slot.innerHTML = `
+        <div style="width: 100%;">
+           <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-size: 12px; color: #666;">Distância:</span>
+              <strong style="font-size: 12px;">${distFormatada} km</strong>
+           </div>
+           <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 12px; color: #666;">Chega em:</span>
+              <strong style="font-size: 14px; color: var(--accent);">${etaTexto}</strong>
+           </div>
+           <div style="display:flex; justify-content: space-between; align-items: center;">
+              ${badgeHTML}
+              <span style="font-size: 10px; color: #999;">Atualizado: ${tempoAtras}</span>
+           </div>
+        </div>
+    `;
+}
+
+/**
+ * Fallback quando GPS do passageiro não está disponível.
+ */
+function _renderizarETAFallbackSemGPS(slot, coordenadasBus) {
+    const tempoAtras = calcularTempoRelativo(coordenadasBus.ts);
+    slot.innerHTML = `
+        <div style="text-align: center; width: 100%;">
+           <h4 style="color: var(--primary); margin: 0 0 5px 0; font-size: 13px;">📍 Autocarro em Movimento</h4>
+           <p style="font-size: 11px; color: #666; margin-bottom: 8px;">Ative a localização para ver distância e ETA.</p>
+           <span style="font-size: 10px; color: #999;">Último sinal: ${tempoAtras}</span>
+        </div>
+    `;
+}
+
+async function solicitarSerGuia() {
     try {
         const res = await apiCall("solicitarCargoGuia", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
         if (res.sucesso) {
             iniciarTransmissaoGpsComoGuia(); 
-        } else {
-            showToast(res.erro, "warning");
-            atualizarRadarDinamico(); 
         }
+        // Silencioso: sem toasts de erro para não interromper a UX
     } catch(e) {
-        showToast("Erro ao contactar o servidor.", "error");
-        atualizarRadarDinamico();
+        // Silencioso: recrutamento falhado não afeta o passageiro
     }
 }
 
 async function iniciarTransmissaoGpsComoGuia() {
     if (!navigator.geolocation) {
-        showToast("O seu telemóvel não suporta GPS.", "error");
         abdicarSerGuia();
         return;
     }
+
+    // Evitar dupla inicialização
+    if (idIntervaloGPS) return;
 
     try {
         if ('wakeLock' in navigator) {
@@ -1007,17 +1079,16 @@ async function iniciarTransmissaoGpsComoGuia() {
                     );
                 }, 120000);
                 
-                showToast("Transmissão iniciada! Você é o Guia.", "success");
+                // Silencioso: atualiza radar sem toast
                 atualizarRadarDinamico(); 
             },
             function(err) {
-                showToast("Permissão de GPS negada. Abdicando...", "error");
+                // GPS negado silenciosamente — não prejudica UX do passageiro
                 abdicarSerGuia();
             },
             { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
         );
     } catch (err) {
-        showToast("Não foi possível aceder aos sensores do ecrã.", "error");
         abdicarSerGuia();
     }
 }
