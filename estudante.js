@@ -1184,12 +1184,25 @@ function stepperNext(current, next) {
     // ---- VALIDAÇÃO POR ETAPA ----
     if (current === 2) {
         const nome = document.getElementById('insc-nome').value.trim();
-        const inst = document.getElementById('insc-instituicao').value;
+        const instSelect = document.getElementById('insc-instituicao').value;
+        const instOutra = document.getElementById('insc-instituicao-outra').value.trim();
         const mat = document.getElementById('insc-matricula').value.trim();
         const rota = document.getElementById('insc-rota').value;
+        const inicioSem = document.getElementById('insc-inicio-semestre').value;
+        const fimSem = document.getElementById('insc-fim-semestre').value;
 
-        if (!nome || !inst || !mat || !rota) {
-            showToast("Preencha todos os campos obrigatórios da Rota Acadêmica.", "warning");
+        const diasCheck = document.querySelectorAll('input[name="insc-dias"]:checked').length > 0;
+        const turnosCheck = document.querySelectorAll('input[name="insc-turnos"]:checked').length > 0;
+
+        let instOk = false;
+        if (instSelect && instSelect !== "Outra (Não listada)") {
+            instOk = true;
+        } else if (instSelect === "Outra (Não listada)" && instOutra) {
+            instOk = true;
+        }
+
+        if (!nome || !instOk || !mat || !rota || !inicioSem || !fimSem || !diasCheck || !turnosCheck) {
+            showToast("Preencha todos os campos obrigatórios da Rota Acadêmica.", "error");
             triggerVibration([50, 50]);
             return;
         }
@@ -1200,7 +1213,7 @@ function stepperNext(current, next) {
         if (condBairro && condBairro.classList.contains('cond-visible')) {
             const bairro = document.getElementById('insc-bairro-23h').value;
             if (!bairro) {
-                showToast("Selecione o bairro de desembarque (23h).", "warning");
+                showToast("Selecione o bairro de desembarque (23h).", "error");
                 return;
             }
         }
@@ -1210,7 +1223,7 @@ function stepperNext(current, next) {
             const parada = document.getElementById('insc-parada-estagio').value.trim();
             const turnoEst = document.getElementById('insc-turno-estagio').value;
             if (!parada || !turnoEst) {
-                showToast("Preencha os dados do estágio (parada e turno).", "warning");
+                showToast("Preencha os dados do estágio (parada e turno).", "error");
                 return;
             }
         }
@@ -1219,7 +1232,7 @@ function stepperNext(current, next) {
         if (condCid && condCid.classList.contains('cond-visible')) {
             const cid = document.getElementById('insc-cid').value.trim();
             if (!cid) {
-                showToast("Informe o CID (classificação da deficiência).", "warning");
+                showToast("Informe o CID (classificação da deficiência).", "error");
                 return;
             }
         }
@@ -1376,12 +1389,17 @@ function toggleCondField(fieldId, show) {
 function processarArquivoInscricao(inputElement, tipoDoc) {
     const file = inputElement.files[0];
     const statusSpan = document.getElementById(`status-insc-${tipoDoc}`);
+    const labelUpload = document.getElementById(`label-insc-${tipoDoc}`);
 
     if (!file) {
         delete inscricaoArquivos[tipoDoc];
         if (statusSpan) {
             statusSpan.innerText = "Nenhum arquivo selecionado";
             statusSpan.style.color = "var(--text-sub)";
+        }
+        if (labelUpload) {
+            labelUpload.classList.remove('file-attached');
+            labelUpload.innerHTML = "📎 Toque para selecionar o arquivo";
         }
         return;
     }
@@ -1394,12 +1412,11 @@ function processarArquivoInscricao(inputElement, tipoDoc) {
             statusSpan.innerText = "Erro: Arquivo demasiado pesado.";
             statusSpan.style.color = "var(--danger)";
         }
+        if (labelUpload) {
+            labelUpload.classList.remove('file-attached');
+            labelUpload.innerHTML = "📎 Toque para selecionar o arquivo";
+        }
         return;
-    }
-
-    if (statusSpan) {
-        statusSpan.innerText = "A processar... ⏳";
-        statusSpan.style.color = "var(--accent)";
     }
 
     const reader = new FileReader();
@@ -1410,8 +1427,12 @@ function processarArquivoInscricao(inputElement, tipoDoc) {
             base64: e.target.result
         };
         if (statusSpan) {
-            statusSpan.innerText = "✅ Anexado com sucesso!";
+            statusSpan.innerText = `✅ ${file.name}`;
             statusSpan.style.color = "var(--success)";
+        }
+        if (labelUpload) {
+            labelUpload.classList.add('file-attached');
+            labelUpload.innerHTML = "✅ Arquivo anexado";
         }
     };
     reader.onerror = function () {
@@ -1421,6 +1442,10 @@ function processarArquivoInscricao(inputElement, tipoDoc) {
         if (statusSpan) {
             statusSpan.innerText = "Erro na leitura.";
             statusSpan.style.color = "var(--danger)";
+        }
+        if (labelUpload) {
+            labelUpload.classList.remove('file-attached');
+            labelUpload.innerHTML = "📎 Toque para selecionar o arquivo";
         }
     };
     reader.readAsDataURL(file);
@@ -1437,14 +1462,15 @@ function toggleModoFoto(modo) {
     if (modo === 'camera') {
         if (areaCamera) areaCamera.classList.remove('hidden');
         if (areaUpload) areaUpload.classList.add('hidden');
-        if (btnCamera) btnCamera.style.background = '#1e293b';
-        if (btnUpload) btnUpload.style.background = '#64748b';
+        if (btnCamera) { btnCamera.classList.add('btn-modo-ativo'); btnCamera.classList.remove('btn-modo-inativo'); }
+        if (btnUpload) { btnUpload.classList.add('btn-modo-inativo'); btnUpload.classList.remove('btn-modo-ativo'); }
+        iniciarCamera3x4();
     } else {
         pararCameraInscricao();
         if (areaCamera) areaCamera.classList.add('hidden');
         if (areaUpload) areaUpload.classList.remove('hidden');
-        if (btnCamera) btnCamera.style.background = '#64748b';
-        if (btnUpload) btnUpload.style.background = '#1e293b';
+        if (btnCamera) { btnCamera.classList.add('btn-modo-inativo'); btnCamera.classList.remove('btn-modo-ativo'); }
+        if (btnUpload) { btnUpload.classList.add('btn-modo-ativo'); btnUpload.classList.remove('btn-modo-inativo'); }
     }
 }
 
@@ -1591,6 +1617,12 @@ function prepararEnvioNativo() {
         return;
     }
 
+    // Validação de Menor Idade
+    if (getRadioValue('insc-menor') === 'Sim' && !inscricaoArquivos['menorIdade']) {
+        showToast("A Declaração de Responsabilidade para menores é obrigatória.", "error");
+        return;
+    }
+
     // Validação da Foto 3x4: câmera OU arquivo
     const fotoFinal = inscricaoFotoBase64 || (inscricaoArquivos['foto3x4'] ? inscricaoArquivos['foto3x4'].base64 : null);
     if (!fotoFinal) {
@@ -1605,6 +1637,7 @@ function prepararEnvioNativo() {
         // Step 2
         nome: nome,
         instituicao: document.getElementById('insc-instituicao').value.trim(),
+        instituicaoOutra: document.getElementById('insc-instituicao-outra').value.trim(),
         matricula: document.getElementById('insc-matricula').value.trim(),
         rota: document.getElementById('insc-rota').value.trim(),
         diasDeUso: getCheckboxValues('insc-dias'),
@@ -1744,6 +1777,11 @@ async function carregarListasInscricao() {
         _popularSelect('insc-instituicao', res.instituicoes || [], 'Outra (Não listada)');
         _popularSelect('insc-rota', res.rotas || [], 'Outra (Não listada)');
         _popularSelect('insc-bairro-23h', res.bairros || [], 'Outro');
+
+        if (res.linkDeclaracaoMenor) {
+            const linkMenor = document.getElementById('link-declaracao-menor');
+            if (linkMenor) linkMenor.href = res.linkDeclaracaoMenor;
+        }
 
     } catch (err) {
         console.warn("[LISTAS] Erro de rede ao carregar listas:", err);
