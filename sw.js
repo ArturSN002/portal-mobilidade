@@ -10,12 +10,12 @@ importScripts("https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js")
 
 // ⚠️ ATENÇÃO: COLE AQUI AS CREDENCIAIS DO SEU FIREBASE (As mesmas do app.js)
 const firebaseConfig = {
-    apiKey: "COLE_SUA_API_KEY",
-    authDomain: "COLE_SEU_PROJECT_ID.firebaseapp.com",
-    projectId: "COLE_SEU_PROJECT_ID",
-    storageBucket: "COLE_SEU_PROJECT_ID.appspot.com",
-    messagingSenderId: "COLE_SEU_SENDER_ID",
-    appId: "COLE_SEU_APP_ID"
+  apiKey: "COLE_SUA_API_KEY",
+  authDomain: "COLE_SEU_PROJECT_ID.firebaseapp.com",
+  projectId: "COLE_SEU_PROJECT_ID",
+  storageBucket: "COLE_SEU_PROJECT_ID.appspot.com",
+  messagingSenderId: "COLE_SEU_SENDER_ID",
+  appId: "COLE_SEU_APP_ID"
 };
 
 try {
@@ -25,7 +25,7 @@ try {
 }
 
 // V9.2.8: NOME ATUALIZADO PARA FORÇAR DOWNLOAD DA NOVA INTERFACE WEB
-const CACHE_NAME = 'maestro-cache-v9.2.8'; 
+const CACHE_NAME = 'maestro-cache-v10.2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -33,7 +33,10 @@ const ASSETS_TO_CACHE = [
   './api_auth.js',
   './main_core.js',
   './operacao.js',
-  './estudante.js',
+  './inscricao.js',
+  './consulta.js',
+  './carteira.js',
+  './mobilidade.js',
   './js_global.js',
   './icone.png',
   './manifest.json'
@@ -70,9 +73,9 @@ self.addEventListener('activate', (event) => {
 // 3. Estratégia de Fetch (Offline-First para ficheiros estáticos)
 self.addEventListener('fetch', (event) => {
   // Ignora chamadas para a API da Google e Firebase (estes precisam de rede viva)
-  if (event.request.url.includes('script.google.com') || 
-      event.request.url.includes('firestore') || 
-      event.request.url.includes('googleapis')) {
+  if (event.request.url.includes('script.google.com') ||
+    event.request.url.includes('firestore') ||
+    event.request.url.includes('googleapis')) {
     return;
   }
 
@@ -113,7 +116,7 @@ if (firebase.messaging.isSupported()) {
 // 5. Ação ao CLICAR na Notificação (Abrir a App)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close(); // Fecha a notificação do sistema
-  
+
   // Lê a rota para onde a notificação deve apontar (geralmente a raiz do portal)
   const urlToOpen = new URL(event.notification.data.click_action || "/", self.location.origin).href;
 
