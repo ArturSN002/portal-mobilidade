@@ -2,52 +2,52 @@
 // 6. FLUXO DE CONSULTA DO ESTUDANTE
 // ========================================================================
 async function consultarEstudante() {
-  const alvo = document.getElementById('id-estudante').value.trim();
-  if (!alvo) { showToast("Informe o CPF.", "error"); return; }
+    const alvo = document.getElementById('id-estudante').value.trim();
+    if (!alvo) { showToast("Informe o CPF.", "error"); return; }
 
-  const btn = document.getElementById('btn-estudante');
-  const resBox = document.getElementById('res-estudante');
-  const checkboxPush = document.getElementById('chk-notificacoes-cpf');
-  
-  btn.innerText = "A CONSULTAR...";
-  btn.disabled = true;
-  resBox.classList.add('hidden');
+    const btn = document.getElementById('btn-estudante');
+    const resBox = document.getElementById('res-estudante');
+    const checkboxPush = document.getElementById('chk-notificacoes-cpf');
 
-  try {
-    const res = await apiCall("consultarStatusCPF", { cpf: alvo });
-    
-    if (!res.encontrado) {
-      mostrarErroEstudante("Não Encontrado", "Verifique o CPF ou submissão.");
-      return;
+    btn.innerText = "A CONSULTAR...";
+    btn.disabled = true;
+    resBox.classList.add('hidden');
+
+    try {
+        const res = await apiCall("consultarStatusCPF", { cpf: alvo });
+
+        if (!res.encontrado) {
+            mostrarErroEstudante("Não Encontrado", "Verifique o CPF ou submissão.");
+            return;
+        }
+
+        if (checkboxPush && checkboxPush.checked) {
+            solicitarConsentimentoPushAnonimo(alvo);
+        }
+
+        renderizarTimelineEstudante(res, resBox);
+    } catch (err) {
+        mostrarErroEstudante("Erro na API", "Tente novamente mais tarde.");
+    } finally {
+        btn.innerText = "CONSULTAR STATUS";
+        btn.disabled = false;
     }
-    
-    if (checkboxPush && checkboxPush.checked) {
-       solicitarConsentimentoPushAnonimo(alvo);
-    }
-    
-    renderizarTimelineEstudante(res, resBox);
-  } catch(err) {
-    mostrarErroEstudante("Erro na API", "Tente novamente mais tarde.");
-  } finally {
-    btn.innerText = "CONSULTAR STATUS";
-    btn.disabled = false;
-  }
 }
 
 async function solicitarConsentimentoPushAnonimo(cpf) {
-  try {
-    if (typeof firebase === 'undefined' || !firebase.messaging.isSupported()) return;
-    const messaging = firebase.messaging();
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      const token = await messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY });
-      if (token) {
-        await apiCall("registrarPushToken", { idEstudante: cpf, pushToken: token });
-      }
+    try {
+        if (typeof firebase === 'undefined' || !firebase.messaging.isSupported()) return;
+        const messaging = firebase.messaging();
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            const token = await messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY });
+            if (token) {
+                await apiCall("registrarPushToken", { idEstudante: cpf, pushToken: token });
+            }
+        }
+    } catch (error) {
+        console.warn("Push anónimo falhou ou foi bloqueado.", error);
     }
-  } catch (error) {
-    console.warn("Push anónimo falhou ou foi bloqueado.", error);
-  }
 }
 
 function irParaCofreComId(idAcesso) {
@@ -55,102 +55,102 @@ function irParaCofreComId(idAcesso) {
         switchView('view-wallet');
         return;
     }
-    
+
     switchView('view-login');
     const inputId = document.getElementById('login-id');
     const inputSenha = document.getElementById('login-senha');
-    
+
     if (inputId && idAcesso) inputId.value = idAcesso;
-    if (inputSenha) setTimeout(() => { inputSenha.focus(); }, 100); 
+    if (inputSenha) setTimeout(() => { inputSenha.focus(); }, 100);
 }
 
 function renderizarTimelineEstudante(dados, container) {
-  const nomeLimpo = formatarNomeProprio(dados.nome).split(' ')[0];
-  let html = `<h3 style="margin:0 0 15px 0; color:var(--primary);">Olá, ${nomeLimpo}!</h3>`;
-  html += `<div class="timeline">`;
-  
-  html += `<div class="timeline-item active-blue">
+    const nomeLimpo = formatarNomeProprio(dados.nome).split(' ')[0];
+    let html = `<h3 style="margin:0 0 15px 0; color:var(--primary);">Olá, ${nomeLimpo}!</h3>`;
+    html += `<div class="timeline">`;
+
+    html += `<div class="timeline-item active-blue">
              <strong style="color: var(--primary);">1. Formulário Recebido</strong><br>
              <span style="color:var(--text-sub); font-size:11px;">Os seus dados deram entrada no sistema.</span>
            </div>`;
 
-  const sOCR = String(dados.statusOCR || "").trim().toUpperCase();
-  const sDocs = String(dados.statusDocs || "").trim().toUpperCase();
-  const sAtiv = String(dados.statusAtividade || "").trim().toUpperCase();
+    const sOCR = String(dados.statusOCR || "").trim().toUpperCase();
+    const sDocs = String(dados.statusDocs || "").trim().toUpperCase();
+    const sAtiv = String(dados.statusAtividade || "").trim().toUpperCase();
 
-  const buildObsBox = (obs, colorBorder, colorBg, colorText) => {
-    if (!obs || obs.trim() === "") return "";
-    return `
+    const buildObsBox = (obs, colorBorder, colorBg, colorText) => {
+        if (!obs || obs.trim() === "") return "";
+        return `
       <div style="margin-top: 12px; padding: 12px; background: ${colorBg}; border-left: 4px solid ${colorBorder}; border-radius: 4px; color: ${colorText}; font-size: 12px; line-height: 1.5; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         <strong style="display:block; margin-bottom:4px; font-size:11px; text-transform:uppercase; opacity:0.8; letter-spacing: 0.5px;">Mensagem do Setor:</strong>
         ${obs.replace(/\n/g, '<br>')}
       </div>
     `;
-  };
+    };
 
-  if (sAtiv === "CANCELADO") {
-    html += `<div class="timeline-item active-red"><strong style="color:var(--danger);">2. Emissão Interrompida</strong></div>`;
-    html += `<div class="timeline-item active-red">
+    if (sAtiv === "CANCELADO") {
+        html += `<div class="timeline-item active-red"><strong style="color:var(--danger);">2. Emissão Interrompida</strong></div>`;
+        html += `<div class="timeline-item active-red">
                <strong style="color:var(--danger);">3. Inscrição Cancelada</strong><br>
                <span style="color:var(--danger); font-size:11px; font-weight:600;">O acesso ao transporte foi cancelado.</span>
                ${buildObsBox(dados.obs, "var(--danger)", "#FEF2F2", "#991B1B")}
              </div>`;
-             
-  } else if (sAtiv === "SUSPENSO") {
-    html += `<div class="timeline-item active-orange"><strong style="color:#F97316;">2. Emissão Interrompida</strong></div>`;
-    html += `<div class="timeline-item active-orange">
+
+    } else if (sAtiv === "SUSPENSO") {
+        html += `<div class="timeline-item active-orange"><strong style="color:#F97316;">2. Emissão Interrompida</strong></div>`;
+        html += `<div class="timeline-item active-orange">
                <strong style="color:#F97316;">3. Inscrição Suspensa</strong><br>
                <span style="color:#F97316; font-size:11px; font-weight:600;">O acesso foi desativado temporariamente.</span>
                ${buildObsBox(dados.obs, "#F97316", "#FFF7ED", "#9A3412")}
                
                <button class="btn-solid" style="margin-top:15px; background: #9A3412; font-size:12px;" onclick="abrirPortalResgate()">CORRIGIR DOCUMENTAÇÃO</button>
              </div>`;
-             
-  } else {
-    if (sOCR === "PENDENTE" || sOCR === "") {
-      html += `<div class="timeline-item"><strong>2. Em Auditoria</strong><br><span style="color:var(--text-sub); font-size:11px;">A aguardar análise documental.</span></div>`;
-      html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
-      
-    } else if (sOCR === "ANALISE_HUMANA" || sOCR === "PENDENCIA") {
-      html += `<div class="timeline-item active-yellow">
+
+    } else {
+        if (sOCR === "PENDENTE" || sOCR === "") {
+            html += `<div class="timeline-item"><strong>2. Em Auditoria</strong><br><span style="color:var(--text-sub); font-size:11px;">A aguardar análise documental.</span></div>`;
+            html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
+
+        } else if (sOCR === "ANALISE_HUMANA" || sOCR === "PENDENCIA") {
+            html += `<div class="timeline-item active-yellow">
                  <strong style="color:#FBBF24;">2. Pendência Documental</strong><br>
                  <span style="color:#D97706; font-size:11px; font-weight:600;">Ação necessária para prosseguir.</span>
                  ${buildObsBox(dados.obs, "#F59E0B", "#FFFBEB", "#92400E")}
                  
                  <button class="btn-solid" style="margin-top:15px; background: var(--accent); font-size:12px;" onclick="abrirPortalResgate()">CORRIGIR DOCUMENTAÇÃO</button>
                </div>`;
-      html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
-      
-    } else {
-      html += `<div class="timeline-item active-green"><strong style="color:var(--success);">2. Documentos Validados</strong></div>`;
-      
-      if (sDocs === "EMITIDO" || sDocs === "EMITIDO_NOTIFICADO" || sDocs === "GERADO") {
-        html += `<div class="timeline-item active-green"><strong style="color:var(--success);">3. Carteira Ativa!</strong><br><span style="color:var(--text-sub); font-size:11px;">A sua identidade estudantil já pode ser utilizada.</span></div>`;
-        
-        if (dados.idAcesso) {
-           html += `
+            html += `<div class="timeline-item"><strong>3. Resultado</strong></div>`;
+
+        } else {
+            html += `<div class="timeline-item active-green"><strong style="color:var(--success);">2. Documentos Validados</strong></div>`;
+
+            if (sDocs === "EMITIDO" || sDocs === "EMITIDO_NOTIFICADO" || sDocs === "GERADO") {
+                html += `<div class="timeline-item active-green"><strong style="color:var(--success);">3. Carteira Ativa!</strong><br><span style="color:var(--text-sub); font-size:11px;">A sua identidade estudantil já pode ser utilizada.</span></div>`;
+
+                if (dados.idAcesso) {
+                    html += `
            <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px solid var(--success); border-radius: 8px; text-align: center;">
              <span style="font-size: 11px; color: var(--success); display:block; margin-bottom:5px; text-transform: uppercase; font-weight:700;">O seu ID de Acesso é:</span>
              <strong style="font-size: 22px; color: #065F46; letter-spacing: 2px; font-family: monospace;">${dados.idAcesso}</strong>
              <p style="font-size: 11px; color: #065F46; margin: 8px 0 0 0;">Use este ID e os 4 últimos dígitos do seu CPF para abrir o cofre digital.</p>
              <button class="btn-solid" style="margin-top:15px;" onclick="irParaCofreComId('${dados.idAcesso}')">IR PARA O COFRE</button>
            </div>`;
+                }
+            } else {
+                html += `<div class="timeline-item active-blue"><strong style="color: var(--primary);">3. A Aguardar Emissão</strong><br><span style="color:var(--text-sub); font-size:11px;">A sua carteira digital está em processamento.</span></div>`;
+            }
         }
-      } else {
-        html += `<div class="timeline-item active-blue"><strong style="color: var(--primary);">3. A Aguardar Emissão</strong><br><span style="color:var(--text-sub); font-size:11px;">A sua carteira digital está em processamento.</span></div>`;
-      }
     }
-  }
 
-  html += `</div>`; 
-  container.innerHTML = html;
-  container.classList.remove('hidden');
+    html += `</div>`;
+    container.innerHTML = html;
+    container.classList.remove('hidden');
 }
 
 function mostrarErroEstudante(titulo, mensagem) {
-  const resBox = document.getElementById('res-estudante');
-  resBox.innerHTML = `<div class="error-box"><strong>${titulo}</strong><br>${mensagem}</div>`;
-  resBox.classList.remove('hidden');
+    const resBox = document.getElementById('res-estudante');
+    resBox.innerHTML = `<div class="error-box"><strong>${titulo}</strong><br>${mensagem}</div>`;
+    resBox.classList.remove('hidden');
 }
 
 // ========================================================================
@@ -181,7 +181,7 @@ function toggleBoxResgate(tipoDoc) {
     const box = document.getElementById(`box-resgate-${tipoDoc}`);
     const fileInput = document.getElementById(`file-resgate-${tipoDoc}`);
     const statusSpan = document.getElementById(`status-resgate-${tipoDoc}`);
-    
+
     if (isChecked) {
         box.classList.remove('hidden');
     } else {
@@ -197,7 +197,7 @@ function toggleBoxResgate(tipoDoc) {
 function processarArquivoResgate(inputElement, tipoDoc) {
     const file = inputElement.files[0];
     const statusSpan = document.getElementById(`status-resgate-${tipoDoc}`);
-    
+
     if (!file) {
         delete arquivosParaResgate[tipoDoc];
         statusSpan.innerText = "A aguardar seleção...";
@@ -206,7 +206,7 @@ function processarArquivoResgate(inputElement, tipoDoc) {
         return;
     }
 
-    if (file.size > 5 * 1024 * 1024) { 
+    if (file.size > 5 * 1024 * 1024) {
         showToast("O arquivo é muito grande (Máximo 5MB).", "error");
         inputElement.value = "";
         delete arquivosParaResgate[tipoDoc];
@@ -220,7 +220,7 @@ function processarArquivoResgate(inputElement, tipoDoc) {
     statusSpan.style.color = "var(--accent)";
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         arquivosParaResgate[tipoDoc] = {
             tipo: tipoDoc,
             nome: file.name,
@@ -230,7 +230,7 @@ function processarArquivoResgate(inputElement, tipoDoc) {
         statusSpan.style.color = "var(--success)";
         verificarBotaoResgate();
     };
-    reader.onerror = function() {
+    reader.onerror = function () {
         showToast("Falha na leitura do arquivo.", "error");
         inputElement.value = "";
         delete arquivosParaResgate[tipoDoc];
@@ -278,11 +278,11 @@ async function enviarArquivosResgate() {
         if (res.sucesso) {
             showToast(res.msg || "Documentos enviados com sucesso!", "success");
             switchView('view-consult');
-            consultarEstudante(); 
+            consultarEstudante();
         } else {
             showToast(res.erro || "Falha ao enviar os documentos.", "error");
         }
-    } catch(e) {
+    } catch (e) {
         showToast("Erro de ligação com a Secretaria.", "error");
     } finally {
         if (!document.getElementById('view-resgate').classList.contains('hidden')) {
@@ -298,8 +298,8 @@ async function enviarArquivosResgate() {
 let currentWalletId = "";
 let currentWalletSenha = "";
 let currentStudentName = "";
-let clockInterval = null; 
-let timeoutSessaoEstudanteID = null; 
+let clockInterval = null;
+let timeoutSessaoEstudanteID = null;
 
 function triggerVibration(ms) {
     if ("vibrate" in navigator) {
@@ -321,7 +321,7 @@ function restaurarSessaoEstudante() {
             currentStudentName = dados.nome;
             armarRelogioSessaoEstudante();
             abrirTelaCofreOuEntrarDireto();
-        } catch(e) {
+        } catch (e) {
             console.warn("Erro ao restaurar sessão de estudante na RAM.");
         }
     }
@@ -353,7 +353,7 @@ function mostrarSkeletonWallet() {
     const container = document.getElementById('wallet-container');
     const actions = document.getElementById('wallet-actions');
     if (actions) actions.classList.add('hidden');
-    
+
     container.innerHTML = `
     <div class="wallet-card">
         <div class="wallet-header skeleton-box" style="color: transparent;">IDENTIDADE UNIVERSITÁRIA</div>
@@ -377,116 +377,116 @@ function mostrarSkeletonWallet() {
 }
 
 async function loginCarteira() {
-  const id = document.getElementById('login-id').value.trim();
-  const senha = document.getElementById('login-senha').value.trim();
-  const btn = document.getElementById('btn-login');
-  const resBox = document.getElementById('res-login');
+    const id = document.getElementById('login-id').value.trim();
+    const senha = document.getElementById('login-senha').value.trim();
+    const btn = document.getElementById('btn-login');
+    const resBox = document.getElementById('res-login');
 
-  if (!id || !senha) {
-    resBox.innerText = "Preencha o ID e a Senha.";
-    resBox.classList.remove('hidden');
-    triggerVibration([50, 50]);
-    return;
-  }
-
-  btn.innerText = "A AUTENTICAR...";
-  btn.disabled = true;
-  resBox.classList.add('hidden');
-  
-  switchView('view-wallet');
-  mostrarSkeletonWallet();
-
-  try {
-    const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
-
-    if (res.erro) {
-      switchView('view-login');
-      resBox.innerText = res.erro;
-      resBox.classList.remove('hidden');
-      triggerVibration([50, 50, 50]);
-    } else if (res.sucesso) {
-      currentWalletId = id;
-      currentWalletSenha = senha;
-      currentStudentName = res.nome;
-      
-      triggerVibration(50);
-      
-      if (res.token) localStorage.setItem("MAESTRO_EST_TOKEN", res.token);
-      localStorage.setItem("MAESTRO_WALLET_CREDS", JSON.stringify({id: id, senha: senha}));
-      
-      const offlineWallet = {
-          nome: res.nome,
-          cpfMascarado: res.cpfMascarado,
-          instituicao: res.instituicao,
-          turno: res.turno,
-          rota: res.rota,
-          fotoBase64: res.fotoUrl,
-          idCarteira: res.idCarteira || id,
-          validade: res.validade,
-          themePrimary: window.THEME_COLOR || "#0A3D6B",
-          themeSecondary: window.BG_COLOR || "#f0f0f0",
-          cidade: res.cidade
-      };
-      localStorage.setItem("MAESTRO_OFFLINE_WALLET", JSON.stringify(offlineWallet));
-      localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
-
-      renderizarCarteira(res);
-      document.getElementById('login-id').value = '';
-      document.getElementById('login-senha').value = '';
-      
-      armarRelogioSessaoEstudante(); 
-      setTimeout(inicializarPushNotifications, 2000); 
+    if (!id || !senha) {
+        resBox.innerText = "Preencha o ID e a Senha.";
+        resBox.classList.remove('hidden');
+        triggerVibration([50, 50]);
+        return;
     }
-  } catch(err) {
-    const cachedData = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
-    const cachedCreds = localStorage.getItem("MAESTRO_WALLET_CREDS");
-    
-    if (cachedData && cachedCreds) {
-       const creds = JSON.parse(cachedCreds);
-       if (creds.id.toUpperCase() === id.toUpperCase() && creds.senha === senha) {
-          currentWalletId = id;
-          currentWalletSenha = senha;
-          const resCached = JSON.parse(cachedData);
-          currentStudentName = resCached.nome;
-          
-          triggerVibration(50);
-          showToast("Modo Offline Ativado. Funções limitadas.", "warning");
-          if (resCached.themePrimary) {
-              renderizarCarteiraOffline(resCached);
-          } else {
-              renderizarCarteira(resCached);
-          }
-          armarRelogioSessaoEstudante();
-          return;
-       }
+
+    btn.innerText = "A AUTENTICAR...";
+    btn.disabled = true;
+    resBox.classList.add('hidden');
+
+    switchView('view-wallet');
+    mostrarSkeletonWallet();
+
+    try {
+        const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
+
+        if (res.erro) {
+            switchView('view-login');
+            resBox.innerText = res.erro;
+            resBox.classList.remove('hidden');
+            triggerVibration([50, 50, 50]);
+        } else if (res.sucesso) {
+            currentWalletId = id;
+            currentWalletSenha = senha;
+            currentStudentName = res.nome;
+
+            triggerVibration(50);
+
+            if (res.token) localStorage.setItem("MAESTRO_EST_TOKEN", res.token);
+            localStorage.setItem("MAESTRO_WALLET_CREDS", JSON.stringify({ id: id, senha: senha }));
+
+            const offlineWallet = {
+                nome: res.nome,
+                cpfMascarado: res.cpfMascarado,
+                instituicao: res.instituicao,
+                turno: res.turno,
+                rota: res.rota,
+                fotoBase64: res.fotoUrl,
+                idCarteira: res.idCarteira || id,
+                validade: res.validade,
+                themePrimary: window.THEME_COLOR || "#0A3D6B",
+                themeSecondary: window.BG_COLOR || "#f0f0f0",
+                cidade: res.cidade
+            };
+            localStorage.setItem("MAESTRO_OFFLINE_WALLET", JSON.stringify(offlineWallet));
+            localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
+
+            renderizarCarteira(res);
+            document.getElementById('login-id').value = '';
+            document.getElementById('login-senha').value = '';
+
+            armarRelogioSessaoEstudante();
+            setTimeout(inicializarPushNotifications, 2000);
+        }
+    } catch (err) {
+        const cachedData = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
+        const cachedCreds = localStorage.getItem("MAESTRO_WALLET_CREDS");
+
+        if (cachedData && cachedCreds) {
+            const creds = JSON.parse(cachedCreds);
+            if (creds.id.toUpperCase() === id.toUpperCase() && creds.senha === senha) {
+                currentWalletId = id;
+                currentWalletSenha = senha;
+                const resCached = JSON.parse(cachedData);
+                currentStudentName = resCached.nome;
+
+                triggerVibration(50);
+                showToast("Modo Offline Ativado. Funções limitadas.", "warning");
+                if (resCached.themePrimary) {
+                    renderizarCarteiraOffline(resCached);
+                } else {
+                    renderizarCarteira(resCached);
+                }
+                armarRelogioSessaoEstudante();
+                return;
+            }
+        }
+        switchView('view-login');
+        resBox.innerText = "Falha de ligação. Necessita de internet.";
+        resBox.classList.remove('hidden');
+        triggerVibration([50, 50, 50]);
+    } finally {
+        if (!document.getElementById('view-login').classList.contains('hidden')) {
+            btn.innerText = "ENTRAR NO COFRE";
+            btn.disabled = false;
+        }
     }
-    switchView('view-login');
-    resBox.innerText = "Falha de ligação. Necessita de internet.";
-    resBox.classList.remove('hidden');
-    triggerVibration([50, 50, 50]);
-  } finally {
-    if (!document.getElementById('view-login').classList.contains('hidden')) {
-      btn.innerText = "ENTRAR NO COFRE";
-      btn.disabled = false;
-    }
-  }
 }
 
 function armarRelogioSessaoEstudante() {
     if (timeoutSessaoEstudanteID) clearTimeout(timeoutSessaoEstudanteID);
     timeoutSessaoEstudanteID = setTimeout(() => {
-        sairCarteira(true); 
+        sairCarteira(true);
         showToast("Sessão expirada. Por favor, aceda novamente.", "info");
     }, 10800000);
 }
 
 function renderizarCarteira(dados) {
-  const container = document.getElementById('wallet-container');
-  const actions = document.getElementById('wallet-actions');
-  const nomeTratado = formatarNomeProprio(dados.nome);
-  const fotoHTML = dados.fotoUrl ? `<img src="${dados.fotoUrl}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem Foto</div>`;
-  
-  let html = `
+    const container = document.getElementById('wallet-container');
+    const actions = document.getElementById('wallet-actions');
+    const nomeTratado = formatarNomeProprio(dados.nome);
+    const fotoHTML = dados.fotoUrl ? `<img src="${dados.fotoUrl}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem Foto</div>`;
+
+    let html = `
   <div class="wallet-card">
     <div class="wallet-header">IDENTIDADE UNIVERSITÁRIA</div>
     <div class="wallet-body">
@@ -522,11 +522,11 @@ function renderizarCarteira(dados) {
       <button id="btn-dw-carteira" class="btn-solid" style="flex:1; margin:0;" onclick="baixarDocumento('CARTEIRA')">🪪 Baixar ID</button>
       <button id="btn-dw-declaracao" class="btn-solid dark-bg" style="flex:1; margin:0;" onclick="baixarDocumento('DECLARACAO')">📄 Declaração</button>
   </div>`;
-  
-  container.innerHTML = html;
-  
-  if (actions) {
-      actions.innerHTML = `
+
+    container.innerHTML = html;
+
+    if (actions) {
+        actions.innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom: 15px;">
            <button class="btn-solid" style="flex:1; margin:0; background: var(--primary);" onclick="verificarJanelasEmbarque()">🚐 Abrir Radar de Viagens</button>
            <button class="btn-solid dark-bg" style="flex:1; margin:0;" onclick="abrirMuralDaSemana()">🗣️ Sugestões / Fórum</button>
@@ -535,26 +535,26 @@ function renderizarCarteira(dados) {
            <button class="btn-text text-danger" style="font-weight: 700; font-size: 14px;" onclick="sairCarteira()">❌ Fechar Cofre Digital</button>
         </div>
       `;
-      actions.classList.remove('hidden');
-  }
-  
-  iniciarRelogioAntiPrint('wallet-clock');
+        actions.classList.remove('hidden');
+    }
 
-  const qrContainer = document.getElementById('wallet-qrcode');
-  if (qrContainer) {
-      qrContainer.innerHTML = ""; 
-      const semente = dados.sementeDia || new Date().toISOString().split('T')[0];
-      new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
-  }
+    iniciarRelogioAntiPrint('wallet-clock');
+
+    const qrContainer = document.getElementById('wallet-qrcode');
+    if (qrContainer) {
+        qrContainer.innerHTML = "";
+        const semente = dados.sementeDia || new Date().toISOString().split('T')[0];
+        new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+    }
 }
 
 function renderizarCarteiraOffline(dados) {
-  const container = document.getElementById('wallet-container');
-  const actions = document.getElementById('wallet-actions');
-  const nomeTratado = formatarNomeProprio(dados.nome);
-  const fotoHTML = dados.fotoBase64 ? `<img src="${dados.fotoBase64}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem Foto</div>`;
-  
-  let html = `
+    const container = document.getElementById('wallet-container');
+    const actions = document.getElementById('wallet-actions');
+    const nomeTratado = formatarNomeProprio(dados.nome);
+    const fotoHTML = dados.fotoBase64 ? `<img src="${dados.fotoBase64}" class="wallet-photo">` : `<div class="wallet-photo" style="display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;text-align:center;">Sem Foto</div>`;
+
+    let html = `
   <div class="wallet-card" style="border: 2px solid #f59e0b;">
     <div class="wallet-header" style="background: #f59e0b; color: #fff;">MODO OFFLINE</div>
     <div class="wallet-body">
@@ -590,36 +590,36 @@ function renderizarCarteiraOffline(dados) {
       <button class="btn-solid" style="flex:1; margin:0; background: #ccc; cursor: not-allowed;" disabled>🪪 Baixar ID</button>
       <button class="btn-solid dark-bg" style="flex:1; margin:0; background: #ccc; cursor: not-allowed;" disabled>📄 Declaração</button>
   </div>`;
-  
-  container.innerHTML = html;
-  
-  if (actions) {
-      actions.innerHTML = `
+
+    container.innerHTML = html;
+
+    if (actions) {
+        actions.innerHTML = `
         <div style="text-align:center;">
            <button class="btn-text text-danger" style="font-weight: 700; font-size: 14px;" onclick="sairCarteira()">❌ Fechar Cofre Digital</button>
         </div>
       `;
-      actions.classList.remove('hidden');
-  }
-  
-  iniciarRelogioAntiPrint('wallet-clock');
+        actions.classList.remove('hidden');
+    }
 
-  const qrContainer = document.getElementById('wallet-qrcode-offline');
-  if (qrContainer) {
-      qrContainer.innerHTML = ""; 
-      const semente = new Date().toISOString().split('T')[0];
-      new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
-  }
+    iniciarRelogioAntiPrint('wallet-clock');
+
+    const qrContainer = document.getElementById('wallet-qrcode-offline');
+    if (qrContainer) {
+        qrContainer.innerHTML = "";
+        const semente = new Date().toISOString().split('T')[0];
+        new QRCode(qrContainer, { text: `${dados.idCarteira}|${semente}`, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+    }
 }
 
 let wakeLock = null;
 async function toggleFullscreenQR(elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    
+
     el.classList.toggle('qr-fullscreen');
     const isFullscreen = el.classList.contains('qr-fullscreen');
-    
+
     if (isFullscreen) {
         if ('wakeLock' in navigator) {
             try {
@@ -638,79 +638,79 @@ async function toggleFullscreenQR(elementId) {
 }
 
 function iniciarRelogioAntiPrint(elementId) {
-  if (clockInterval) clearInterval(clockInterval);
-  const clockDiv = document.getElementById(elementId);
-  if (!clockDiv) return;
-  const update = () => clockDiv.innerText = `⏳ Autenticado: ${new Date().toLocaleTimeString('pt-BR')}`;
-  update();
-  clockInterval = setInterval(update, 1000);
+    if (clockInterval) clearInterval(clockInterval);
+    const clockDiv = document.getElementById(elementId);
+    if (!clockDiv) return;
+    const update = () => clockDiv.innerText = `⏳ Autenticado: ${new Date().toLocaleTimeString('pt-BR')}`;
+    update();
+    clockInterval = setInterval(update, 1000);
 }
 
 async function baixarDocumento(tipo, tentativa = 1) {
-  const MAX_TENTATIVAS = 3;
-  const btnId = tipo === 'CARTEIRA' ? 'btn-dw-carteira' : 'btn-dw-declaracao';
-  const btn = document.getElementById(btnId);
-  
-  const textoOriginal = btn.getAttribute('data-original-text') || btn.innerHTML;
-  if (tentativa === 1) btn.setAttribute('data-original-text', textoOriginal);
+    const MAX_TENTATIVAS = 3;
+    const btnId = tipo === 'CARTEIRA' ? 'btn-dw-carteira' : 'btn-dw-declaracao';
+    const btn = document.getElementById(btnId);
 
-  btn.innerHTML = tentativa === 1 ? `⏳ A transferir...` : `🔄 Tentativa ${tentativa}/${MAX_TENTATIVAS}...`;
-  btn.disabled = true;
+    const textoOriginal = btn.getAttribute('data-original-text') || btn.innerHTML;
+    if (tentativa === 1) btn.setAttribute('data-original-text', textoOriginal);
 
-  try {
-    const res = await apiCall("baixarDocumentoSeguro", { id: currentWalletId, tipo: tipo });
-    
-    if (res.erro) {
-      btn.innerHTML = textoOriginal;
-      btn.disabled = false;
-      showToast(res.erro, "error");
-    } else if (res.sucesso && res.arquivoBase64) {
-      const link = document.createElement('a');
-      link.href = `data:application/pdf;base64,${res.arquivoBase64}`;
-      link.download = res.arquivoNome || `Documento_${tipo}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      showToast(`Download de ${tipo} concluído!`, "success");
-      btn.innerHTML = `⏳ Aguarde...`;
-      setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 10000); 
+    btn.innerHTML = tentativa === 1 ? `⏳ A transferir...` : `🔄 Tentativa ${tentativa}/${MAX_TENTATIVAS}...`;
+    btn.disabled = true;
+
+    try {
+        const res = await apiCall("baixarDocumentoSeguro", { id: currentWalletId, tipo: tipo });
+
+        if (res.erro) {
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+            showToast(res.erro, "error");
+        } else if (res.sucesso && res.arquivoBase64) {
+            const link = document.createElement('a');
+            link.href = `data:application/pdf;base64,${res.arquivoBase64}`;
+            link.download = res.arquivoNome || `Documento_${tipo}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast(`Download de ${tipo} concluído!`, "success");
+            btn.innerHTML = `⏳ Aguarde...`;
+            setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 10000);
+        }
+    } catch (err) {
+        if (tentativa < MAX_TENTATIVAS) {
+            showToast(`Servidor ocupado. A tentar...`, "info");
+            setTimeout(() => { baixarDocumento(tipo, tentativa + 1); }, tentativa * 2000);
+        } else {
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+            showToast("Falha de conexão com a API.", "error");
+        }
     }
-  } catch(err) {
-    if (tentativa < MAX_TENTATIVAS) {
-      showToast(`Servidor ocupado. A tentar...`, "info");
-      setTimeout(() => { baixarDocumento(tipo, tentativa + 1); }, tentativa * 2000);
-    } else {
-      btn.innerHTML = textoOriginal;
-      btn.disabled = false;
-      showToast("Falha de conexão com a API.", "error");
-    }
-  }
 }
 
 async function sairCarteira(expiracaoSilenciosa = false) {
-  try { await apiCall("invalidarTokenSessao"); } catch(e) {}
-  
-  localStorage.removeItem("MAESTRO_EST_TOKEN");
+    try { await apiCall("invalidarTokenSessao"); } catch (e) { }
 
-  if (clockInterval) clearInterval(clockInterval);
-  if (timeoutSessaoEstudanteID) clearInterval(timeoutSessaoEstudanteID);
-  
-  pararTransmissaoGpsE_Radar();
-  
-  document.getElementById('wallet-container').innerHTML = ''; 
-  const actions = document.getElementById('wallet-actions');
-  if (actions) actions.classList.add('hidden');
-  
-  currentWalletId = "";
-  currentWalletSenha = "";
-  currentStudentName = "";
-  
-  const painelMob = document.getElementById('view-mobilidade');
-  if (painelMob) painelMob.style.display = 'none';
-  
-  switchView('view-aluno-menu'); 
-  if (!expiracaoSilenciosa) showToast("Cofre bloqueado com segurança.", "info");
+    localStorage.removeItem("MAESTRO_EST_TOKEN");
+
+    if (clockInterval) clearInterval(clockInterval);
+    if (timeoutSessaoEstudanteID) clearInterval(timeoutSessaoEstudanteID);
+
+    pararTransmissaoGpsE_Radar();
+
+    document.getElementById('wallet-container').innerHTML = '';
+    const actions = document.getElementById('wallet-actions');
+    if (actions) actions.classList.add('hidden');
+
+    currentWalletId = "";
+    currentWalletSenha = "";
+    currentStudentName = "";
+
+    const painelMob = document.getElementById('view-mobilidade');
+    if (painelMob) painelMob.style.display = 'none';
+
+    switchView('view-aluno-menu');
+    if (!expiracaoSilenciosa) showToast("Cofre bloqueado com segurança.", "info");
 }
 
 // ========================================================================
@@ -718,23 +718,23 @@ async function sairCarteira(expiracaoSilenciosa = false) {
 // ========================================================================
 
 let onibusSelecionadoGPS = null;
-let idIntervaloGPS = null;      
-let idIntervaloRadar = null;    
+let idIntervaloGPS = null;
+let idIntervaloRadar = null;
 let wakeLockAtivo = null;
 
 function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
-    const R = 6371; 
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; 
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
 
 function calcularETA(distanciaKm) {
-    const velMediaKmH = 25; 
+    const velMediaKmH = 25;
     const tempoHoras = distanciaKm / velMediaKmH;
     const tempoMinutos = Math.round(tempoHoras * 60);
     if (tempoMinutos <= 2) return "A chegar!";
@@ -742,58 +742,58 @@ function calcularETA(distanciaKm) {
 }
 
 async function verificarJanelasEmbarque() {
-   if (!currentWalletId) {
-      showToast("Sessão inválida para aceder às viagens.", "error");
-      return;
-   }
-   
-   const painelMob = document.getElementById('view-mobilidade');
-   const containerLista = document.getElementById('lista-viagens-container');
-   const painelSucesso = document.getElementById('painel-viagem-ativa');
-   
-   if (painelMob) painelMob.style.display = 'block';
-   if (painelSucesso) painelSucesso.innerHTML = ''; 
-   
-   if (containerLista) {
-       containerLista.innerHTML = `<div class="loader" style="margin: 0 auto 10px auto; width: 25px; height: 25px; border-width: 3px;"></div><p style="font-size: 11px; color: var(--text-sub);">A procurar autocarros...</p>`;
-       containerLista.classList.remove('hidden');
-   }
+    if (!currentWalletId) {
+        showToast("Sessão inválida para aceder às viagens.", "error");
+        return;
+    }
 
-   try {
-       if (painelMob) painelMob.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const painelMob = document.getElementById('view-mobilidade');
+    const containerLista = document.getElementById('lista-viagens-container');
+    const painelSucesso = document.getElementById('painel-viagem-ativa');
 
-       const res = await apiCall("getViagensDisponiveisPortal", { idEstudante: currentWalletId });
-       
-       if (!res.sucesso) {
-           if (containerLista) containerLista.innerHTML = `<p style="font-size: 11px; color: var(--danger);">Erro: ${res.erro}</p>`;
-           return;
-       }
+    if (painelMob) painelMob.style.display = 'block';
+    if (painelSucesso) painelSucesso.innerHTML = '';
 
-       if (res.emViagem) {
-           if (containerLista) containerLista.classList.add('hidden');
-           onibusSelecionadoGPS = res.dadosViagem.idOnibus;
-           abrirPainelViagem(); 
-           return;
-       }
+    if (containerLista) {
+        containerLista.innerHTML = `<div class="loader" style="margin: 0 auto 10px auto; width: 25px; height: 25px; border-width: 3px;"></div><p style="font-size: 11px; color: var(--text-sub);">A procurar autocarros...</p>`;
+        containerLista.classList.remove('hidden');
+    }
 
-       if (!res.viagens || res.viagens.length === 0) {
-           let msgEmpty = "Nenhum embarque previsto para agora.";
-           if (res.statusOperacao === "FORA_DE_HORARIO") {
-               msgEmpty = "<b>Fora do Horário de Embarque.</b><br>Os autocarros só aparecem aqui minutos antes da hora de partida da sua rota.";
-           } else if (res.statusOperacao === "SEM_FROTA") {
-               msgEmpty = "Não há autocarros ativos associados à sua rota neste momento.";
-           }
-           if (containerLista) containerLista.innerHTML = `<div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; color: #92400e; font-size: 12px; line-height: 1.4; text-align:left;">${msgEmpty}</div>`;
-           return;
-       }
+    try {
+        if (painelMob) painelMob.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-       let html = `<p style="font-size: 11px; color: var(--text-sub); margin-bottom: 10px;">Selecione o seu autocarro para garantir lugar:</p>`;
-       res.viagens.forEach(v => {
-           const labelLota = v.vagasRestantes > 0 ? `<span style="color:var(--success); font-weight:bold;">${v.vagasRestantes} vagas</span>` : `<span style="color:var(--danger); font-weight:bold;">LOTADO</span>`;
-           const btnDisable = v.vagasRestantes <= 0 ? "disabled" : "";
-           const btnBg = v.vagasRestantes <= 0 ? "#ccc" : "var(--primary)";
-           
-           html += `
+        const res = await apiCall("getViagensDisponiveisPortal", { idEstudante: currentWalletId });
+
+        if (!res.sucesso) {
+            if (containerLista) containerLista.innerHTML = `<p style="font-size: 11px; color: var(--danger);">Erro: ${res.erro}</p>`;
+            return;
+        }
+
+        if (res.emViagem) {
+            if (containerLista) containerLista.classList.add('hidden');
+            onibusSelecionadoGPS = res.dadosViagem.idOnibus;
+            abrirPainelViagem();
+            return;
+        }
+
+        if (!res.viagens || res.viagens.length === 0) {
+            let msgEmpty = "Nenhum embarque previsto para agora.";
+            if (res.statusOperacao === "FORA_DE_HORARIO") {
+                msgEmpty = "<b>Fora do Horário de Embarque.</b><br>Os autocarros só aparecem aqui minutos antes da hora de partida da sua rota.";
+            } else if (res.statusOperacao === "SEM_FROTA") {
+                msgEmpty = "Não há autocarros ativos associados à sua rota neste momento.";
+            }
+            if (containerLista) containerLista.innerHTML = `<div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; color: #92400e; font-size: 12px; line-height: 1.4; text-align:left;">${msgEmpty}</div>`;
+            return;
+        }
+
+        let html = `<p style="font-size: 11px; color: var(--text-sub); margin-bottom: 10px;">Selecione o seu autocarro para garantir lugar:</p>`;
+        res.viagens.forEach(v => {
+            const labelLota = v.vagasRestantes > 0 ? `<span style="color:var(--success); font-weight:bold;">${v.vagasRestantes} vagas</span>` : `<span style="color:var(--danger); font-weight:bold;">LOTADO</span>`;
+            const btnDisable = v.vagasRestantes <= 0 ? "disabled" : "";
+            const btnBg = v.vagasRestantes <= 0 ? "#ccc" : "var(--primary)";
+
+            html += `
            <div style="background: var(--secondary); padding: 12px; border-radius: 8px; margin-bottom: 10px; text-align: left; border: 1px solid var(--border);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                  <strong style="font-size: 13px;">🚌 ${v.rota}</strong>
@@ -804,18 +804,18 @@ async function verificarJanelasEmbarque() {
                  <button ${btnDisable} onclick="confirmarEmbarque('${v.id}')" style="background: ${btnBg}; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">FAZER CHECK-IN</button>
               </div>
            </div>`;
-       });
-       
-       if (containerLista) containerLista.innerHTML = html;
+        });
 
-   } catch (e) {
-       if (containerLista) containerLista.innerHTML = `<p style="font-size: 11px; color: var(--danger);">Não foi possível atualizar a logística.</p>`;
-   }
+        if (containerLista) containerLista.innerHTML = html;
+
+    } catch (e) {
+        if (containerLista) containerLista.innerHTML = `<p style="font-size: 11px; color: var(--danger);">Não foi possível atualizar a logística.</p>`;
+    }
 }
 
 async function confirmarEmbarque(idOnibus) {
     showToast("A verificar localização (GPS)...", "loading");
-    
+
     if (!navigator.geolocation) {
         showToast("O GPS é obrigatório e deve estar exato para embarcar.", "error");
         return;
@@ -835,21 +835,21 @@ async function confirmarEmbarque(idOnibus) {
 
         showToast("GPS adquirido. A processar lugar...", "loading");
 
-        const res = await apiCall("realizarCheckInOnibus", { 
-            idOnibus: idOnibus, 
+        const res = await apiCall("realizarCheckInOnibus", {
+            idOnibus: idOnibus,
             idEstudante: currentWalletId,
             lat: lat,
             lng: lng
         });
-        
+
         if (res.sucesso) {
             showToast("Lugar Confirmado!", "success");
-            onibusSelecionadoGPS = idOnibus; 
+            onibusSelecionadoGPS = idOnibus;
             document.getElementById('lista-viagens-container').classList.add('hidden');
-            abrirPainelViagem(); 
+            abrirPainelViagem();
         } else {
             showToast(res.erro || "Lotação atingida no momento do clique.", "error");
-            verificarJanelasEmbarque(); 
+            verificarJanelasEmbarque();
         }
     } catch (e) {
         if (e instanceof GeolocationPositionError || (e && e.code)) {
@@ -863,7 +863,7 @@ async function confirmarEmbarque(idOnibus) {
 function abrirPainelViagem() {
     const painelSucesso = document.getElementById('painel-viagem-ativa');
     if (!painelSucesso) return;
-    
+
     painelSucesso.innerHTML = `
       <div style="background: var(--secondary); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
          <h3 style="color: var(--success); margin: 0 0 10px 0; font-size: 18px;">✅ Check-in Confirmado</h3>
@@ -875,8 +875,8 @@ function abrirPainelViagem() {
       </div>
     `;
     painelSucesso.classList.remove('hidden');
-    
-    atualizarRadarDinamico(); 
+
+    atualizarRadarDinamico();
     if (idIntervaloRadar) clearInterval(idIntervaloRadar);
     idIntervaloRadar = setInterval(atualizarRadarDinamico, 30000);
 }
@@ -888,13 +888,13 @@ async function atualizarRadarDinamico() {
 
     try {
         const res = await apiCall("statusRadarOnibus", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
-        
+
         // --- Injetar CSS de animação ---
         if (!document.getElementById('radar-pulse-css')) {
-           const style = document.createElement('style');
-           style.id = 'radar-pulse-css';
-           style.innerHTML = `@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }`;
-           document.head.appendChild(style);
+            const style = document.createElement('style');
+            style.id = 'radar-pulse-css';
+            style.innerHTML = `@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }`;
+            document.head.appendChild(style);
         }
 
         // --- UI do Guia (Transmissor Ativo) ---
@@ -908,12 +908,12 @@ async function atualizarRadarDinamico() {
                    <button onclick="abdicarSerGuia()" class="btn-solid" style="background: #ef4444; margin: 15px 0 0 0; padding: 8px; font-size: 12px;">Ajudando a comunidade (Parar)</button>
                 </div>
             `;
-        } 
+        }
         // --- UI do Passageiro (com ETA Híbrido) ---
         else if (res.guiaAtivo && res.coordenadas) {
             // Silent Recruitment: auto-volunteer se < 5 guias
             if (res.totalGuias === undefined || res.totalGuias < 5) {
-                solicitarSerGuia().catch(function() {});
+                solicitarSerGuia().catch(function () { });
             }
 
             boxRadar.innerHTML = `
@@ -928,14 +928,14 @@ async function atualizarRadarDinamico() {
                    <button onclick="atualizarRadarDinamico()" class="btn-text" style="width: 100%; text-align: center; padding: 8px 0 0 0; margin-top: 5px; font-size: 11px;">🔄 Atualizar Agora</button>
                 </div>
             `;
-            
+
             // Fetch posição do passageiro e chamar ETA Híbrido
             _buscarETAHibrido(res.coordenadas);
-        } 
+        }
         // --- Radar Inativo (sem guias) ---
         else {
             // Silent Recruitment: auto-volunteer silenciosamente
-            solicitarSerGuia().catch(function() {});
+            solicitarSerGuia().catch(function () { });
 
             boxRadar.innerHTML = `
                 <div style="text-align: center;">
@@ -946,7 +946,7 @@ async function atualizarRadarDinamico() {
                 </div>
             `;
         }
-    } catch(e) {
+    } catch (e) {
         // Silencioso
     }
 }
@@ -965,7 +965,7 @@ function _buscarETAHibrido(coordenadasBus) {
     }
 
     navigator.geolocation.getCurrentPosition(
-        function(posPassageiro) {
+        function (posPassageiro) {
             const latEst = posPassageiro.coords.latitude;
             const lngEst = posPassageiro.coords.longitude;
 
@@ -974,7 +974,7 @@ function _buscarETAHibrido(coordenadasBus) {
                 lngBus: coordenadasBus.lng,
                 latEstudante: latEst,
                 lngEstudante: lngEst
-            }).then(function(resEta) {
+            }).then(function (resEta) {
                 if (!resEta || !resEta.sucesso) {
                     // Fallback local se API falhar
                     const distLocal = calcularDistanciaHaversine(latEst, lngEst, coordenadasBus.lat, coordenadasBus.lng);
@@ -983,12 +983,12 @@ function _buscarETAHibrido(coordenadasBus) {
                 }
                 const etaTexto = resEta.etaMinutos <= 2 ? "A chegar!" : `~ ${resEta.etaMinutos} min`;
                 _renderizarETANoSlot(etaSlot, resEta.distanciaKm, etaTexto, resEta.metodo, coordenadasBus.ts);
-            }).catch(function() {
+            }).catch(function () {
                 const distLocal = calcularDistanciaHaversine(latEst, lngEst, coordenadasBus.lat, coordenadasBus.lng);
                 _renderizarETANoSlot(etaSlot, distLocal, calcularETA(distLocal), "HAVERSINE_FALLBACK", coordenadasBus.ts);
             });
         },
-        function() {
+        function () {
             _renderizarETAFallbackSemGPS(etaSlot, coordenadasBus);
         },
         { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
@@ -1045,10 +1045,10 @@ async function solicitarSerGuia() {
     try {
         const res = await apiCall("solicitarCargoGuia", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
         if (res.sucesso) {
-            iniciarTransmissaoGpsComoGuia(); 
+            iniciarTransmissaoGpsComoGuia();
         }
         // Silencioso: sem toasts de erro para não interromper a UX
-    } catch(e) {
+    } catch (e) {
         // Silencioso: recrutamento falhado não afeta o passageiro
     }
 }
@@ -1066,11 +1066,11 @@ async function iniciarTransmissaoGpsComoGuia() {
         if ('wakeLock' in navigator) {
             wakeLockAtivo = await navigator.wakeLock.request('screen');
         }
-        
+
         navigator.geolocation.getCurrentPosition(
-            function(pos) {
+            function (pos) {
                 enviarCoordenadaSegura(pos.coords.latitude, pos.coords.longitude);
-                
+
                 if (idIntervaloGPS) clearInterval(idIntervaloGPS);
                 idIntervaloGPS = setInterval(() => {
                     navigator.geolocation.getCurrentPosition(
@@ -1078,11 +1078,11 @@ async function iniciarTransmissaoGpsComoGuia() {
                         e => console.warn("GPS falhou a leitura.")
                     );
                 }, 120000);
-                
+
                 // Silencioso: atualiza radar sem toast
-                atualizarRadarDinamico(); 
+                atualizarRadarDinamico();
             },
-            function(err) {
+            function (err) {
                 // GPS negado silenciosamente — não prejudica UX do passageiro
                 abdicarSerGuia();
             },
@@ -1095,17 +1095,17 @@ async function iniciarTransmissaoGpsComoGuia() {
 
 function enviarCoordenadaSegura(lat, lng) {
     if (!onibusSelecionadoGPS || !currentWalletId) return;
-    
-    apiCall("atualizarGPSOnibus", { 
-        idOnibus: onibusSelecionadoGPS, 
-        idEstudante: currentWalletId, 
-        lat: lat, 
-        lng: lng 
+
+    apiCall("atualizarGPSOnibus", {
+        idOnibus: onibusSelecionadoGPS,
+        idEstudante: currentWalletId,
+        lat: lat,
+        lng: lng
     }).then(res => {
         if (res && !res.sucesso) {
             console.warn("Servidor rejeitou o GPS (Timeout ou Roubo): " + res.erro);
             pararTransmissaoGpsE_Radar();
-            atualizarRadarDinamico(); 
+            atualizarRadarDinamico();
         }
     }).catch(e => {
         // Silencioso
@@ -1113,13 +1113,13 @@ function enviarCoordenadaSegura(lat, lng) {
 }
 
 async function abdicarSerGuia() {
-    pararTransmissaoGpsE_Radar(false); 
+    pararTransmissaoGpsE_Radar(false);
     showToast("A libertar GPS...", "loading");
     try {
         await apiCall("abdicarCargoGuia", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
         showToast("Transmissão encerrada com segurança.", "info");
-        atualizarRadarDinamico(); 
-    } catch(e) {
+        atualizarRadarDinamico();
+    } catch (e) {
         atualizarRadarDinamico();
     }
 }
@@ -1131,701 +1131,3 @@ function pararTransmissaoGpsE_Radar(matarRadarTambem = true) {
 }
 
 // ========================================================================
-// 9. MÓDULO SMART STEPPER — INSCRIÇÃO NATIVA (V10.1)
-// ========================================================================
-
-const STEPPER_LABELS = {
-    1: 'Triagem',
-    2: 'Rota Acadêmica',
-    3: 'Condicionais',
-    4: 'Cofre Digital'
-};
-
-let inscricaoArquivos = {};
-let inscricaoFotoBase64 = null;
-let cameraStream = null;
-
-// ----- Step Navigation -----
-
-function atualizarStepperUI(stepAtual) {
-    for (let i = 1; i <= 4; i++) {
-        const dot = document.getElementById(`dot-${i}`);
-        const conn = document.getElementById(`conn-${i}`);
-
-        if (!dot) continue;
-
-        dot.classList.remove('step-active', 'step-done');
-
-        if (i < stepAtual) {
-            dot.classList.add('step-done');
-        } else if (i === stepAtual) {
-            dot.classList.add('step-active');
-        }
-
-        if (conn) {
-            conn.classList.remove('step-done');
-            if (i < stepAtual) {
-                conn.classList.add('step-done');
-            }
-        }
-    }
-
-    const label = document.getElementById('stepper-label');
-    if (label) {
-        label.innerHTML = `Etapa <strong>${stepAtual}</strong> de 4 — ${STEPPER_LABELS[stepAtual]}`;
-    }
-}
-
-function stepperNext(current, next) {
-    const stepCurrent = document.getElementById(`step-${current}`);
-    const stepNext = document.getElementById(`step-${next}`);
-    if (!stepCurrent || !stepNext) return;
-
-    // ---- VALIDAÇÃO POR ETAPA ----
-    if (current === 1) {
-        const cpfRaw = document.getElementById('insc-cpf').value.replace(/\D/g, '');
-        if (cpfRaw.length !== 11) {
-            showToast("CPF inválido. Informe 11 dígitos.", "error");
-            triggerVibration([50, 50]);
-            return;
-        }
-    }
-
-    if (current === 2) {
-        const nome = document.getElementById('insc-nome').value.trim();
-        const instSelect = document.getElementById('insc-instituicao').value;
-        const instOutra = document.getElementById('insc-instituicao-outra').value.trim();
-        const mat = document.getElementById('insc-matricula').value.trim();
-        const rota = document.getElementById('insc-rota').value;
-        const inicioSem = document.getElementById('insc-inicio-semestre').value;
-        const fimSem = document.getElementById('insc-fim-semestre').value;
-
-        const diasCheck = document.querySelectorAll('input[name="insc-dias"]:checked').length > 0;
-        const turnosCheck = document.querySelectorAll('input[name="insc-turnos"]:checked').length > 0;
-
-        let instOk = false;
-        if (instSelect && instSelect !== "Outra (Não listada)") {
-            instOk = true;
-        } else if (instSelect === "Outra (Não listada)" && instOutra) {
-            instOk = true;
-        }
-
-        if (!nome || !instOk || !mat || !rota || !inicioSem || !fimSem || !diasCheck || !turnosCheck) {
-            showToast("Preencha todos os campos obrigatórios da Rota Acadêmica.", "error");
-            triggerVibration([50, 50]);
-            return;
-        }
-    }
-
-    if (current === 3) {
-        const condBairro = document.getElementById('cond-bairro');
-        if (condBairro && condBairro.classList.contains('cond-visible')) {
-            const bairro = document.getElementById('insc-bairro-23h').value;
-            if (!bairro) {
-                showToast("Selecione o bairro de desembarque (23h).", "error");
-                return;
-            }
-        }
-
-        const condEstagio = document.getElementById('cond-estagio');
-        if (condEstagio && condEstagio.classList.contains('cond-visible')) {
-            const parada = document.getElementById('insc-parada-estagio').value.trim();
-            const turnoEst = document.getElementById('insc-turno-estagio').value;
-            if (!parada || !turnoEst) {
-                showToast("Preencha os dados do estágio (parada e turno).", "error");
-                return;
-            }
-        }
-
-        const condCid = document.getElementById('cond-cid');
-        if (condCid && condCid.classList.contains('cond-visible')) {
-            const cid = document.getElementById('insc-cid').value.trim();
-            if (!cid) {
-                showToast("Informe o CID (classificação da deficiência).", "error");
-                return;
-            }
-        }
-    }
-
-    // ---- TRANSIÇÃO ----
-    stepCurrent.classList.remove('step-visible');
-    stepNext.classList.remove('step-visible');
-
-    // Force re-trigger animation
-    void stepNext.offsetWidth;
-
-    stepNext.classList.add('step-visible');
-    atualizarStepperUI(next);
-
-    // Scroll to top of form
-    const formCard = stepNext.closest('.form-card');
-    if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function stepperPrev(current, prev) {
-    const stepCurrent = document.getElementById(`step-${current}`);
-    const stepPrev = document.getElementById(`step-${prev}`);
-    if (!stepCurrent || !stepPrev) return;
-
-    stepCurrent.classList.remove('step-visible');
-    stepPrev.classList.remove('step-visible');
-
-    void stepPrev.offsetWidth;
-
-    stepPrev.classList.add('step-visible');
-    atualizarStepperUI(prev);
-
-    const formCard = stepPrev.closest('.form-card');
-    if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ----- Step 1: CPF Triagem -----
-
-function formatarCPFInput(valor) {
-    const nums = valor.replace(/\D/g, '');
-    if (nums.length <= 3) return nums;
-    if (nums.length <= 6) return nums.slice(0, 3) + '.' + nums.slice(3);
-    if (nums.length <= 9) return nums.slice(0, 3) + '.' + nums.slice(3, 6) + '.' + nums.slice(6);
-    return nums.slice(0, 3) + '.' + nums.slice(3, 6) + '.' + nums.slice(6, 9) + '-' + nums.slice(9, 11);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const cpfInput = document.getElementById('insc-cpf');
-    if (cpfInput) {
-        cpfInput.addEventListener('input', function () {
-            const pos = this.selectionStart;
-            const oldLen = this.value.length;
-            this.value = formatarCPFInput(this.value);
-            const newLen = this.value.length;
-            this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
-        });
-    }
-
-    // Phase 03: Carregar listas dinâmicas no arranque (background fetch)
-    carregarListasInscricao();
-});
-
-async function verificarCPFInscricao() {
-    const cpfRaw = document.getElementById('insc-cpf').value.replace(/\D/g, '');
-    const btn = document.getElementById('btn-insc-verificar');
-
-    if (cpfRaw.length !== 11) {
-        showToast("CPF inválido. Informe 11 dígitos.", "error");
-        triggerVibration([50, 50]);
-        return;
-    }
-
-    btn.innerText = "A VERIFICAR...";
-    btn.disabled = true;
-
-    try {
-        const res = await apiCall("verificarCpfRenovacao", { cpf: cpfRaw });
-
-        if (!res.sucesso) {
-            showToast(res.erro || "Erro ao verificar CPF.", "error");
-            return;
-        }
-
-        if (res.isRenovacao && res.dados) {
-            // Auto-fill para renovação
-            const d = res.dados;
-            const elNome = document.getElementById('insc-nome');
-            const elInst = document.getElementById('insc-instituicao');
-            const elMat = document.getElementById('insc-matricula');
-            const elRota = document.getElementById('insc-rota');
-
-            if (elNome && d.nome) elNome.value = d.nome;
-            if (elMat && d.matricula) elMat.value = d.matricula;
-
-            // Selects: tenta selecionar o valor correspondente
-            if (elInst && d.instituicao) {
-                _selecionarOpcaoSelect(elInst, d.instituicao);
-            }
-            if (elRota && d.rota) {
-                _selecionarOpcaoSelect(elRota, d.rota);
-            }
-
-            showToast("Cadastro encontrado! Verifique e atualize os seus dados.", "success");
-        } else {
-            showToast("CPF válido. Preencha os dados.", "success");
-        }
-
-        triggerVibration(50);
-        stepperNext(1, 2);
-
-    } catch (err) {
-        console.error("Erro na verificação de CPF:", err);
-        showToast("Falha de conexão. Tente novamente.", "error");
-    } finally {
-        btn.innerText = "VERIFICAR CPF";
-        btn.disabled = false;
-    }
-}
-
-/**
- * Tenta selecionar uma opção de um <select> pelo valor.
- * Se não encontrar match exato, mantém a opção padrão.
- */
-function _selecionarOpcaoSelect(selectEl, valor) {
-    const valorLimpo = String(valor).trim().toLowerCase();
-    for (let i = 0; i < selectEl.options.length; i++) {
-        if (selectEl.options[i].value.trim().toLowerCase() === valorLimpo ||
-            selectEl.options[i].text.trim().toLowerCase() === valorLimpo) {
-            selectEl.selectedIndex = i;
-            return;
-        }
-    }
-    // Se não encontrou, não altera (fica em "Selecione...")
-}
-
-// ----- Step 3: Conditional Fields -----
-
-function toggleCondField(fieldId, show) {
-    const field = document.getElementById(fieldId);
-    if (!field) return;
-
-    if (show) {
-        field.classList.add('cond-visible');
-    } else {
-        field.classList.remove('cond-visible');
-        // Clear sub-inputs when hidden
-        field.querySelectorAll('input, select').forEach(el => {
-            if (el.type === 'text' || el.type === 'tel') el.value = '';
-            if (el.tagName === 'SELECT') el.selectedIndex = 0;
-        });
-    }
-}
-
-// ----- Step 4: File Upload Processing -----
-
-function processarArquivoInscricao(inputElement, tipoDoc) {
-    const file = inputElement.files[0];
-    const statusSpan = document.getElementById(`status-insc-${tipoDoc}`);
-    const labelUpload = document.getElementById(`label-insc-${tipoDoc}`);
-
-    if (!file) {
-        delete inscricaoArquivos[tipoDoc];
-        if (statusSpan) {
-            statusSpan.innerText = "Nenhum arquivo selecionado";
-            statusSpan.style.color = "var(--text-sub)";
-        }
-        if (labelUpload) {
-            labelUpload.classList.remove('file-attached');
-            labelUpload.innerHTML = "📎 Toque para selecionar o arquivo";
-        }
-        return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-        showToast("Arquivo muito grande (Máximo 5MB).", "error");
-        inputElement.value = "";
-        delete inscricaoArquivos[tipoDoc];
-        if (statusSpan) {
-            statusSpan.innerText = "Erro: Arquivo demasiado pesado.";
-            statusSpan.style.color = "var(--danger)";
-        }
-        if (labelUpload) {
-            labelUpload.classList.remove('file-attached');
-            labelUpload.innerHTML = "📎 Toque para selecionar o arquivo";
-        }
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        inscricaoArquivos[tipoDoc] = {
-            tipo: tipoDoc,
-            nome: file.name,
-            base64: e.target.result
-        };
-        if (statusSpan) {
-            statusSpan.innerText = `✅ ${file.name}`;
-            statusSpan.style.color = "var(--success)";
-        }
-        if (labelUpload) {
-            labelUpload.classList.add('file-attached');
-            labelUpload.innerHTML = "✅ Arquivo anexado";
-        }
-    };
-    reader.onerror = function () {
-        showToast("Falha na leitura do arquivo.", "error");
-        inputElement.value = "";
-        delete inscricaoArquivos[tipoDoc];
-        if (statusSpan) {
-            statusSpan.innerText = "Erro na leitura.";
-            statusSpan.style.color = "var(--danger)";
-        }
-        if (labelUpload) {
-            labelUpload.classList.remove('file-attached');
-            labelUpload.innerHTML = "📎 Toque para selecionar o arquivo";
-        }
-    };
-    reader.readAsDataURL(file);
-}
-
-// ----- Step 4: Hybrid Photo Toggle -----
-
-function toggleModoFoto(modo) {
-    const areaCamera = document.getElementById('camera-3x4-area');
-    const areaUpload = document.getElementById('upload-3x4-area');
-    const btnCamera = document.getElementById('btn-modo-camera');
-    const btnUpload = document.getElementById('btn-modo-upload');
-
-    if (modo === 'camera') {
-        if (areaCamera) areaCamera.classList.remove('hidden');
-        if (areaUpload) areaUpload.classList.add('hidden');
-        if (btnCamera) { btnCamera.classList.add('btn-modo-ativo'); btnCamera.classList.remove('btn-modo-inativo'); }
-        if (btnUpload) { btnUpload.classList.add('btn-modo-inativo'); btnUpload.classList.remove('btn-modo-ativo'); }
-        iniciarCamera3x4();
-    } else {
-        pararCameraInscricao();
-        if (areaCamera) areaCamera.classList.add('hidden');
-        if (areaUpload) areaUpload.classList.remove('hidden');
-        if (btnCamera) { btnCamera.classList.add('btn-modo-inativo'); btnCamera.classList.remove('btn-modo-ativo'); }
-        if (btnUpload) { btnUpload.classList.add('btn-modo-ativo'); btnUpload.classList.remove('btn-modo-inativo'); }
-    }
-}
-
-// ----- Step 4: Camera 3x4 -----
-
-async function iniciarCamera3x4() {
-    const viewfinder = document.getElementById('camera-viewfinder');
-    const video = document.getElementById('camera-video');
-    const btnCapturar = document.getElementById('btn-capturar-foto');
-    const preview = document.getElementById('camera-preview');
-    const btnRefazer = document.getElementById('btn-refazer-foto');
-
-    if (!viewfinder || !video) return;
-
-    // Hide preview, show viewfinder
-    if (preview) preview.classList.add('hidden');
-    if (btnRefazer) btnRefazer.classList.add('hidden');
-
-    // Stop any existing stream
-    pararCameraInscricao();
-
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'user',
-                width: { ideal: 480 },
-                height: { ideal: 640 }
-            }
-        });
-
-        video.srcObject = cameraStream;
-        viewfinder.classList.remove('hidden');
-        if (btnCapturar) btnCapturar.classList.remove('hidden');
-
-    } catch (err) {
-        console.error("Câmara:", err);
-        showToast("Não foi possível aceder à câmara. Verifique as permissões.", "error");
-    }
-}
-
-function capturarFoto3x4() {
-    const video = document.getElementById('camera-video');
-    const canvas = document.getElementById('camera-canvas');
-    const preview = document.getElementById('camera-preview');
-    const viewfinder = document.getElementById('camera-viewfinder');
-    const btnCapturar = document.getElementById('btn-capturar-foto');
-    const btnRefazer = document.getElementById('btn-refazer-foto');
-
-    if (!video || !canvas || !preview) return;
-
-    // Set canvas dimensions to 3x4 aspect ratio
-    const largura = 300;
-    const altura = 400;
-    canvas.width = largura;
-    canvas.height = altura;
-
-    const ctx = canvas.getContext('2d');
-
-    // Mirror horizontally (front camera is mirrored in CSS)
-    ctx.translate(largura, 0);
-    ctx.scale(-1, 1);
-
-    // Calculate crop from video center
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    const aspectTarget = largura / altura;
-    const aspectVideo = vw / vh;
-
-    let sx, sy, sw, sh;
-    if (aspectVideo > aspectTarget) {
-        sh = vh;
-        sw = vh * aspectTarget;
-        sx = (vw - sw) / 2;
-        sy = 0;
-    } else {
-        sw = vw;
-        sh = vw / aspectTarget;
-        sx = 0;
-        sy = (vh - sh) / 2;
-    }
-
-    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, largura, altura);
-
-    inscricaoFotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
-
-    preview.src = inscricaoFotoBase64;
-    preview.classList.remove('hidden');
-    if (btnRefazer) btnRefazer.classList.remove('hidden');
-
-    // Stop camera to save battery
-    pararCameraInscricao();
-    if (viewfinder) viewfinder.classList.add('hidden');
-    if (btnCapturar) btnCapturar.classList.add('hidden');
-
-    showToast("Foto capturada com sucesso!", "success");
-    triggerVibration(50);
-}
-
-function pararCameraInscricao() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-    }
-}
-
-// ----- Form Payload Assembly -----
-
-function getRadioValue(name) {
-    const checked = document.querySelector(`input[name="${name}"]:checked`);
-    return checked ? checked.value : '';
-}
-
-function getCheckboxValues(name) {
-    return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
-}
-
-function prepararEnvioNativo() {
-    const btn = document.getElementById('btn-submeter-inscricao');
-
-    // Basic validation
-    const cpf = document.getElementById('insc-cpf').value.replace(/\D/g, '');
-    const nome = document.getElementById('insc-nome').value.trim();
-
-    if (!cpf || cpf.length !== 11) {
-        showToast("CPF inválido. Volte à etapa 1.", "error");
-        return;
-    }
-
-    if (!nome) {
-        showToast("Nome completo é obrigatório. Volte à etapa 2.", "error");
-        return;
-    }
-
-    // Validação do Documento com Foto (RG/CNH) — obrigatório
-    if (!inscricaoArquivos['documento']) {
-        showToast("O Documento com Foto (RG ou CNH) é obrigatório.", "error");
-        return;
-    }
-
-    // Validação de Menor Idade
-    if (getRadioValue('insc-menor') === 'Sim' && !inscricaoArquivos['menorIdade']) {
-        showToast("A Declaração de Responsabilidade para menores é obrigatória.", "error");
-        return;
-    }
-
-    // Validação da Foto 3x4: câmera OU arquivo
-    const fotoFinal = inscricaoFotoBase64 || (inscricaoArquivos['foto3x4'] ? inscricaoArquivos['foto3x4'].base64 : null);
-    if (!fotoFinal) {
-        showToast("A Foto 3x4 é obrigatória. Use a câmera ou anexe um arquivo.", "error");
-        return;
-    }
-
-    const payloadNativo = {
-        // Step 1
-        cpf: cpf,
-
-        // Step 2
-        nome: nome,
-        instituicao: document.getElementById('insc-instituicao').value.trim(),
-        instituicaoOutra: document.getElementById('insc-instituicao-outra').value.trim(),
-        matricula: document.getElementById('insc-matricula').value.trim(),
-        rota: document.getElementById('insc-rota').value.trim(),
-        diasDeUso: getCheckboxValues('insc-dias'),
-        turnos: getCheckboxValues('insc-turnos'),
-        inicioSemestre: document.getElementById('insc-inicio-semestre').value,
-        fimSemestre: document.getElementById('insc-fim-semestre').value,
-
-        // Step 3
-        transporte23h: getRadioValue('insc-23h'),
-        bairro23h: document.getElementById('insc-bairro-23h').value,
-        transporteEstagio: getRadioValue('insc-estagio'),
-        paradaEstagio: document.getElementById('insc-parada-estagio').value.trim(),
-        turnoEstagio: document.getElementById('insc-turno-estagio').value,
-        possuiDeficiencia: getRadioValue('insc-pcd'),
-        cidDeficiencia: document.getElementById('insc-cid').value.trim(),
-        acompanhadoCriancas: getRadioValue('insc-criancas'),
-        menorIdade: getRadioValue('insc-menor'),
-
-        // Step 4
-        arquivos: inscricaoArquivos,
-        fotoBase64: fotoFinal,
-
-        // Metadata
-        timestampEnvio: new Date().toISOString(),
-        origemEnvio: 'PWA_NATIVA'
-    };
-
-    console.log("========== PAYLOAD INSCRIÇÃO NATIVA ==========");
-    console.log(payloadNativo);
-    console.log("===============================================");
-
-    // Visual feedback
-    btn.innerHTML = "📤 A ENVIAR... ⏳";
-    btn.disabled = true;
-
-    apiCall("submeterInscricaoNativa", payloadNativo)
-        .then(res => {
-            if (res.sucesso) {
-                showToast(res.msg || "Inscrição recebida com sucesso!", "success");
-                triggerVibration([50, 30, 50]);
-                // Reset do formulário e volta ao menu
-                setTimeout(() => {
-                    switchView('view-aluno-menu');
-                    _resetarFormularioInscricao();
-                }, 2000);
-            } else {
-                showToast(res.erro || "Erro ao submeter inscrição.", "error");
-                triggerVibration([100, 50, 100]);
-                btn.innerHTML = "📤 SUBMETER INSCRIÇÃO";
-                btn.disabled = false;
-            }
-        })
-        .catch(err => {
-            console.error("Erro de rede na inscrição:", err);
-            showToast("Falha de conexão. Verifique a internet e tente novamente.", "error");
-            btn.innerHTML = "📤 SUBMETER INSCRIÇÃO";
-            btn.disabled = false;
-        });
-}
-
-function _resetarFormularioInscricao() {
-    // Limpa todos os inputs de texto do formulário
-    const textIds = [
-        'insc-cpf', 'insc-nome', 'insc-matricula',
-        'insc-inicio-semestre', 'insc-fim-semestre',
-        'insc-parada-estagio', 'insc-cid'
-    ];
-    textIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-
-    // Reset checkboxes e radios
-    document.querySelectorAll('#view-inscricao input[type="checkbox"]').forEach(cb => cb.checked = false);
-    document.querySelectorAll('#view-inscricao input[type="radio"]').forEach(rb => {
-        rb.checked = rb.defaultChecked;
-    });
-
-    // Reset all selects (instituição, rota, bairro, turno estágio)
-    document.querySelectorAll('#view-inscricao select').forEach(sel => sel.selectedIndex = 0);
-
-    // Reset conditional fields
-    document.querySelectorAll('.cond-field').forEach(cf => cf.classList.remove('cond-visible'));
-
-    // Reset file inputs (inclui novos campos: documento e foto3x4)
-    const fileIds = ['insc-file-documento', 'insc-file-residencia', 'insc-file-vinculo', 'insc-file-foto3x4'];
-    fileIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-
-    const statusIds = ['status-insc-documento', 'status-insc-residencia', 'status-insc-vinculo', 'status-insc-foto3x4'];
-    statusIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.innerText = 'Nenhum arquivo selecionado'; el.style.color = 'var(--text-sub)'; }
-    });
-
-    // Reset camera
-    pararCameraInscricao();
-    const preview = document.getElementById('camera-preview');
-    if (preview) preview.classList.add('hidden');
-    const btnRefazer = document.getElementById('btn-refazer-foto');
-    if (btnRefazer) btnRefazer.classList.add('hidden');
-    const viewfinder = document.getElementById('camera-viewfinder');
-    if (viewfinder) viewfinder.classList.add('hidden');
-
-    // Reset hybrid photo toggle (câmera é o padrão)
-    toggleModoFoto('camera');
-
-    // Reset state
-    inscricaoArquivos = {};
-    inscricaoFotoBase64 = null;
-
-    // Reset stepper to step 1
-    document.querySelectorAll('.step-container').forEach(sc => sc.classList.remove('step-visible'));
-    const step1 = document.getElementById('step-1');
-    if (step1) step1.classList.add('step-visible');
-    atualizarStepperUI(1);
-
-    // Carrega listas dinâmicas para dropdowns
-    carregarListasInscricao();
-}
-
-// ========================================================================
-// 9.1. LISTAS DINÂMICAS — POPULAÇÃO DE DROPDOWNS (V10.1 - FASE 03)
-// ========================================================================
-
-/**
- * Busca Instituições, Rotas e Bairros 23h da aba Configurações via API
- * e popula os <select> do Smart Stepper. Mantém as opções estáticas
- * ("Selecione..." e "Outra/Outro") intactas.
- */
-async function carregarListasInscricao() {
-    try {
-        const res = await apiCall("getListsInscricao");
-        if (!res || !res.sucesso) {
-            console.warn("[LISTAS] Falha ao carregar listas dinâmicas:", res ? res.erro : "sem resposta");
-            return;
-        }
-
-        _popularSelect('insc-instituicao', res.instituicoes || [], 'Outra (Não listada)');
-        _popularSelect('insc-rota', res.rotas || [], 'Outra (Não listada)');
-        _popularSelect('insc-bairro-23h', res.bairros || [], 'Outro');
-
-        if (res.linkDeclaracaoMenor) {
-            const linkMenor = document.getElementById('link-declaracao-menor');
-            if (linkMenor) linkMenor.href = res.linkDeclaracaoMenor;
-        }
-
-    } catch (err) {
-        console.warn("[LISTAS] Erro de rede ao carregar listas:", err);
-    }
-}
-
-/**
- * Popula um <select> com opções dinâmicas, preservando a primeira opção
- * ("Selecione...") e a última opção fixa (fallback ex: "Outra").
- * @param {string} selectId - ID do elemento <select>.
- * @param {string[]} items - Array de valores a inserir.
- * @param {string} labelFallback - Texto da opção fixa final.
- */
-function _popularSelect(selectId, items, labelFallback) {
-    const select = document.getElementById(selectId);
-    if (!select || items.length === 0) return;
-
-    // Preservar a primeira opção ("Selecione...")
-    const primeiraOpcao = select.options[0];
-
-    // Limpar tudo
-    select.innerHTML = '';
-
-    // Re-inserir placeholder
-    select.appendChild(primeiraOpcao);
-
-    // Inserir opções dinâmicas
-    items.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item;
-        opt.textContent = item;
-        select.appendChild(opt);
-    });
-
-    // Re-inserir opção fixa (fallback) no final
-    const optFallback = document.createElement('option');
-    optFallback.value = labelFallback;
-    optFallback.textContent = labelFallback;
-    select.appendChild(optFallback);
-
-    // Garantir que "Selecione..." está ativo
-    select.selectedIndex = 0;
-}
-
