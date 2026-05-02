@@ -1058,3 +1058,460 @@ function pararTransmissaoGpsE_Radar(matarRadarTambem = true) {
     if (matarRadarTambem && idIntervaloRadar) { clearInterval(idIntervaloRadar); idIntervaloRadar = null; }
     if (wakeLockAtivo) { wakeLockAtivo.release().then(() => wakeLockAtivo = null); }
 }
+
+// ========================================================================
+// 9. MÓDULO SMART STEPPER — INSCRIÇÃO NATIVA (V10.1)
+// ========================================================================
+
+const STEPPER_LABELS = {
+    1: 'Triagem',
+    2: 'Rota Acadêmica',
+    3: 'Condicionais',
+    4: 'Cofre Digital'
+};
+
+let inscricaoArquivos = {};
+let inscricaoFotoBase64 = null;
+let cameraStream = null;
+
+// ----- Step Navigation -----
+
+function atualizarStepperUI(stepAtual) {
+    for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        const conn = document.getElementById(`conn-${i}`);
+
+        if (!dot) continue;
+
+        dot.classList.remove('step-active', 'step-done');
+
+        if (i < stepAtual) {
+            dot.classList.add('step-done');
+        } else if (i === stepAtual) {
+            dot.classList.add('step-active');
+        }
+
+        if (conn) {
+            conn.classList.remove('step-done');
+            if (i < stepAtual) {
+                conn.classList.add('step-done');
+            }
+        }
+    }
+
+    const label = document.getElementById('stepper-label');
+    if (label) {
+        label.innerHTML = `Etapa <strong>${stepAtual}</strong> de 4 — ${STEPPER_LABELS[stepAtual]}`;
+    }
+}
+
+function stepperNext(current, next) {
+    const stepCurrent = document.getElementById(`step-${current}`);
+    const stepNext = document.getElementById(`step-${next}`);
+    if (!stepCurrent || !stepNext) return;
+
+    stepCurrent.classList.remove('step-visible');
+    stepNext.classList.remove('step-visible');
+
+    // Force re-trigger animation
+    void stepNext.offsetWidth;
+
+    stepNext.classList.add('step-visible');
+    atualizarStepperUI(next);
+
+    // Scroll to top of form
+    const formCard = stepNext.closest('.form-card');
+    if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function stepperPrev(current, prev) {
+    const stepCurrent = document.getElementById(`step-${current}`);
+    const stepPrev = document.getElementById(`step-${prev}`);
+    if (!stepCurrent || !stepPrev) return;
+
+    stepCurrent.classList.remove('step-visible');
+    stepPrev.classList.remove('step-visible');
+
+    void stepPrev.offsetWidth;
+
+    stepPrev.classList.add('step-visible');
+    atualizarStepperUI(prev);
+
+    const formCard = stepPrev.closest('.form-card');
+    if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ----- Step 1: CPF Triagem -----
+
+function formatarCPFInput(valor) {
+    const nums = valor.replace(/\D/g, '');
+    if (nums.length <= 3) return nums;
+    if (nums.length <= 6) return nums.slice(0, 3) + '.' + nums.slice(3);
+    if (nums.length <= 9) return nums.slice(0, 3) + '.' + nums.slice(3, 6) + '.' + nums.slice(6);
+    return nums.slice(0, 3) + '.' + nums.slice(3, 6) + '.' + nums.slice(6, 9) + '-' + nums.slice(9, 11);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const cpfInput = document.getElementById('insc-cpf');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function () {
+            const pos = this.selectionStart;
+            const oldLen = this.value.length;
+            this.value = formatarCPFInput(this.value);
+            const newLen = this.value.length;
+            this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+        });
+    }
+});
+
+function verificarCPFInscricao() {
+    const cpfRaw = document.getElementById('insc-cpf').value.replace(/\D/g, '');
+    const btn = document.getElementById('btn-insc-verificar');
+
+    if (cpfRaw.length !== 11) {
+        showToast("CPF inválido. Informe 11 dígitos.", "error");
+        triggerVibration([50, 50]);
+        return;
+    }
+
+    // Simulate backend check (will be wired in next prompt)
+    btn.innerText = "A VERIFICAR...";
+    btn.disabled = true;
+
+    setTimeout(() => {
+        btn.innerText = "VERIFICAR CPF";
+        btn.disabled = false;
+        showToast("CPF válido. Preencha os dados.", "success");
+        triggerVibration(50);
+        stepperNext(1, 2);
+    }, 800);
+}
+
+// ----- Step 3: Conditional Fields -----
+
+function toggleCondField(fieldId, show) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    if (show) {
+        field.classList.add('cond-visible');
+    } else {
+        field.classList.remove('cond-visible');
+        // Clear sub-inputs when hidden
+        field.querySelectorAll('input, select').forEach(el => {
+            if (el.type === 'text' || el.type === 'tel') el.value = '';
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        });
+    }
+}
+
+// ----- Step 4: File Upload Processing -----
+
+function processarArquivoInscricao(inputElement, tipoDoc) {
+    const file = inputElement.files[0];
+    const statusSpan = document.getElementById(`status-insc-${tipoDoc}`);
+
+    if (!file) {
+        delete inscricaoArquivos[tipoDoc];
+        if (statusSpan) {
+            statusSpan.innerText = "Nenhum arquivo selecionado";
+            statusSpan.style.color = "var(--text-sub)";
+        }
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        showToast("Arquivo muito grande (Máximo 5MB).", "error");
+        inputElement.value = "";
+        delete inscricaoArquivos[tipoDoc];
+        if (statusSpan) {
+            statusSpan.innerText = "Erro: Arquivo demasiado pesado.";
+            statusSpan.style.color = "var(--danger)";
+        }
+        return;
+    }
+
+    if (statusSpan) {
+        statusSpan.innerText = "A processar... ⏳";
+        statusSpan.style.color = "var(--accent)";
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        inscricaoArquivos[tipoDoc] = {
+            tipo: tipoDoc,
+            nome: file.name,
+            base64: e.target.result
+        };
+        if (statusSpan) {
+            statusSpan.innerText = "✅ Anexado com sucesso!";
+            statusSpan.style.color = "var(--success)";
+        }
+    };
+    reader.onerror = function () {
+        showToast("Falha na leitura do arquivo.", "error");
+        inputElement.value = "";
+        delete inscricaoArquivos[tipoDoc];
+        if (statusSpan) {
+            statusSpan.innerText = "Erro na leitura.";
+            statusSpan.style.color = "var(--danger)";
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+// ----- Step 4: Camera 3x4 -----
+
+async function iniciarCamera3x4() {
+    const viewfinder = document.getElementById('camera-viewfinder');
+    const video = document.getElementById('camera-video');
+    const btnCapturar = document.getElementById('btn-capturar-foto');
+    const btnAbrir = document.getElementById('btn-abrir-camera');
+    const preview = document.getElementById('camera-preview');
+    const btnRefazer = document.getElementById('btn-refazer-foto');
+
+    if (!viewfinder || !video) return;
+
+    // Hide preview, show viewfinder
+    if (preview) preview.classList.add('hidden');
+    if (btnRefazer) btnRefazer.classList.add('hidden');
+
+    // Stop any existing stream
+    pararCameraInscricao();
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'user',
+                width: { ideal: 480 },
+                height: { ideal: 640 }
+            }
+        });
+
+        video.srcObject = cameraStream;
+        viewfinder.classList.remove('hidden');
+        if (btnCapturar) btnCapturar.classList.remove('hidden');
+        if (btnAbrir) btnAbrir.classList.add('hidden');
+
+    } catch (err) {
+        console.error("Câmara:", err);
+        showToast("Não foi possível aceder à câmara. Verifique as permissões.", "error");
+    }
+}
+
+function capturarFoto3x4() {
+    const video = document.getElementById('camera-video');
+    const canvas = document.getElementById('camera-canvas');
+    const preview = document.getElementById('camera-preview');
+    const viewfinder = document.getElementById('camera-viewfinder');
+    const btnCapturar = document.getElementById('btn-capturar-foto');
+    const btnAbrir = document.getElementById('btn-abrir-camera');
+    const btnRefazer = document.getElementById('btn-refazer-foto');
+
+    if (!video || !canvas || !preview) return;
+
+    // Set canvas dimensions to 3x4 aspect ratio
+    const largura = 300;
+    const altura = 400;
+    canvas.width = largura;
+    canvas.height = altura;
+
+    const ctx = canvas.getContext('2d');
+
+    // Mirror horizontally (front camera is mirrored in CSS)
+    ctx.translate(largura, 0);
+    ctx.scale(-1, 1);
+
+    // Calculate crop from video center
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const aspectTarget = largura / altura;
+    const aspectVideo = vw / vh;
+
+    let sx, sy, sw, sh;
+    if (aspectVideo > aspectTarget) {
+        sh = vh;
+        sw = vh * aspectTarget;
+        sx = (vw - sw) / 2;
+        sy = 0;
+    } else {
+        sw = vw;
+        sh = vw / aspectTarget;
+        sx = 0;
+        sy = (vh - sh) / 2;
+    }
+
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, largura, altura);
+
+    inscricaoFotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+    preview.src = inscricaoFotoBase64;
+    preview.classList.remove('hidden');
+    if (btnRefazer) btnRefazer.classList.remove('hidden');
+
+    // Stop camera to save battery
+    pararCameraInscricao();
+    if (viewfinder) viewfinder.classList.add('hidden');
+    if (btnCapturar) btnCapturar.classList.add('hidden');
+    if (btnAbrir) {
+        btnAbrir.classList.remove('hidden');
+        btnAbrir.innerHTML = '📷 REABRIR CÂMARA';
+    }
+
+    showToast("Foto capturada com sucesso!", "success");
+    triggerVibration(50);
+}
+
+function pararCameraInscricao() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+}
+
+// ----- Form Payload Assembly -----
+
+function getRadioValue(name) {
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    return checked ? checked.value : '';
+}
+
+function getCheckboxValues(name) {
+    return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
+}
+
+function prepararEnvioNativo() {
+    const btn = document.getElementById('btn-submeter-inscricao');
+
+    // Basic validation
+    const cpf = document.getElementById('insc-cpf').value.replace(/\D/g, '');
+    const nome = document.getElementById('insc-nome').value.trim();
+
+    if (!cpf || cpf.length !== 11) {
+        showToast("CPF inválido. Volte à etapa 1.", "error");
+        return;
+    }
+
+    if (!nome) {
+        showToast("Nome completo é obrigatório. Volte à etapa 2.", "error");
+        return;
+    }
+
+    if (!inscricaoFotoBase64) {
+        showToast("Foto 3x4 é obrigatória. Capture uma selfie.", "error");
+        return;
+    }
+
+    const payloadNativo = {
+        // Step 1
+        cpf: cpf,
+
+        // Step 2
+        nome: nome,
+        instituicao: document.getElementById('insc-instituicao').value.trim(),
+        matricula: document.getElementById('insc-matricula').value.trim(),
+        rota: document.getElementById('insc-rota').value.trim(),
+        diasDeUso: getCheckboxValues('insc-dias'),
+        turnos: getCheckboxValues('insc-turnos'),
+        inicioSemestre: document.getElementById('insc-inicio-semestre').value,
+        fimSemestre: document.getElementById('insc-fim-semestre').value,
+
+        // Step 3
+        transporte23h: getRadioValue('insc-23h'),
+        bairro23h: document.getElementById('insc-bairro-23h').value.trim(),
+        transporteEstagio: getRadioValue('insc-estagio'),
+        paradaEstagio: document.getElementById('insc-parada-estagio').value.trim(),
+        turnoEstagio: document.getElementById('insc-turno-estagio').value,
+        possuiDeficiencia: getRadioValue('insc-pcd'),
+        cidDeficiencia: document.getElementById('insc-cid').value.trim(),
+        acompanhadoCriancas: getRadioValue('insc-criancas'),
+
+        // Step 4
+        arquivos: inscricaoArquivos,
+        fotoBase64: inscricaoFotoBase64,
+
+        // Metadata
+        timestampEnvio: new Date().toISOString(),
+        origemEnvio: 'PWA_NATIVA'
+    };
+
+    console.log("========== PAYLOAD INSCRIÇÃO NATIVA ==========");
+    console.log(payloadNativo);
+    console.log("===============================================");
+
+    // Visual feedback
+    btn.innerHTML = "📤 A ENVIAR... ⏳";
+    btn.disabled = true;
+
+    apiCall("submeterInscricaoNativa", payloadNativo)
+        .then(res => {
+            if (res.sucesso) {
+                showToast(res.msg || "Inscrição recebida com sucesso!", "success");
+                triggerVibration([50, 30, 50]);
+                // Reset do formulário e volta ao menu
+                setTimeout(() => {
+                    switchView('view-aluno-menu');
+                    _resetarFormularioInscricao();
+                }, 2000);
+            } else {
+                showToast(res.erro || "Erro ao submeter inscrição.", "error");
+                triggerVibration([100, 50, 100]);
+                btn.innerHTML = "📤 SUBMETER INSCRIÇÃO";
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error("Erro de rede na inscrição:", err);
+            showToast("Falha de conexão. Verifique a internet e tente novamente.", "error");
+            btn.innerHTML = "📤 SUBMETER INSCRIÇÃO";
+            btn.disabled = false;
+        });
+}
+
+function _resetarFormularioInscricao() {
+    // Limpa todos os inputs do formulário
+    const ids = [
+        'insc-cpf', 'insc-nome', 'insc-instituicao', 'insc-matricula', 'insc-rota',
+        'insc-inicio-semestre', 'insc-fim-semestre', 'insc-bairro-23h',
+        'insc-parada-estagio', 'insc-cid'
+    ];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+    // Reset checkboxes e radios
+    document.querySelectorAll('#view-inscricao input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#view-inscricao input[type="radio"]').forEach(rb => {
+        rb.checked = rb.defaultChecked;
+    });
+    document.querySelectorAll('#view-inscricao select').forEach(sel => sel.selectedIndex = 0);
+
+    // Reset conditional fields
+    document.querySelectorAll('.cond-field').forEach(cf => cf.classList.remove('cond-visible'));
+
+    // Reset file inputs
+    const fileIds = ['insc-file-residencia', 'insc-file-vinculo'];
+    fileIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('status-insc-residencia').innerText = 'Nenhum arquivo selecionado';
+    document.getElementById('status-insc-vinculo').innerText = 'Nenhum arquivo selecionado';
+
+    // Reset camera
+    pararCameraInscricao();
+    const preview = document.getElementById('camera-preview');
+    if (preview) preview.classList.add('hidden');
+    const btnRefazer = document.getElementById('btn-refazer-foto');
+    if (btnRefazer) btnRefazer.classList.add('hidden');
+    const btnAbrir = document.getElementById('btn-abrir-camera');
+    if (btnAbrir) { btnAbrir.classList.remove('hidden'); btnAbrir.innerHTML = '📷 ABRIR CÂMARA FRONTAL'; }
+    const viewfinder = document.getElementById('camera-viewfinder');
+    if (viewfinder) viewfinder.classList.add('hidden');
+
+    // Reset state
+    inscricaoArquivos = {};
+    inscricaoFotoBase64 = null;
+
+    // Reset stepper to step 1
+    document.querySelectorAll('.step-container').forEach(sc => sc.classList.remove('step-visible'));
+    const step1 = document.getElementById('step-1');
+    if (step1) step1.classList.add('step-visible');
+    atualizarStepperUI(1);
+}
+
