@@ -1,4 +1,4 @@
-﻿// ========================================================================
+// ========================================================================
 // 9. MÓDULO SMART STEPPER — INSCRIÇÃO NATIVA (V10.1)
 // ========================================================================
 
@@ -67,6 +67,9 @@ function stepperNext(current, next) {
 
     if (current === 2) {
         const nome = document.getElementById('insc-nome').value.trim();
+        const email = document.getElementById('insc-email').value.trim();
+        const rg = document.getElementById('insc-rg').value.trim();
+        const contato = document.getElementById('insc-contato').value.trim();
         const instSelect = document.getElementById('insc-instituicao').value;
         const instOutra = document.getElementById('insc-instituicao-outra').value.trim();
         const mat = document.getElementById('insc-matricula').value.trim();
@@ -84,7 +87,7 @@ function stepperNext(current, next) {
             instOk = true;
         }
 
-        if (!nome || !instOk || !mat || !rota || !inicioSem || !fimSem || !diasCheck || !turnosCheck) {
+        if (!nome || !email || !rg || !contato || !instOk || !mat || !rota || !inicioSem || !fimSem || !diasCheck || !turnosCheck) {
             showToast("Preencha todos os campos obrigatórios da Rota Acadêmica.", "error");
             triggerVibration([50, 50]);
             return;
@@ -92,6 +95,11 @@ function stepperNext(current, next) {
     }
 
     if (current === 3) {
+        if (!getRadioValue('insc-23h') || !getRadioValue('insc-estagio') || !getRadioValue('insc-pcd') || !getRadioValue('insc-menor') || !getRadioValue('insc-criancas')) { 
+            showToast("Por favor, responda a todas as perguntas de Sim/Não.", "error"); 
+            return; 
+        }
+
         const condBairro = document.getElementById('cond-bairro');
         if (condBairro && condBairro.classList.contains('cond-visible')) {
             const bairro = document.getElementById('insc-bairro-23h').value;
@@ -201,11 +209,17 @@ async function verificarCPFInscricao() {
             // Auto-fill para renovação
             const d = res.dados;
             const elNome = document.getElementById('insc-nome');
+            const elEmail = document.getElementById('insc-email');
+            const elRg = document.getElementById('insc-rg');
+            const elContato = document.getElementById('insc-contato');
             const elInst = document.getElementById('insc-instituicao');
             const elMat = document.getElementById('insc-matricula');
             const elRota = document.getElementById('insc-rota');
 
             if (elNome && d.nome) elNome.value = d.nome;
+            if (elEmail && d.email) elEmail.value = d.email;
+            if (elRg && d.rg) elRg.value = d.rg;
+            if (elContato && d.contato) elContato.value = d.contato;
             if (elMat && d.matricula) elMat.value = d.matricula;
 
             // Selects: tenta selecionar o valor correspondente
@@ -512,6 +526,9 @@ function prepararEnvioNativo() {
 
         // Step 2
         nome: nome,
+        email: document.getElementById('insc-email').value.trim(),
+        rg: document.getElementById('insc-rg').value.trim(),
+        contato: document.getElementById('insc-contato').value.trim(),
         instituicao: document.getElementById('insc-instituicao').value.trim(),
         instituicaoOutra: document.getElementById('insc-instituicao-outra').value.trim(),
         matricula: document.getElementById('insc-matricula').value.trim(),
@@ -549,6 +566,12 @@ function prepararEnvioNativo() {
     btn.innerHTML = "📤 A ENVIAR... ⏳";
     btn.disabled = true;
 
+    // Forcibly turn off hardware immediately
+    pararCameraInscricao();
+    if (typeof pararTransmissaoGpsE_Radar === 'function') { 
+        pararTransmissaoGpsE_Radar(true); 
+    }
+
     apiCall("submeterInscricaoNativa", payloadNativo)
         .then(res => {
             if (res.sucesso) {
@@ -577,7 +600,7 @@ function prepararEnvioNativo() {
 function _resetarFormularioInscricao() {
     // Limpa todos os inputs de texto do formulário
     const textIds = [
-        'insc-cpf', 'insc-nome', 'insc-matricula',
+        'insc-cpf', 'insc-nome', 'insc-email', 'insc-rg', 'insc-contato', 'insc-matricula',
         'insc-inicio-semestre', 'insc-fim-semestre',
         'insc-parada-estagio', 'insc-cid'
     ];
