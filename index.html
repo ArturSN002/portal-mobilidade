@@ -368,6 +368,7 @@
             <input type="tel" id="insc-cpf" class="input-field" placeholder="000.000.000-00" maxlength="14" inputmode="numeric">
             <p style="font-size: 11px; color: var(--text-sub); margin: -5px 0 15px 0; line-height: 1.4;">Verificamos se já existe um cadastro vinculado a este CPF antes de prosseguir.</p>
             <button class="btn-solid" id="btn-insc-verificar" onclick="verificarCPFInscricao()">VERIFICAR CPF</button>
+            <div id="cpf-feedback-box" class="hidden" style="margin-top:15px; padding:10px; border-radius:8px; font-size:12px; font-weight:600; text-align:center;"></div>
             <button class="btn-text" onclick="switchView('view-aluno-menu')">Cancelar</button>
           </div>
 
@@ -384,7 +385,7 @@
             <label class="input-label">WHATSAPP / TELEFONE *</label>
             <input type="tel" id="insc-contato" class="input-field" placeholder="(00) 00000-0000">
             
-            <label class="input-label">RG (IDENTIDADE) *</label>
+            <label class="input-label">RG (IDENTIDADE) (Opcional)</label>
             <input type="text" id="insc-rg" class="input-field" placeholder="Apenas números">
 
             <label class="input-label">INSTITUIÇÃO DE ENSINO</label>
