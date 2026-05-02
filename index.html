@@ -262,6 +262,14 @@
           </div>
         </button>
 
+        <button class="menu-card outline-card" onclick="switchView('view-validador')" style="border-color: #0d9488; background: rgba(13,148,136,0.04);">
+          <span class="icon">🛡️</span>
+          <div class="info">
+            <strong style="color: #0d9488;">Validar Documento</strong>
+            <span>Verificar autenticidade de declaração</span>
+          </div>
+        </button>
+
         <button class="menu-card dark-card" onclick="switchView('view-login-fiscal')">
           <span class="icon">🔐</span>
           <div class="info">
@@ -269,6 +277,26 @@
             <span>Equipa da Secretaria</span>
           </div>
         </button>
+      </section>
+
+      <section id="view-validador" class="view-section">
+        <div class="form-card" style="padding: 20px;">
+          <div class="form-header" style="margin-bottom: 15px;">
+            <span style="font-size: 38px; display: block; margin-bottom: 5px;">🛡️</span>
+            <h2>Cartório Digital</h2>
+            <p>Verificação de Autenticidade Documental</p>
+          </div>
+
+          <label class="input-label">CÓDIGO DE VALIDAÇÃO</label>
+          <input type="text" id="input-hash-validador" class="input-field" placeholder="Ex: SMEB-2026-A7KC3M" style="text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; text-align: center; font-size: 16px;">
+          <p style="font-size: 10px; color: var(--text-sub); margin: -5px 0 15px 0; text-align: center;">Insira o código impresso no rodapé da Declaração de Vínculo</p>
+
+          <button class="btn-solid" style="background: #0d9488;" onclick="verificarHashPublico()">VALIDAR DOCUMENTO</button>
+
+          <div id="res-validador" style="margin-top: 20px;"></div>
+
+          <button class="btn-text" onclick="switchView('view-hub')">⬅ Voltar ao Início</button>
+        </div>
       </section>
 
       <section id="view-mural" class="view-section">
