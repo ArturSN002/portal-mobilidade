@@ -814,9 +814,33 @@ async function verificarJanelasEmbarque() {
 }
 
 async function confirmarEmbarque(idOnibus) {
-    showToast("A processar lugar...", "loading");
+    showToast("A verificar localização (GPS)...", "loading");
+    
+    if (!navigator.geolocation) {
+        showToast("O GPS é obrigatório e deve estar exato para embarcar.", "error");
+        return;
+    }
+
     try {
-        const res = await apiCall("realizarCheckInOnibus", { idOnibus: idOnibus, idEstudante: currentWalletId });
+        const posicao = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 0
+            });
+        });
+
+        const lat = posicao.coords.latitude;
+        const lng = posicao.coords.longitude;
+
+        showToast("GPS adquirido. A processar lugar...", "loading");
+
+        const res = await apiCall("realizarCheckInOnibus", { 
+            idOnibus: idOnibus, 
+            idEstudante: currentWalletId,
+            lat: lat,
+            lng: lng
+        });
         
         if (res.sucesso) {
             showToast("Lugar Confirmado!", "success");
@@ -828,7 +852,11 @@ async function confirmarEmbarque(idOnibus) {
             verificarJanelasEmbarque(); 
         }
     } catch (e) {
-        showToast("Erro ao processar reserva.", "error");
+        if (e instanceof GeolocationPositionError || (e && e.code)) {
+            showToast("O GPS é obrigatório e deve estar exato para embarcar.", "error");
+        } else {
+            showToast("Erro ao processar reserva.", "error");
+        }
     }
 }
 
