@@ -1181,6 +1181,51 @@ function stepperNext(current, next) {
     const stepNext = document.getElementById(`step-${next}`);
     if (!stepCurrent || !stepNext) return;
 
+    // ---- VALIDAÇÃO POR ETAPA ----
+    if (current === 2) {
+        const nome = document.getElementById('insc-nome').value.trim();
+        const inst = document.getElementById('insc-instituicao').value;
+        const mat = document.getElementById('insc-matricula').value.trim();
+        const rota = document.getElementById('insc-rota').value;
+
+        if (!nome || !inst || !mat || !rota) {
+            showToast("Preencha todos os campos obrigatórios da Rota Acadêmica.", "warning");
+            triggerVibration([50, 50]);
+            return;
+        }
+    }
+
+    if (current === 3) {
+        const condBairro = document.getElementById('cond-bairro');
+        if (condBairro && condBairro.classList.contains('cond-visible')) {
+            const bairro = document.getElementById('insc-bairro-23h').value;
+            if (!bairro) {
+                showToast("Selecione o bairro de desembarque (23h).", "warning");
+                return;
+            }
+        }
+
+        const condEstagio = document.getElementById('cond-estagio');
+        if (condEstagio && condEstagio.classList.contains('cond-visible')) {
+            const parada = document.getElementById('insc-parada-estagio').value.trim();
+            const turnoEst = document.getElementById('insc-turno-estagio').value;
+            if (!parada || !turnoEst) {
+                showToast("Preencha os dados do estágio (parada e turno).", "warning");
+                return;
+            }
+        }
+
+        const condCid = document.getElementById('cond-cid');
+        if (condCid && condCid.classList.contains('cond-visible')) {
+            const cid = document.getElementById('insc-cid').value.trim();
+            if (!cid) {
+                showToast("Informe o CID (classificação da deficiência).", "warning");
+                return;
+            }
+        }
+    }
+
+    // ---- TRANSIÇÃO ----
     stepCurrent.classList.remove('step-visible');
     stepNext.classList.remove('step-visible');
 
@@ -1235,7 +1280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function verificarCPFInscricao() {
+async function verificarCPFInscricao() {
     const cpfRaw = document.getElementById('insc-cpf').value.replace(/\D/g, '');
     const btn = document.getElementById('btn-insc-verificar');
 
@@ -1245,17 +1290,67 @@ function verificarCPFInscricao() {
         return;
     }
 
-    // Simulate backend check (will be wired in next prompt)
     btn.innerText = "A VERIFICAR...";
     btn.disabled = true;
 
-    setTimeout(() => {
-        btn.innerText = "VERIFICAR CPF";
-        btn.disabled = false;
-        showToast("CPF válido. Preencha os dados.", "success");
+    try {
+        const res = await apiCall("verificarCpfRenovacao", { cpf: cpfRaw });
+
+        if (!res.sucesso) {
+            showToast(res.erro || "Erro ao verificar CPF.", "error");
+            return;
+        }
+
+        if (res.isRenovacao && res.dados) {
+            // Auto-fill para renovação
+            const d = res.dados;
+            const elNome = document.getElementById('insc-nome');
+            const elInst = document.getElementById('insc-instituicao');
+            const elMat = document.getElementById('insc-matricula');
+            const elRota = document.getElementById('insc-rota');
+
+            if (elNome && d.nome) elNome.value = d.nome;
+            if (elMat && d.matricula) elMat.value = d.matricula;
+
+            // Selects: tenta selecionar o valor correspondente
+            if (elInst && d.instituicao) {
+                _selecionarOpcaoSelect(elInst, d.instituicao);
+            }
+            if (elRota && d.rota) {
+                _selecionarOpcaoSelect(elRota, d.rota);
+            }
+
+            showToast("Cadastro encontrado! Verifique e atualize os seus dados.", "success");
+        } else {
+            showToast("CPF válido. Preencha os dados.", "success");
+        }
+
         triggerVibration(50);
         stepperNext(1, 2);
-    }, 800);
+
+    } catch (err) {
+        console.error("Erro na verificação de CPF:", err);
+        showToast("Falha de conexão. Tente novamente.", "error");
+    } finally {
+        btn.innerText = "VERIFICAR CPF";
+        btn.disabled = false;
+    }
+}
+
+/**
+ * Tenta selecionar uma opção de um <select> pelo valor.
+ * Se não encontrar match exato, mantém a opção padrão.
+ */
+function _selecionarOpcaoSelect(selectEl, valor) {
+    const valorLimpo = String(valor).trim().toLowerCase();
+    for (let i = 0; i < selectEl.options.length; i++) {
+        if (selectEl.options[i].value.trim().toLowerCase() === valorLimpo ||
+            selectEl.options[i].text.trim().toLowerCase() === valorLimpo) {
+            selectEl.selectedIndex = i;
+            return;
+        }
+    }
+    // Se não encontrou, não altera (fica em "Selecione...")
 }
 
 // ----- Step 3: Conditional Fields -----
@@ -1329,6 +1424,28 @@ function processarArquivoInscricao(inputElement, tipoDoc) {
         }
     };
     reader.readAsDataURL(file);
+}
+
+// ----- Step 4: Hybrid Photo Toggle -----
+
+function toggleModoFoto(modo) {
+    const areaCamera = document.getElementById('camera-3x4-area');
+    const areaUpload = document.getElementById('upload-3x4-area');
+    const btnCamera = document.getElementById('btn-modo-camera');
+    const btnUpload = document.getElementById('btn-modo-upload');
+
+    if (modo === 'camera') {
+        if (areaCamera) areaCamera.classList.remove('hidden');
+        if (areaUpload) areaUpload.classList.add('hidden');
+        if (btnCamera) btnCamera.style.background = '#1e293b';
+        if (btnUpload) btnUpload.style.background = '#64748b';
+    } else {
+        pararCameraInscricao();
+        if (areaCamera) areaCamera.classList.add('hidden');
+        if (areaUpload) areaUpload.classList.remove('hidden');
+        if (btnCamera) btnCamera.style.background = '#64748b';
+        if (btnUpload) btnUpload.style.background = '#1e293b';
+    }
 }
 
 // ----- Step 4: Camera 3x4 -----
@@ -1468,8 +1585,16 @@ function prepararEnvioNativo() {
         return;
     }
 
-    if (!inscricaoFotoBase64) {
-        showToast("Foto 3x4 é obrigatória. Capture uma selfie.", "error");
+    // Validação do Documento com Foto (RG/CNH) — obrigatório
+    if (!inscricaoArquivos['documento']) {
+        showToast("O Documento com Foto (RG ou CNH) é obrigatório.", "error");
+        return;
+    }
+
+    // Validação da Foto 3x4: câmera OU arquivo
+    const fotoFinal = inscricaoFotoBase64 || (inscricaoArquivos['foto3x4'] ? inscricaoArquivos['foto3x4'].base64 : null);
+    if (!fotoFinal) {
+        showToast("A Foto 3x4 é obrigatória. Use a câmera ou anexe um arquivo.", "error");
         return;
     }
 
@@ -1489,17 +1614,18 @@ function prepararEnvioNativo() {
 
         // Step 3
         transporte23h: getRadioValue('insc-23h'),
-        bairro23h: document.getElementById('insc-bairro-23h').value.trim(),
+        bairro23h: document.getElementById('insc-bairro-23h').value,
         transporteEstagio: getRadioValue('insc-estagio'),
         paradaEstagio: document.getElementById('insc-parada-estagio').value.trim(),
         turnoEstagio: document.getElementById('insc-turno-estagio').value,
         possuiDeficiencia: getRadioValue('insc-pcd'),
         cidDeficiencia: document.getElementById('insc-cid').value.trim(),
         acompanhadoCriancas: getRadioValue('insc-criancas'),
+        menorIdade: getRadioValue('insc-menor'),
 
         // Step 4
         arquivos: inscricaoArquivos,
-        fotoBase64: inscricaoFotoBase64,
+        fotoBase64: fotoFinal,
 
         // Metadata
         timestampEnvio: new Date().toISOString(),
@@ -1540,29 +1666,35 @@ function prepararEnvioNativo() {
 }
 
 function _resetarFormularioInscricao() {
-    // Limpa todos os inputs do formulário
-    const ids = [
-        'insc-cpf', 'insc-nome', 'insc-instituicao', 'insc-matricula', 'insc-rota',
-        'insc-inicio-semestre', 'insc-fim-semestre', 'insc-bairro-23h',
+    // Limpa todos os inputs de texto do formulário
+    const textIds = [
+        'insc-cpf', 'insc-nome', 'insc-matricula',
+        'insc-inicio-semestre', 'insc-fim-semestre',
         'insc-parada-estagio', 'insc-cid'
     ];
-    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    textIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
     // Reset checkboxes e radios
     document.querySelectorAll('#view-inscricao input[type="checkbox"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('#view-inscricao input[type="radio"]').forEach(rb => {
         rb.checked = rb.defaultChecked;
     });
+
+    // Reset all selects (instituição, rota, bairro, turno estágio)
     document.querySelectorAll('#view-inscricao select').forEach(sel => sel.selectedIndex = 0);
 
     // Reset conditional fields
     document.querySelectorAll('.cond-field').forEach(cf => cf.classList.remove('cond-visible'));
 
-    // Reset file inputs
-    const fileIds = ['insc-file-residencia', 'insc-file-vinculo'];
+    // Reset file inputs (inclui novos campos: documento e foto3x4)
+    const fileIds = ['insc-file-documento', 'insc-file-residencia', 'insc-file-vinculo', 'insc-file-foto3x4'];
     fileIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    document.getElementById('status-insc-residencia').innerText = 'Nenhum arquivo selecionado';
-    document.getElementById('status-insc-vinculo').innerText = 'Nenhum arquivo selecionado';
+
+    const statusIds = ['status-insc-documento', 'status-insc-residencia', 'status-insc-vinculo', 'status-insc-foto3x4'];
+    statusIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.innerText = 'Nenhum arquivo selecionado'; el.style.color = 'var(--text-sub)'; }
+    });
 
     // Reset camera
     pararCameraInscricao();
@@ -1575,6 +1707,9 @@ function _resetarFormularioInscricao() {
     const viewfinder = document.getElementById('camera-viewfinder');
     if (viewfinder) viewfinder.classList.add('hidden');
 
+    // Reset hybrid photo toggle (câmera é o padrão)
+    toggleModoFoto('camera');
+
     // Reset state
     inscricaoArquivos = {};
     inscricaoFotoBase64 = null;
@@ -1584,5 +1719,72 @@ function _resetarFormularioInscricao() {
     const step1 = document.getElementById('step-1');
     if (step1) step1.classList.add('step-visible');
     atualizarStepperUI(1);
+
+    // Carrega listas dinâmicas para dropdowns
+    carregarListasInscricao();
+}
+
+// ========================================================================
+// 9.1. LISTAS DINÂMICAS — POPULAÇÃO DE DROPDOWNS (V10.1 - FASE 03)
+// ========================================================================
+
+/**
+ * Busca Instituições, Rotas e Bairros 23h da aba Configurações via API
+ * e popula os <select> do Smart Stepper. Mantém as opções estáticas
+ * ("Selecione..." e "Outra/Outro") intactas.
+ */
+async function carregarListasInscricao() {
+    try {
+        const res = await apiCall("getListsInscricao");
+        if (!res || !res.sucesso) {
+            console.warn("[LISTAS] Falha ao carregar listas dinâmicas:", res ? res.erro : "sem resposta");
+            return;
+        }
+
+        _popularSelect('insc-instituicao', res.instituicoes || [], 'Outra (Não listada)');
+        _popularSelect('insc-rota', res.rotas || [], 'Outra (Não listada)');
+        _popularSelect('insc-bairro-23h', res.bairros || [], 'Outro');
+
+    } catch (err) {
+        console.warn("[LISTAS] Erro de rede ao carregar listas:", err);
+    }
+}
+
+/**
+ * Popula um <select> com opções dinâmicas, preservando a primeira opção
+ * ("Selecione...") e a última opção fixa (fallback ex: "Outra").
+ * @param {string} selectId - ID do elemento <select>.
+ * @param {string[]} items - Array de valores a inserir.
+ * @param {string} labelFallback - Texto da opção fixa final.
+ */
+function _popularSelect(selectId, items, labelFallback) {
+    const select = document.getElementById(selectId);
+    if (!select || items.length === 0) return;
+
+    // Preservar a primeira opção ("Selecione...")
+    const primeiraOpcao = select.options[0];
+
+    // Limpar tudo
+    select.innerHTML = '';
+
+    // Re-inserir placeholder
+    select.appendChild(primeiraOpcao);
+
+    // Inserir opções dinâmicas
+    items.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        select.appendChild(opt);
+    });
+
+    // Re-inserir opção fixa (fallback) no final
+    const optFallback = document.createElement('option');
+    optFallback.value = labelFallback;
+    optFallback.textContent = labelFallback;
+    select.appendChild(optFallback);
+
+    // Garantir que "Selecione..." está ativo
+    select.selectedIndex = 0;
 }
 
