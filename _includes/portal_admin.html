@@ -1,0 +1,323 @@
+      <section id="view-login-fiscal" class="view-section">
+        <div class="form-card dark-form">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">🛡️</span>
+            <h2>Acesso Restrito</h2>
+            <p>Identificação Operacional</p>
+          </div>
+          <input type="email" id="fiscal-email" class="input-field" placeholder="Login">
+          <input type="password" id="fiscal-senha" class="input-field" placeholder="Senha">
+          <button class="btn-solid accent-bg" id="btn-login-fiscal" onclick="fazerLoginOperador()">AUTENTICAR</button>
+          <div id="res-login-fiscal" class="error-box hidden" style="margin-top: 10px;"></div>
+          <button class="btn-text text-light" style="margin-top: 10px; font-size: 11px;" onclick="abrirRecuperacaoSenha()">Esqueci-me da senha</button>
+          <button class="btn-text text-light" onclick="switchView('view-hub')">Cancelar</button>
+        </div>
+      </section>
+
+      <section id="view-recuperar-senha" class="view-section" style="display: none;">
+        <div class="form-card dark-form">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">📧</span>
+            <h2>Recuperação de Senha</h2>
+            <p>Insira o seu e-mail para receber o PIN de recuperação</p>
+          </div>
+          <input type="email" id="recuperar-email" class="input-field" placeholder="O seu E-mail Operacional">
+          <button class="btn-solid accent-bg" id="btn-solicitar-recuperacao" onclick="solicitarRecuperacaoSenha()">ENVIAR CÓDIGO PIN</button>
+          <button class="btn-text text-light" onclick="switchView('view-login-fiscal')">Voltar ao Login</button>
+        </div>
+      </section>
+
+      <section id="view-redefinir-senha" class="view-section" style="display: none;">
+        <div class="form-card dark-form">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">🔑</span>
+            <h2>Redefinir Senha</h2>
+            <p>Insira o PIN recebido no e-mail e a sua nova senha</p>
+          </div>
+          <input type="text" id="redefinir-pin" class="input-field uppercase text-center" placeholder="PIN de 6 dígitos" maxlength="6">
+          <input type="password" id="redefinir-nova-senha" class="input-field" placeholder="Nova Senha (Mínimo 6 caracteres)">
+          <input type="password" id="redefinir-confirmar-senha" class="input-field" placeholder="Confirmar Nova Senha">
+          <button class="btn-solid accent-bg" id="btn-confirmar-redefinicao" onclick="confirmarRedefinicaoSenha()">REDEFINIR SENHA</button>
+          <button class="btn-text text-light" onclick="switchView('view-login-fiscal')">Cancelar</button>
+        </div>
+      </section>
+
+      <section id="view-admin-hub" class="view-section">
+        <div class="welcome-text">
+          Bem-vindo, <span id="nome-operador-logado" style="color: var(--accent); font-weight: 700;">Operador</span>
+        </div>
+
+        <div id="menu-grupo-campo">
+            <button class="menu-card dark-card" onclick="switchView('view-fiscal')">
+              <span class="icon">🛂</span>
+              <div class="info">
+                <strong>Modo Fiscalização</strong>
+                <span>Validar identidades com QR Code</span>
+              </div>
+            </button>
+
+            <button class="menu-card outline-card" style="border-color: var(--accent); background: rgba(245, 158, 11, 0.05);" onclick="abrirModalEncerrarRota()">
+              <span class="icon" style="background: none; filter: none;">🏁</span>
+              <div class="info">
+                <strong style="color: var(--accent);">Finalizar Viagem (Manual)</strong>
+                <span>Limpar lotação de um autocarro</span>
+              </div>
+            </button>
+
+            <button class="menu-card outline-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.1);" onclick="abrirModalSOS()">
+              <span class="icon" style="background: var(--danger);">🚨</span>
+              <div class="info">
+                <strong style="color: var(--danger);">Reportar Avaria (SOS)</strong>
+                <span>Aviso urgente à Secretaria e alunos</span>
+              </div>
+            </button>
+        </div>
+
+        <div id="menu-grupo-secretaria" class="hidden">
+            <div class="divider-text" style="color: #666; margin-top: 25px;">SECRETARIA E LOGÍSTICA</div>
+            
+            <button class="menu-card outline-card" style="border-color: var(--primary);" onclick="abrirMesaAuditoria()">
+              <span class="icon" style="background: none; filter: none;">📂</span>
+              <div class="info">
+                <strong style="color: var(--primary);">Mesa de Auditoria</strong>
+                <span>Validar documentos e gerir matrículas</span>
+              </div>
+            </button>
+
+            <button class="menu-card outline-card" style="border-color: #3b82f6; background: rgba(59, 130, 246, 0.05);" onclick="abrirModalAvisosFiscal()">
+              <span class="icon" style="background: none; filter: none;">📢</span>
+              <div class="info">
+                <strong style="color: #3b82f6;">Central de Comunicação</strong>
+                <span>Disparar avisos Push e Mural</span>
+              </div>
+            </button>
+            
+            <button class="menu-card outline-card" onclick="carregarDashboard()">
+              <span class="icon" style="background: none; filter: none;">📊</span>
+              <div class="info">
+                <strong style="color: var(--text-main);">Painel Analítico</strong>
+                <span>Estatísticas de uso e BI</span>
+              </div>
+            </button>
+        </div>
+
+        <div id="menu-grupo-moderador" class="hidden">
+            <div class="divider-text" style="color: #666; margin-top: 25px;">ADMINISTRAÇÃO DO SISTEMA</div>
+            
+            <button class="menu-card dark-card" style="border-color: var(--accent);" onclick="abrirPainelModerador()">
+              <span class="icon">⚙️</span>
+              <div class="info">
+                <strong style="color: var(--accent);">Sala das Máquinas</strong>
+                <span>CRON, Motores e Gestão de Contas</span>
+              </div>
+            </button>
+        </div>
+
+        <button class="btn-text text-danger" style="margin-top: 20px; font-weight: 700;" onclick="encerrarSessaoOperador()">Sair do Sistema</button>
+      </section>
+
+      <section id="view-auditoria" class="view-section">
+         <div class="form-card" style="padding: 15px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+               <h2 style="margin:0; font-size: 16px; color: var(--primary);">📂 MESA DE AUDITORIA</h2>
+               <button onclick="carregarFilaAuditoria()" style="background: none; border: none; font-size: 20px; cursor: pointer;">🔄</button>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+               <input type="text" id="auditoria-pesquisa" class="input-field" style="margin:0; padding: 10px; font-size: 13px;" placeholder="Pesquisar por Nome, CPF ou E-mail...">
+               <button class="btn-solid" style="margin:0; width: auto; padding: 10px 15px;" onclick="carregarFilaAuditoria(true)">🔍</button>
+            </div>
+            <p style="font-size: 10px; color: var(--text-sub); margin: 0;">A mostrar os casos mais antigos na fila (FIFO). Use a pesquisa para encontrar um aluno específico.</p>
+         </div>
+         
+         <div id="auditoria-fila-container">
+            <div class="text-center" style="padding: 30px;"><div class="loader" style="margin: 0 auto;"></div></div>
+         </div>
+         
+         <button class="btn-solid dark-bg" style="margin-top: 15px;" onclick="switchView('view-admin-hub')">Voltar ao Menu</button>
+      </section>
+
+      <section id="view-moderador" class="view-section">
+         <div class="form-card" style="padding: 15px; border: 2px solid #333;">
+            <div class="form-header" style="margin-bottom: 20px;">
+               <span style="font-size: 36px; display: block; margin-bottom: 5px;">⚙️</span>
+               <h2 style="color: var(--text-main); font-size: 18px;">SALA DAS MÁQUINAS</h2>
+               <p style="font-size: 11px; line-height: 1.3;">Controlo de automações e estado do servidor.</p>
+            </div>
+            
+            <div style="background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px; position: relative;">
+               <div id="loader-sincronizacao-motores" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 10; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                   <div class="loader" style="width: 25px; height: 25px; border-width: 3px;"></div>
+               </div>
+               
+               <span class="label-sm" style="color: var(--primary);">ESTADO DOS MOTORES (CRON)</span>
+               
+               <div class="switch-row">
+                 <span class="desc-xs">Sincronização Forms (ETL)</span>
+                 <label class="switch">
+                   <input type="checkbox" id="toggle-motor-etl" onchange="alterarMotor('ETL', this.checked)">
+                   <span class="slider"></span>
+                 </label>
+               </div>
+               <div class="switch-row">
+                 <span class="desc-xs">Auditoria Inteligente (OCR/IA)</span>
+                 <label class="switch">
+                   <input type="checkbox" id="toggle-motor-ocr" onchange="alterarMotor('OCR', this.checked)">
+                   <span class="slider"></span>
+                 </label>
+               </div>
+               <div class="switch-row">
+                 <span class="desc-xs">Emissão de Carteiras (PDFs)</span>
+                 <label class="switch">
+                   <input type="checkbox" id="toggle-motor-docs" onchange="alterarMotor('DOCS', this.checked)">
+                   <span class="slider"></span>
+                 </label>
+               </div>
+               <div class="switch-row">
+                 <span class="desc-xs">Fila de Envio de E-mails</span>
+                 <label class="switch">
+                   <input type="checkbox" id="toggle-motor-email" onchange="alterarMotor('EMAIL', this.checked)">
+                   <span class="slider"></span>
+                 </label>
+               </div>
+               </div>
+
+            <div style="background: #fff; border: 1px dashed #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+               <span class="label-sm">AÇÕES FORÇADAS MANUAIS</span>
+               <button class="btn-solid" style="background: #4b5563; font-size: 12px; padding: 10px; margin-bottom: 8px;" onclick="forcarMotor('ETL')">🔄 Sincronizar Forms</button>
+               <button class="btn-solid" style="background: #4b5563; font-size: 12px; padding: 10px; margin-bottom: 8px;" onclick="forcarMotor('OCR')">🔍 Auditar OCR</button>
+               <button class="btn-solid" style="background: #4b5563; font-size: 12px; padding: 10px; margin-bottom: 8px;" onclick="forcarMotor('DOCS')">📄 Emitir PDFs</button>
+               <button class="btn-solid" style="background: #4b5563; font-size: 12px; padding: 10px; margin-bottom: 0;" onclick="forcarMotor('EMAIL')">📧 Fila de E-mails</button>
+            </div>
+            
+            <button class="btn-solid dark-bg" onclick="switchView('view-admin-hub')">Voltar ao Menu</button>
+         </div>
+      </section>
+
+      <section id="view-fiscal" class="view-section">
+        <div class="form-card dark-form" id="app-fiscal">
+          <div class="form-header">
+            <h2>🛂 VALIDAÇÃO</h2>
+            <p>Aponte a câmara para o QR Code do aluno</p>
+          </div>
+          
+          <button class="btn-solid dark-bg" id="btn-scanner" onclick="iniciarScanner()" style="margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <span style="font-size: 20px;">📷</span> LER VÍDEO CONTÍNUO
+          </button>
+          
+          <button class="btn-solid accent-bg" id="btn-scanner-nativo" onclick="document.getElementById('input-qr-file').click()" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 2px solid #fff;">
+            <span style="font-size: 20px;">📱</span> USAR CÂMARA NATIVA
+          </button>
+          <input type="file" id="input-qr-file" accept="image/*" capture="environment" class="hidden" onchange="lerQRCodePorFoto(event)">
+
+          <div id="leitor-qr-container" class="hidden" style="margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 2px solid var(--accent); background: #000;">
+            <div id="leitor-qr"></div>
+            <button class="btn-solid text-danger" style="border-radius: 0; background: #222;" onclick="fecharScanner()">❌ CANCELAR CÂMARA</button>
+          </div>
+
+          <div class="divider-text">OU DIGITE O ID MANUALMENTE</div>
+
+          <input type="text" id="id-fiscal" class="input-field uppercase text-center" placeholder="ID DA CARTEIRA">
+          <button class="btn-solid accent-bg" id="btn-fiscal" onclick="validarFiscal()">VERIFICAR ESTUDANTE</button>
+          
+          <button class="btn-text text-light" style="margin-top: 15px;" onclick="fecharModoFiscalizacao()">Voltar ao Menu</button>
+        </div>
+        
+        <div id="res-fiscal" class="result-container"></div>
+      </section>
+
+      <section id="view-dashboard" class="view-section">
+        <div class="form-card dark-form" style="padding: 15px;">
+          <div class="form-header" style="margin-bottom: 20px;">
+            <h2 style="color: var(--primary);">📊 DASHBOARD</h2>
+            <p>Dados oficiais do semestre letivo</p>
+          </div>
+
+          <div class="dash-kpi-grid">
+            <div class="dash-kpi"><strong id="kpi-ativos" style="color: #10B981;">-</strong><span>ATIVOS</span></div>
+            <div class="dash-kpi"><strong id="kpi-pendentes" style="color: #FBBF24;">-</strong><span>NA FILA</span></div>
+            <div class="dash-kpi"><strong id="kpi-retidos" style="color: #F97316;">-</strong><span>ATENÇÃO</span></div>
+            <div class="dash-kpi"><strong id="kpi-suspensos" style="color: #EF4444;">-</strong><span>INATIVOS</span></div>
+          </div>
+
+          <div class="dash-box">
+            <h3>Status Global</h3>
+            <div class="chart-wrapper"><canvas id="chart-status"></canvas></div>
+          </div>
+
+          <div class="dash-box">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px;">
+              <span class="text-light">Motor Gemini IA (Gasto/Limite OCR)</span>
+              <strong id="kpi-ia-text" style="color: var(--accent);">- / -</strong>
+            </div>
+            <div class="progress-track"><div id="bar-ia-usage" class="progress-fill" style="width: 0%;"></div></div>
+          </div>
+
+          <div class="dash-tabs" style="margin-bottom: 10px;">
+            <button class="dash-tab active" id="tab-logistica" onclick="mudarAbaDashboard('logistica')">Visão Geral</button>
+            <button class="dash-tab" id="tab-analise" onclick="mudarAbaDashboard('analise')">BI (Cruzamento)</button>
+            <button class="dash-tab" id="tab-noturno" onclick="mudarAbaDashboard('noturno')">Rotas 23h</button>
+            <button class="dash-tab" id="tab-inclusao" onclick="mudarAbaDashboard('inclusao')">Inclusão</button>
+          </div>
+
+          <div id="dash-area-logistica">
+            <div class="dash-box"><h3>Instituições Top 5</h3><div class="chart-wrapper"><canvas id="chart-instituicoes"></canvas></div></div>
+            <div class="dash-box"><h3>Dias de Utilização</h3><div class="chart-wrapper"><canvas id="chart-dias"></canvas></div></div>
+            <div class="dash-box"><h3>Turnos</h3><div class="chart-wrapper"><canvas id="chart-turnos"></canvas></div></div>
+            <div class="dash-box"><h3>Rotas Ativas</h3><div class="chart-wrapper"><canvas id="chart-rotas"></canvas></div></div>
+          </div>
+
+          <div id="dash-area-analise" class="hidden">
+             <div class="dash-box" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 10px;">
+                   <h3 style="margin:0; color:var(--accent);">🔍 Análise Livre</h3>
+                   <div style="text-align: right;">
+                      <span style="font-size: 10px; color:#999; display:block;">Estudantes Encontrados</span>
+                      <strong id="bi_total" style="font-size: 24px; color:#10B981;">0</strong>
+                   </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                   <label style="font-size: 11px; color:#aaa; display:block; margin-bottom: 5px;">AGRUPAR GRÁFICO POR (EIXO X)</label>
+                   <select id="bi_eixo_x" onchange="renderizarDashboardBI()" style="width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 13px;">
+                      <option value="r">Rota</option>
+                      <option value="i" selected>Instituição</option>
+                      <option value="t">Turno</option>
+                   </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                   <strong style="font-size: 11px; color:#ccc; display:block; margin-bottom:8px;">INSTITUIÇÕES</strong>
+                   <div id="container-chips-inst" class="chip-group"></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                   <strong style="font-size: 11px; color:#ccc; display:block; margin-bottom:8px;">TURNOS</strong>
+                   <div id="container-chips-turno" class="chip-group"></div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                   <strong style="font-size: 11px; color:#ccc; display:block; margin-bottom:8px;">DIAS DA SEMANA</strong>
+                   <div id="container-chips-dia" class="chip-group"></div>
+                </div>
+                
+                <div class="chart-wrapper"><canvas id="chart-bi"></canvas></div>
+                <p style="font-size: 10px; color: #666; text-align: center; margin-top: 10px;">Dica: Se não selecionar nenhum filtro numa categoria, o sistema assumirá "Todos".</p>
+             </div>
+          </div>
+
+          <div id="dash-area-noturno" class="hidden">
+            <div class="dash-box"><h3>Adesão Rota da Madrugada</h3><div class="chart-wrapper"><canvas id="chart-adesao-23h"></canvas></div></div>
+            <div class="dash-box"><h3>Bairros de Desembarque</h3><div class="chart-wrapper" style="height: 300px;"><canvas id="chart-bairros-23h"></canvas></div></div>
+          </div>
+
+          <div id="dash-area-inclusao" class="hidden">
+            <div class="dash-box"><h3>Estagiários</h3><div class="chart-wrapper"><canvas id="chart-estagio"></canvas></div></div>
+            <div class="dash-box"><h3>Acessibilidade (PCD)</h3><div class="chart-wrapper"><canvas id="chart-pcd"></canvas></div></div>
+            <div class="dash-box"><h3>Menores de Idade</h3><div class="chart-wrapper"><canvas id="chart-menor"></canvas></div></div>
+            <div class="dash-box"><h3>Acompanhados (Filhos)</h3><div class="chart-wrapper"><canvas id="chart-acompanhado"></canvas></div></div>
+          </div>
+
+          <button class="btn-solid dark-bg" style="margin-top: 15px;" onclick="switchView('view-admin-hub')">Voltar ao Menu</button>
+        </div>
+      </section>

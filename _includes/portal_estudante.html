@@ -1,0 +1,416 @@
+      <section id="view-aluno-menu" class="view-section">
+        <div class="welcome-text">Área do Estudante</div>
+
+        <button class="menu-card outline-card" style="border-color: var(--success); background: rgba(16,185,129,0.04);" onclick="abrirNovaInscricao()">
+          <span class="icon">📝</span>
+          <div class="info">
+            <strong style="color: var(--success);">Nova Inscrição</strong>
+            <span>Solicite o seu passe de transporte</span>
+          </div>
+        </button>
+
+        <button class="menu-card outline-card" onclick="switchView('view-consult')">
+          <span class="icon">🔍</span>
+          <div class="info">
+            <strong>Acompanhar Inscrição</strong>
+            <span>Verifique o status usando o seu CPF</span>
+          </div>
+        </button>
+
+        <button class="menu-card primary-card" onclick="switchView('view-login')">
+          <span class="icon">🪪</span>
+          <div class="info">
+            <strong>Abrir Carteira Digital</strong>
+            <span>Acessar (Requer ID)</span>
+          </div>
+        </button>
+
+        <button class="btn-text" onclick="switchView('view-hub')">⬅ Voltar ao Início</button>
+      </section>
+
+      <section id="view-inscricao" class="view-section">
+        <div class="form-card" style="padding: 20px;">
+          <div class="form-header" style="margin-bottom: 10px;">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">📝</span>
+            <h2>Inscrição no Transporte</h2>
+            <p>Preencha os dados para solicitar o seu passe</p>
+          </div>
+
+          <!-- Progress Indicator -->
+          <div class="stepper-progress" id="stepper-progress">
+            <div class="step-dot step-active" id="dot-1"></div>
+            <div class="step-connector" id="conn-1"></div>
+            <div class="step-dot" id="dot-2"></div>
+            <div class="step-connector" id="conn-2"></div>
+            <div class="step-dot" id="dot-3"></div>
+            <div class="step-connector" id="conn-3"></div>
+            <div class="step-dot" id="dot-4"></div>
+          </div>
+          <div class="stepper-label" id="stepper-label">Etapa <strong>1</strong> de 4 — Triagem</div>
+
+          <!-- ============ STEP 1: Triagem ============ -->
+          <div class="step-container step-visible" id="step-1">
+            <div class="step-section-title">Identificação</div>
+            <label class="input-label">CPF (APENAS NÚMEROS)</label>
+            <input type="tel" id="insc-cpf" class="input-field" placeholder="000.000.000-00" maxlength="14" inputmode="numeric">
+            <p style="font-size: 11px; color: var(--text-sub); margin: -5px 0 15px 0; line-height: 1.4;">Verificamos se já existe um cadastro vinculado a este CPF antes de prosseguir.</p>
+            <button class="btn-solid" id="btn-insc-verificar" onclick="verificarCPFInscricao()">VERIFICAR CPF</button>
+            <div id="cpf-feedback-box" class="hidden" style="margin-top:15px; padding:10px; border-radius:8px; font-size:12px; font-weight:600; text-align:center;"></div>
+            <button class="btn-text" onclick="switchView('view-aluno-menu')">Cancelar</button>
+          </div>
+
+          <!-- ============ STEP 2: Rota Acadêmica ============ -->
+          <div class="step-container" id="step-2">
+            <div class="step-section-title">Dados Acadêmicos</div>
+
+            <label class="input-label">NOME COMPLETO</label>
+            <input type="text" id="insc-nome" class="input-field" placeholder="Nome conforme documento">
+
+            <label class="input-label">E-MAIL DE CONTATO *</label>
+            <input type="email" id="insc-email" class="input-field" placeholder="seu@email.com">
+            
+            <label class="input-label">WHATSAPP / TELEFONE *</label>
+            <input type="tel" id="insc-contato" class="input-field" placeholder="(00) 00000-0000">
+            
+            <label class="input-label">RG (IDENTIDADE) (Opcional)</label>
+            <input type="text" id="insc-rg" class="input-field" placeholder="Apenas números">
+
+            <label class="input-label">INSTITUIÇÃO DE ENSINO</label>
+            <select id="insc-instituicao" class="input-field" onchange="toggleCondField('cond-outra-inst', this.value === 'Outra (Não listada)')">
+              <option value="" disabled selected>Selecione...</option>
+              <!-- Populado dinamicamente via getListsInscricao() -->
+              <option value="Outra (Não listada)">Outra (Não listada)</option>
+            </select>
+            <div class="cond-field" id="cond-outra-inst">
+              <label class="input-label">NOME DA INSTITUIÇÃO</label>
+              <input type="text" id="insc-instituicao-outra" class="input-field" placeholder="Informe o nome completo da instituição">
+            </div>
+
+            <label class="input-label">MATRÍCULA</label>
+            <input type="text" id="insc-matricula" class="input-field" placeholder="Número de matrícula">
+
+            <label class="input-label">ROTA DE TRANSPORTE</label>
+            <select id="insc-rota" class="input-field">
+              <option value="" disabled selected>Selecione...</option>
+              <!-- Populado dinamicamente via getListsInscricao() -->
+              <option value="Outra (Não listada)">Outra (Não listada)</option>
+            </select>
+
+            <div class="step-section-title">Dias de Utilização</div>
+            <div class="insc-check-group">
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Segunda"> Seg</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Terça"> Ter</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Quarta"> Qua</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Quinta"> Qui</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Sexta"> Sex</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Sábado"> Sáb</label>
+            </div>
+
+            <div class="step-section-title">Turnos</div>
+            <div class="insc-check-group">
+              <label class="insc-check-label"><input type="checkbox" name="insc-turnos" value="Matutino"> Matutino</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-turnos" value="Vespertino"> Vespertino</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-turnos" value="Noturno"> Noturno</label>
+            </div>
+
+            <div class="step-section-title">Período Letivo</div>
+            <label class="input-label">INÍCIO DO SEMESTRE</label>
+            <input type="date" id="insc-inicio-semestre" class="input-field">
+            <label class="input-label">FIM DO SEMESTRE</label>
+            <input type="date" id="insc-fim-semestre" class="input-field">
+
+            <div class="stepper-nav">
+              <button class="btn-solid btn-back" onclick="stepperPrev(2, 1)">⬅ VOLTAR</button>
+              <button class="btn-solid" onclick="stepperNext(2, 3)">PRÓXIMO ➡</button>
+            </div>
+          </div>
+
+          <!-- ============ STEP 3: Condicionais ============ -->
+          <div class="step-container" id="step-3">
+            <div class="step-section-title">Perguntas Condicionais</div>
+
+            <!-- Q1: Transporte 23h -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Utiliza o transporte das 23h (noturno)?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Sim" onchange="toggleCondField('cond-bairro', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Não" onchange="toggleCondField('cond-bairro', false)"> Não</label>
+            </div>
+            <div class="cond-field" id="cond-bairro">
+              <label class="input-label">BAIRRO DE DESEMBARQUE (23h)</label>
+              <select id="insc-bairro-23h" class="input-field">
+                <option value="" disabled selected>Selecione...</option>
+                <!-- Populado dinamicamente via getListsInscricao() -->
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+
+            <!-- Q2: Estágio -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Necessita de transporte para estágio?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Sim" onchange="toggleCondField('cond-estagio', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Não" onchange="toggleCondField('cond-estagio', false)"> Não</label>
+            </div>
+            <div class="cond-field" id="cond-estagio">
+              <label class="input-label">PARADA DO ESTÁGIO</label>
+              <input type="text" id="insc-parada-estagio" class="input-field" placeholder="Endereço ou ponto de referência">
+              <label class="input-label">TURNO DO ESTÁGIO</label>
+              <select id="insc-turno-estagio" class="input-field">
+                <option value="">Selecione...</option>
+                <option value="Matutino">Matutino</option>
+                <option value="Vespertino">Vespertino</option>
+                <option value="Noturno">Noturno</option>
+                <option value="Integral">Integral</option>
+              </select>
+            </div>
+
+            <!-- Q3: PCD -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Possui deficiência de mobilidade?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Sim" onchange="toggleCondField('cond-cid', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Não" onchange="toggleCondField('cond-cid', false)"> Não</label>
+            </div>
+            <div class="cond-field" id="cond-cid">
+              <label class="input-label">CID (CLASSIFICAÇÃO)</label>
+              <input type="text" id="insc-cid" class="input-field" placeholder="Ex: G80, M54...">
+            </div>
+
+            <!-- Q4: Menor de Idade -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">O aluno é menor de idade? (Menos de 18 anos)</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Sim" onchange="toggleCondField('cond-menor', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Não" onchange="toggleCondField('cond-menor', false)"> Não</label>
+            </div>
+            <div class="cond-field" id="cond-menor">
+              <div class="custom-file-upload" style="margin-bottom: 15px;">
+                <label class="input-label">DECLARAÇÃO DE RESPONSABILIDADE (PDF ou Imagem) *</label>
+                <label for="insc-file-menor" class="btn-file-custom" id="label-insc-menor">📎 Toque para selecionar o arquivo</label>
+                <input type="file" id="insc-file-menor" accept="application/pdf, image/jpeg, image/png" onchange="processarArquivoInscricao(this, 'menorIdade')">
+                <span class="file-name-display" id="status-insc-menorIdade">Nenhum arquivo selecionado</span>
+              </div>
+              <p style="font-size: 10px; color: var(--text-sub); line-height: 1.3; margin-top: 0;">
+                ⚠️ Para menores, é obrigatório anexar a Declaração de Responsabilidade assinada pelo responsável legal.
+                <a href="#" id="link-declaracao-menor" target="_blank" style="color: var(--primary); font-weight: 600;">Baixar modelo</a>.
+              </p>
+            </div>
+
+            <!-- Q5: Crianças -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Viaja acompanhado de crianças?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Sim"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Não"> Não</label>
+            </div>
+
+            <div class="stepper-nav">
+              <button class="btn-solid btn-back" onclick="stepperPrev(3, 2)">⬅ VOLTAR</button>
+              <button class="btn-solid" onclick="stepperNext(3, 4)">PRÓXIMO ➡</button>
+            </div>
+          </div>
+
+          <!-- ============ STEP 4: Cofre Digital / Uploads ============ -->
+          <div class="step-container" id="step-4">
+            <div class="step-section-title">📎 Documentos Obrigatórios</div>
+
+            <div class="custom-file-upload" style="margin-bottom: 15px;">
+              <label class="input-label">DOCUMENTO COM FOTO (RG ou CNH) *</label>
+              <label for="insc-file-documento" class="btn-file-custom" id="label-insc-documento">📎 Toque para selecionar o arquivo</label>
+              <input type="file" id="insc-file-documento" accept="application/pdf, image/jpeg, image/png" onchange="processarArquivoInscricao(this, 'documento')">
+              <span class="file-name-display" id="status-insc-documento">Nenhum arquivo selecionado</span>
+            </div>
+
+            <div class="custom-file-upload" style="margin-bottom: 15px;">
+              <label class="input-label">COMPROVANTE DE RESIDÊNCIA (PDF ou Imagem)</label>
+              <label for="insc-file-residencia" class="btn-file-custom" id="label-insc-residencia">📎 Toque para selecionar o arquivo</label>
+              <input type="file" id="insc-file-residencia" accept="application/pdf, image/jpeg, image/png" onchange="processarArquivoInscricao(this, 'residencia')">
+              <span class="file-name-display" id="status-insc-residencia">Nenhum arquivo selecionado</span>
+            </div>
+
+            <div class="custom-file-upload" style="margin-bottom: 15px;">
+              <label class="input-label">DECLARAÇÃO DE VÍNCULO ACADÊMICO (PDF ou Imagem)</label>
+              <label for="insc-file-vinculo" class="btn-file-custom" id="label-insc-vinculo">📎 Toque para selecionar o arquivo</label>
+              <input type="file" id="insc-file-vinculo" accept="application/pdf, image/jpeg, image/png" onchange="processarArquivoInscricao(this, 'vinculo')">
+              <span class="file-name-display" id="status-insc-vinculo">Nenhum arquivo selecionado</span>
+            </div>
+
+            <div class="step-section-title">📷 Foto 3x4</div>
+            <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.4;">Envie uma foto usando a câmara frontal ou anexe um arquivo de imagem existente.</p>
+
+            <!-- Toggle: Câmera vs Arquivo -->
+            <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+              <button type="button" class="btn-solid btn-modo-ativo" id="btn-modo-camera" style="flex: 1; font-size: 12px; padding: 8px 10px;" onclick="toggleModoFoto('camera')">
+                📷 Usar Câmera
+              </button>
+              <button type="button" class="btn-solid btn-modo-inativo" id="btn-modo-upload" style="flex: 1; font-size: 12px; padding: 8px 10px;" onclick="toggleModoFoto('upload')">
+                📎 Anexar Arquivo
+              </button>
+            </div>
+
+            <!-- Modo: Câmera (visível por padrão) -->
+            <div id="camera-3x4-area">
+
+              <div class="camera-container hidden" id="camera-viewfinder">
+                <video id="camera-video" autoplay playsinline muted></video>
+                <div class="camera-oval-mask"></div>
+              </div>
+
+              <button class="btn-solid hidden" id="btn-capturar-foto" style="background: var(--success); margin-top: 10px;" onclick="capturarFoto3x4()">
+                ✅ CAPTURAR FOTO
+              </button>
+
+              <canvas id="camera-canvas" style="display: none;"></canvas>
+              <img id="camera-preview" class="camera-preview-box hidden" alt="Pré-visualização da foto">
+              <button class="btn-text hidden" id="btn-refazer-foto" onclick="iniciarCamera3x4()" style="margin-top: 0;">🔄 Tirar outra foto</button>
+            </div>
+
+            <!-- Modo: Upload de Arquivo (oculto por padrão) -->
+            <div id="upload-3x4-area" class="hidden">
+              <div class="custom-file-upload">
+                <label class="input-label">SELECIONAR IMAGEM DA GALERIA</label>
+                <label for="insc-file-foto3x4" class="btn-file-custom" id="label-insc-foto3x4">📷 Toque para selecionar uma foto</label>
+                <input type="file" id="insc-file-foto3x4" accept="image/jpeg, image/png, image/webp" onchange="processarArquivoInscricao(this, 'foto3x4')">
+                <span class="file-name-display" id="status-insc-foto3x4">Nenhum arquivo selecionado</span>
+              </div>
+            </div>
+
+            <div class="stepper-nav" style="margin-top: 25px;">
+              <button class="btn-solid btn-back" onclick="stepperPrev(4, 3)">⬅ VOLTAR</button>
+              <button class="btn-solid" style="background: var(--success);" id="btn-submeter-inscricao" onclick="prepararEnvioNativo()">📤 SUBMETER INSCRIÇÃO</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <section id="view-consult" class="view-section">
+        <div class="form-card">
+          <div class="form-header">
+            <h2>Situação Cadastral</h2>
+            <p>Acompanhe a emissão da sua identidade</p>
+          </div>
+          <input type="text" id="id-estudante" class="input-field" placeholder="Digite apenas os números do CPF">
+          
+          <div style="text-align: left; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+             <label style="display:flex; align-items:flex-start; gap:8px; font-size:11px; color:#166534; cursor:pointer;">
+                <input type="checkbox" id="chk-notificacoes-cpf" style="margin-top: 2px;">
+                <span><strong>Avisem-me por aqui!</strong> Desejo receber atualizações e alertas sobre o meu processo diretamente neste telemóvel.</span>
+             </label>
+          </div>
+
+          <button class="btn-solid" id="btn-estudante" onclick="consultarEstudante()">CONSULTAR STATUS</button>
+          <button class="btn-text" onclick="switchView('view-aluno-menu')">Cancelar</button>
+        </div>
+        <div id="res-estudante" class="result-container hidden"></div>
+      </section>
+
+      <section id="view-resgate" class="view-section">
+         <div class="form-card" style="border: 2px solid var(--accent);">
+            <div class="form-header" style="margin-bottom: 15px;">
+               <span style="font-size: 36px; display: block; margin-bottom: 5px;">📤</span>
+               <h2 style="color: var(--accent);">RESGATE DOCUMENTAL</h2>
+               <p style="font-size: 11px; line-height: 1.3;">Envie apenas os documentos solicitados pela Secretaria.</p>
+            </div>
+            
+            <div style="background: #FFFBEB; border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+               <p style="margin: 0; font-size: 11px; color: #92400E; font-weight: bold;">⚠️ ATENÇÃO AOS FORMATOS:</p>
+               <ul style="margin: 5px 0 0 0; padding-left: 15px; font-size: 10px; color: #92400E;">
+                  <li><strong>Foto 3x4:</strong> Apenas Imagem (JPEG/PNG).</li>
+                  <li><strong>Outros Documentos:</strong> Apenas PDF.</li>
+               </ul>
+            </div>
+
+            <div id="container-inputs-resgate">
+               <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                  <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-main);">
+                     <input type="checkbox" id="chk-resgate-foto" onchange="toggleBoxResgate('FOTO')" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                     📷 Enviar Foto 3x4 (Nova)
+                  </label>
+                  <div id="box-resgate-FOTO" class="hidden" style="margin-top: 8px; padding-left: 26px;">
+                     <input type="file" id="file-resgate-FOTO" accept="image/jpeg, image/png" class="input-field" style="font-size: 11px; padding: 8px; margin-bottom: 0;" onchange="processarArquivoResgate(this, 'FOTO')">
+                     <span id="status-resgate-FOTO" style="font-size: 10px; color: var(--text-sub);">A aguardar seleção...</span>
+                  </div>
+               </div>
+
+               <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                  <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-main);">
+                     <input type="checkbox" id="chk-resgate-vinculo" onchange="toggleBoxResgate('VINCULO')" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                     🎓 Declaração de Vínculo
+                  </label>
+                  <div id="box-resgate-VINCULO" class="hidden" style="margin-top: 8px; padding-left: 26px;">
+                     <input type="file" id="file-resgate-VINCULO" accept="application/pdf" class="input-field" style="font-size: 11px; padding: 8px; margin-bottom: 0;" onchange="processarArquivoResgate(this, 'VINCULO')">
+                     <span id="status-resgate-VINCULO" style="font-size: 10px; color: var(--text-sub);">A aguardar seleção...</span>
+                  </div>
+               </div>
+
+               <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                  <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-main);">
+                     <input type="checkbox" id="chk-resgate-residencia" onchange="toggleBoxResgate('RESIDENCIA')" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                     🏠 Comprovante de Residência
+                  </label>
+                  <div id="box-resgate-RESIDENCIA" class="hidden" style="margin-top: 8px; padding-left: 26px;">
+                     <input type="file" id="file-resgate-RESIDENCIA" accept="application/pdf" class="input-field" style="font-size: 11px; padding: 8px; margin-bottom: 0;" onchange="processarArquivoResgate(this, 'RESIDENCIA')">
+                     <span id="status-resgate-RESIDENCIA" style="font-size: 10px; color: var(--text-sub);">A aguardar seleção...</span>
+                  </div>
+               </div>
+
+               <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                  <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-main);">
+                     <input type="checkbox" id="chk-resgate-documento" onchange="toggleBoxResgate('DOCUMENTO')" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                     🪪 RG ou CNH (Documento)
+                  </label>
+                  <div id="box-resgate-DOCUMENTO" class="hidden" style="margin-top: 8px; padding-left: 26px;">
+                     <input type="file" id="file-resgate-DOCUMENTO" accept="application/pdf" class="input-field" style="font-size: 11px; padding: 8px; margin-bottom: 0;" onchange="processarArquivoResgate(this, 'DOCUMENTO')">
+                     <span id="status-resgate-DOCUMENTO" style="font-size: 10px; color: var(--text-sub);">A aguardar seleção...</span>
+                  </div>
+               </div>
+
+               <div style="margin-bottom: 15px;">
+                  <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-main);">
+                     <input type="checkbox" id="chk-resgate-estagio" onchange="toggleBoxResgate('ESTAGIO')" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                     💼 Comprovante de Estágio
+                  </label>
+                  <div id="box-resgate-ESTAGIO" class="hidden" style="margin-top: 8px; padding-left: 26px;">
+                     <input type="file" id="file-resgate-ESTAGIO" accept="application/pdf" class="input-field" style="font-size: 11px; padding: 8px; margin-bottom: 0;" onchange="processarArquivoResgate(this, 'ESTAGIO')">
+                     <span id="status-resgate-ESTAGIO" style="font-size: 10px; color: var(--text-sub);">A aguardar seleção...</span>
+                  </div>
+               </div>
+            </div>
+
+            <button class="btn-solid accent-bg" id="btn-enviar-resgate" onclick="enviarArquivosResgate()" disabled style="opacity: 0.5;">ENVIAR DOCUMENTOS</button>
+            <button class="btn-text" onclick="cancelarResgate()">Cancelar e Voltar</button>
+         </div>
+      </section>
+
+      <section id="view-login" class="view-section">
+        <div class="form-card">
+          <div class="form-header">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">🔒</span>
+            <h2>Cofre Digital</h2>
+            <p>Insira as credenciais da sua carteira</p>
+          </div>
+          <label class="input-label">ID DA CARTEIRA</label>
+          <input type="text" id="login-id" class="input-field uppercase" placeholder="Ex: 2026CM...">
+          <label class="input-label">PIN</label>
+          <input type="password" id="login-senha" class="input-field" placeholder="Últimos 4 dígitos do CPF" maxlength="4">
+          <button class="btn-solid" id="btn-login" onclick="loginCarteira()">ENTRAR NO COFRE</button>
+          <button class="btn-text" onclick="switchView('view-aluno-menu')">Cancelar</button>
+        </div>
+        <div id="res-login" class="error-box hidden"></div>
+      </section>
+
+      <section id="view-wallet" class="view-section">
+        <div id="wallet-container"></div>
+        <div id="wallet-actions" class="hidden" style="margin-top: 15px;"></div>
+
+        <div id="view-mobilidade" style="margin-top: 25px; display: none;">
+           <div class="form-card" style="padding: 15px; border: 2px solid var(--primary);">
+              <div class="form-header" style="margin-bottom: 15px;">
+                 <h2 style="font-size: 14px; margin-bottom: 2px;">🚌 PRÓXIMAS VIAGENS</h2>
+                 <p style="font-size: 10px;">Janela de Embarque em Tempo Real</p>
+              </div>
+              <div id="lista-viagens-container" style="text-align: center;">
+                 <div class="loader" style="margin: 0 auto 10px auto; width: 25px; height: 25px; border-width: 3px;"></div>
+                 <p style="font-size: 11px; color: var(--text-sub);">A procurar autocarros na sua rota...</p>
+              </div>
+              <div id="painel-viagem-ativa" class="hidden text-center"></div>
+           </div>
+        </div>
+      </section>
