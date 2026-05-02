@@ -286,6 +286,14 @@
       <section id="view-aluno-menu" class="view-section">
         <div class="welcome-text">Área do Estudante</div>
 
+        <button class="menu-card outline-card" style="border-color: var(--success); background: rgba(16,185,129,0.04);" onclick="switchView('view-inscricao')">
+          <span class="icon">📝</span>
+          <div class="info">
+            <strong style="color: var(--success);">Nova Inscrição</strong>
+            <span>Solicite o seu passe de transporte</span>
+          </div>
+        </button>
+
         <button class="menu-card outline-card" onclick="switchView('view-consult')">
           <span class="icon">🔍</span>
           <div class="info">
@@ -303,6 +311,187 @@
         </button>
 
         <button class="btn-text" onclick="switchView('view-hub')">⬅ Voltar ao Início</button>
+      </section>
+
+      <section id="view-inscricao" class="view-section">
+        <div class="form-card" style="padding: 20px;">
+          <div class="form-header" style="margin-bottom: 10px;">
+            <span style="font-size: 36px; display: block; margin-bottom: 5px;">📝</span>
+            <h2>Inscrição no Transporte</h2>
+            <p>Preencha os dados para solicitar o seu passe</p>
+          </div>
+
+          <!-- Progress Indicator -->
+          <div class="stepper-progress" id="stepper-progress">
+            <div class="step-dot step-active" id="dot-1"></div>
+            <div class="step-connector" id="conn-1"></div>
+            <div class="step-dot" id="dot-2"></div>
+            <div class="step-connector" id="conn-2"></div>
+            <div class="step-dot" id="dot-3"></div>
+            <div class="step-connector" id="conn-3"></div>
+            <div class="step-dot" id="dot-4"></div>
+          </div>
+          <div class="stepper-label" id="stepper-label">Etapa <strong>1</strong> de 4 — Triagem</div>
+
+          <!-- ============ STEP 1: Triagem ============ -->
+          <div class="step-container step-visible" id="step-1">
+            <div class="step-section-title">Identificação</div>
+            <label class="input-label">CPF (APENAS NÚMEROS)</label>
+            <input type="tel" id="insc-cpf" class="input-field" placeholder="000.000.000-00" maxlength="14" inputmode="numeric">
+            <p style="font-size: 11px; color: var(--text-sub); margin: -5px 0 15px 0; line-height: 1.4;">Verificamos se já existe um cadastro vinculado a este CPF antes de prosseguir.</p>
+            <button class="btn-solid" id="btn-insc-verificar" onclick="verificarCPFInscricao()">VERIFICAR CPF</button>
+            <button class="btn-text" onclick="switchView('view-aluno-menu')">Cancelar</button>
+          </div>
+
+          <!-- ============ STEP 2: Rota Acadêmica ============ -->
+          <div class="step-container" id="step-2">
+            <div class="step-section-title">Dados Acadêmicos</div>
+
+            <label class="input-label">NOME COMPLETO</label>
+            <input type="text" id="insc-nome" class="input-field" placeholder="Nome conforme documento">
+
+            <label class="input-label">INSTITUIÇÃO DE ENSINO</label>
+            <input type="text" id="insc-instituicao" class="input-field" placeholder="Ex: UFRB, IFBA, UNEB...">
+
+            <label class="input-label">MATRÍCULA</label>
+            <input type="text" id="insc-matricula" class="input-field" placeholder="Número de matrícula">
+
+            <label class="input-label">ROTA DE TRANSPORTE</label>
+            <input type="text" id="insc-rota" class="input-field" placeholder="Ex: Rota 1 - Campus Sede">
+
+            <div class="step-section-title">Dias de Utilização</div>
+            <div class="insc-check-group">
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Segunda"> Seg</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Terça"> Ter</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Quarta"> Qua</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Quinta"> Qui</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Sexta"> Sex</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-dias" value="Sábado"> Sáb</label>
+            </div>
+
+            <div class="step-section-title">Turnos</div>
+            <div class="insc-check-group">
+              <label class="insc-check-label"><input type="checkbox" name="insc-turnos" value="Matutino"> Matutino</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-turnos" value="Vespertino"> Vespertino</label>
+              <label class="insc-check-label"><input type="checkbox" name="insc-turnos" value="Noturno"> Noturno</label>
+            </div>
+
+            <div class="step-section-title">Período Letivo</div>
+            <label class="input-label">INÍCIO DO SEMESTRE</label>
+            <input type="date" id="insc-inicio-semestre" class="input-field">
+            <label class="input-label">FIM DO SEMESTRE</label>
+            <input type="date" id="insc-fim-semestre" class="input-field">
+
+            <div class="stepper-nav">
+              <button class="btn-solid btn-back" onclick="stepperPrev(2, 1)">⬅ VOLTAR</button>
+              <button class="btn-solid" onclick="stepperNext(2, 3)">PRÓXIMO ➡</button>
+            </div>
+          </div>
+
+          <!-- ============ STEP 3: Condicionais ============ -->
+          <div class="step-container" id="step-3">
+            <div class="step-section-title">Perguntas Condicionais</div>
+
+            <!-- Q1: Transporte 23h -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Utiliza o transporte das 23h (noturno)?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Sim" onchange="toggleCondField('cond-bairro', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-23h" value="Não" onchange="toggleCondField('cond-bairro', false)" checked> Não</label>
+            </div>
+            <div class="cond-field" id="cond-bairro">
+              <label class="input-label">BAIRRO DE DESEMBARQUE (23h)</label>
+              <input type="text" id="insc-bairro-23h" class="input-field" placeholder="Ex: Centro, Mangabeira...">
+            </div>
+
+            <!-- Q2: Estágio -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Necessita de transporte para estágio?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Sim" onchange="toggleCondField('cond-estagio', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-estagio" value="Não" onchange="toggleCondField('cond-estagio', false)" checked> Não</label>
+            </div>
+            <div class="cond-field" id="cond-estagio">
+              <label class="input-label">PARADA DO ESTÁGIO</label>
+              <input type="text" id="insc-parada-estagio" class="input-field" placeholder="Endereço ou ponto de referência">
+              <label class="input-label">TURNO DO ESTÁGIO</label>
+              <select id="insc-turno-estagio" class="input-field">
+                <option value="">Selecione...</option>
+                <option value="Matutino">Matutino</option>
+                <option value="Vespertino">Vespertino</option>
+                <option value="Noturno">Noturno</option>
+                <option value="Integral">Integral</option>
+              </select>
+            </div>
+
+            <!-- Q3: PCD -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Possui deficiência de mobilidade?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Sim" onchange="toggleCondField('cond-cid', true)"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-pcd" value="Não" onchange="toggleCondField('cond-cid', false)" checked> Não</label>
+            </div>
+            <div class="cond-field" id="cond-cid">
+              <label class="input-label">CID (CLASSIFICAÇÃO)</label>
+              <input type="text" id="insc-cid" class="input-field" placeholder="Ex: G80, M54...">
+            </div>
+
+            <!-- Q4: Crianças -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Viaja acompanhado de crianças?</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Sim"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Não" checked> Não</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Às vezes"> Às vezes</label>
+            </div>
+
+            <div class="stepper-nav">
+              <button class="btn-solid btn-back" onclick="stepperPrev(3, 2)">⬅ VOLTAR</button>
+              <button class="btn-solid" onclick="stepperNext(3, 4)">PRÓXIMO ➡</button>
+            </div>
+          </div>
+
+          <!-- ============ STEP 4: Cofre Digital / Uploads ============ -->
+          <div class="step-container" id="step-4">
+            <div class="step-section-title">📎 Documentos Obrigatórios</div>
+
+            <div class="upload-block">
+              <label class="input-label">COMPROVANTE DE RESIDÊNCIA (PDF ou Imagem)</label>
+              <input type="file" id="insc-file-residencia" class="input-field" accept="application/pdf, image/jpeg, image/png" style="font-size: 12px; padding: 10px;" onchange="processarArquivoInscricao(this, 'residencia')">
+              <span class="upload-status" id="status-insc-residencia">Nenhum arquivo selecionado</span>
+            </div>
+
+            <div class="upload-block">
+              <label class="input-label">DECLARAÇÃO DE VÍNCULO ACADÊMICO (PDF ou Imagem)</label>
+              <input type="file" id="insc-file-vinculo" class="input-field" accept="application/pdf, image/jpeg, image/png" style="font-size: 12px; padding: 10px;" onchange="processarArquivoInscricao(this, 'vinculo')">
+              <span class="upload-status" id="status-insc-vinculo">Nenhum arquivo selecionado</span>
+            </div>
+
+            <div class="step-section-title">📷 Foto 3x4 (Selfie)</div>
+            <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.4;">Tire uma foto usando a câmara frontal. Posicione o rosto centralizado no oval.</p>
+
+            <div id="camera-3x4-area">
+              <button class="btn-solid" style="background: #1e293b; margin-bottom: 10px;" id="btn-abrir-camera" onclick="iniciarCamera3x4()">
+                📷 ABRIR CÂMARA FRONTAL
+              </button>
+
+              <div class="camera-container hidden" id="camera-viewfinder">
+                <video id="camera-video" autoplay playsinline muted></video>
+                <div class="camera-oval-mask"></div>
+              </div>
+
+              <button class="btn-solid hidden" id="btn-capturar-foto" style="background: var(--success); margin-top: 10px;" onclick="capturarFoto3x4()">
+                ✅ CAPTURAR FOTO
+              </button>
+
+              <canvas id="camera-canvas" style="display: none;"></canvas>
+              <img id="camera-preview" class="camera-preview-box hidden" alt="Pré-visualização da foto">
+              <button class="btn-text hidden" id="btn-refazer-foto" onclick="iniciarCamera3x4()" style="margin-top: 0;">🔄 Tirar outra foto</button>
+            </div>
+
+            <div class="stepper-nav" style="margin-top: 25px;">
+              <button class="btn-solid btn-back" onclick="stepperPrev(4, 3)">⬅ VOLTAR</button>
+              <button class="btn-solid" style="background: var(--success);" id="btn-submeter-inscricao" onclick="prepararEnvioNativo()">📤 SUBMETER INSCRIÇÃO</button>
+            </div>
+          </div>
+
+        </div>
       </section>
 
       <section id="view-consult" class="view-section">
