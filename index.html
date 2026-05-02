@@ -379,13 +379,21 @@
             <input type="text" id="insc-nome" class="input-field" placeholder="Nome conforme documento">
 
             <label class="input-label">INSTITUIÇÃO DE ENSINO</label>
-            <input type="text" id="insc-instituicao" class="input-field" placeholder="Ex: UFRB, IFBA, UNEB...">
+            <select id="insc-instituicao" class="input-field">
+              <option value="" disabled selected>Selecione...</option>
+              <!-- Populado dinamicamente via getListsInscricao() -->
+              <option value="Outra (Não listada)">Outra (Não listada)</option>
+            </select>
 
             <label class="input-label">MATRÍCULA</label>
             <input type="text" id="insc-matricula" class="input-field" placeholder="Número de matrícula">
 
             <label class="input-label">ROTA DE TRANSPORTE</label>
-            <input type="text" id="insc-rota" class="input-field" placeholder="Ex: Rota 1 - Campus Sede">
+            <select id="insc-rota" class="input-field">
+              <option value="" disabled selected>Selecione...</option>
+              <!-- Populado dinamicamente via getListsInscricao() -->
+              <option value="Outra (Não listada)">Outra (Não listada)</option>
+            </select>
 
             <div class="step-section-title">Dias de Utilização</div>
             <div class="insc-check-group">
@@ -428,7 +436,11 @@
             </div>
             <div class="cond-field" id="cond-bairro">
               <label class="input-label">BAIRRO DE DESEMBARQUE (23h)</label>
-              <input type="text" id="insc-bairro-23h" class="input-field" placeholder="Ex: Centro, Mangabeira...">
+              <select id="insc-bairro-23h" class="input-field">
+                <option value="" disabled selected>Selecione...</option>
+                <!-- Populado dinamicamente via getListsInscricao() -->
+                <option value="Outro">Outro</option>
+              </select>
             </div>
 
             <!-- Q2: Estágio -->
@@ -461,12 +473,18 @@
               <input type="text" id="insc-cid" class="input-field" placeholder="Ex: G80, M54...">
             </div>
 
-            <!-- Q4: Crianças -->
+            <!-- Q4: Menor de Idade -->
+            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">O aluno é menor de idade? (Menos de 18 anos)</p>
+            <div class="insc-radio-group">
+              <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Sim"> Sim</label>
+              <label class="insc-radio-label"><input type="radio" name="insc-menor" value="Não" checked> Não</label>
+            </div>
+
+            <!-- Q5: Crianças -->
             <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Viaja acompanhado de crianças?</p>
             <div class="insc-radio-group">
               <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Sim"> Sim</label>
               <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Não" checked> Não</label>
-              <label class="insc-radio-label"><input type="radio" name="insc-criancas" value="Às vezes"> Às vezes</label>
             </div>
 
             <div class="stepper-nav">
@@ -480,6 +498,12 @@
             <div class="step-section-title">📎 Documentos Obrigatórios</div>
 
             <div class="upload-block">
+              <label class="input-label">DOCUMENTO COM FOTO (RG ou CNH) *</label>
+              <input type="file" id="insc-file-documento" class="input-field" accept="application/pdf, image/jpeg, image/png" style="font-size: 12px; padding: 10px;" onchange="processarArquivoInscricao(this, 'documento')">
+              <span class="upload-status" id="status-insc-documento">Nenhum arquivo selecionado</span>
+            </div>
+
+            <div class="upload-block">
               <label class="input-label">COMPROVANTE DE RESIDÊNCIA (PDF ou Imagem)</label>
               <input type="file" id="insc-file-residencia" class="input-field" accept="application/pdf, image/jpeg, image/png" style="font-size: 12px; padding: 10px;" onchange="processarArquivoInscricao(this, 'residencia')">
               <span class="upload-status" id="status-insc-residencia">Nenhum arquivo selecionado</span>
@@ -491,9 +515,20 @@
               <span class="upload-status" id="status-insc-vinculo">Nenhum arquivo selecionado</span>
             </div>
 
-            <div class="step-section-title">📷 Foto 3x4 (Selfie)</div>
-            <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.4;">Tire uma foto usando a câmara frontal. Posicione o rosto centralizado no oval.</p>
+            <div class="step-section-title">📷 Foto 3x4</div>
+            <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.4;">Envie uma foto usando a câmara frontal ou anexe um arquivo de imagem existente.</p>
 
+            <!-- Toggle: Câmera vs Arquivo -->
+            <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+              <button type="button" class="btn-solid" id="btn-modo-camera" style="flex: 1; font-size: 12px; padding: 8px 10px; background: #1e293b;" onclick="toggleModoFoto('camera')">
+                📷 Usar Câmera
+              </button>
+              <button type="button" class="btn-solid" id="btn-modo-upload" style="flex: 1; font-size: 12px; padding: 8px 10px; background: #64748b;" onclick="toggleModoFoto('upload')">
+                📎 Anexar Arquivo
+              </button>
+            </div>
+
+            <!-- Modo: Câmera (visível por padrão) -->
             <div id="camera-3x4-area">
               <button class="btn-solid" style="background: #1e293b; margin-bottom: 10px;" id="btn-abrir-camera" onclick="iniciarCamera3x4()">
                 📷 ABRIR CÂMARA FRONTAL
@@ -511,6 +546,15 @@
               <canvas id="camera-canvas" style="display: none;"></canvas>
               <img id="camera-preview" class="camera-preview-box hidden" alt="Pré-visualização da foto">
               <button class="btn-text hidden" id="btn-refazer-foto" onclick="iniciarCamera3x4()" style="margin-top: 0;">🔄 Tirar outra foto</button>
+            </div>
+
+            <!-- Modo: Upload de Arquivo (oculto por padrão) -->
+            <div id="upload-3x4-area" class="hidden">
+              <div class="upload-block">
+                <label class="input-label">SELECIONAR IMAGEM DA GALERIA</label>
+                <input type="file" id="insc-file-foto3x4" class="input-field" accept="image/jpeg, image/png, image/webp" style="font-size: 12px; padding: 10px;" onchange="processarArquivoInscricao(this, 'foto3x4')">
+                <span class="upload-status" id="status-insc-foto3x4">Nenhum arquivo selecionado</span>
+              </div>
             </div>
 
             <div class="stepper-nav" style="margin-top: 25px;">
