@@ -431,3 +431,38 @@ function verificarHashPublico() {
         </div>`;
     });
 }
+
+// ========================================================================
+// MENU DE CONFIGURAÇÕES (BOTTOM SHEET)
+// ========================================================================
+
+function abrirMenuConfiguracoes() {
+  const modal = document.getElementById('modal-configuracoes');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  
+  const toggle = document.getElementById('dark-mode-toggle-settings');
+  if (toggle) {
+    toggle.checked = document.body.classList.contains('dark-theme');
+  }
+  
+  // force reflow
+  void modal.offsetWidth;
+  modal.classList.add('active');
+}
+
+function fecharMenuConfiguracoes() {
+  const modal = document.getElementById('modal-configuracoes');
+  if (!modal) return;
+  modal.classList.remove('active');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+  }, 300);
+}
+
+function navegarPeloMenu(viewId) {
+  fecharMenuConfiguracoes();
+  setTimeout(() => {
+    switchView(viewId);
+  }, 300);
+}
