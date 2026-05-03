@@ -211,67 +211,96 @@ async function verificarCPFInscricao() {
     btn.innerText = "A VERIFICAR...";
     btn.disabled = true;
 
-    try {
-        const res = await apiCall("verificarCpfRenovacao", { cpf: cpfRaw });
-
-        if (!res.sucesso) {
-            showToast(res.erro || "Erro ao verificar CPF.", "error");
-            return;
-        }
-
-        if (res.isRenovacao && res.dados) {
-            // Auto-fill para renovação
-            const d = res.dados;
-            const elNome = document.getElementById('insc-nome');
-            const elEmail = document.getElementById('insc-email');
-            const elRg = document.getElementById('insc-rg');
-            const elContato = document.getElementById('insc-contato');
-            const elInst = document.getElementById('insc-instituicao');
-            const elMat = document.getElementById('insc-matricula');
-            const elRota = document.getElementById('insc-rota');
-
-            if (elNome && d.nome) elNome.value = d.nome;
-            if (elEmail && d.email) elEmail.value = d.email;
-            if (elRg && d.rg) elRg.value = d.rg;
-            if (elContato && d.contato) elContato.value = d.contato;
-            if (elMat && d.matricula) elMat.value = d.matricula;
-
-            // Selects: tenta selecionar o valor correspondente
-            if (elInst && d.instituicao) {
-                _selecionarOpcaoSelect(elInst, d.instituicao);
-            }
-            if (elRota && d.rota) {
-                _selecionarOpcaoSelect(elRota, d.rota);
+    // 1. O Cão de Guarda: Verificar duplicidade no ano corrente (ABA_SISTEMA)
+    google.script.run
+        .withSuccessHandler(async function(resDuplicidade) {
+            if (resDuplicidade.duplicado) {
+                // ⛔ Cão de guarda ativado! CPF duplicado na base atual.
+                const feedbackBox = document.getElementById('cpf-feedback-box');
+                if (feedbackBox) {
+                    feedbackBox.style.background = '#fef2f2';
+                    feedbackBox.style.color = '#991b1b';
+                    feedbackBox.innerHTML = `⚠️ ${resDuplicidade.mensagem}`;
+                    feedbackBox.classList.remove('hidden');
+                } else {
+                    showToast(resDuplicidade.mensagem, "error");
+                }
+                triggerVibration([100, 50, 100]);
+                btn.innerText = "VERIFICAR CPF";
+                btn.disabled = false;
+                return; // Bloqueia o avanço para a Etapa 2
             }
 
-            const feedbackBox = document.getElementById('cpf-feedback-box');
-            if (feedbackBox) {
-                feedbackBox.style.background = '#ecfdf5';
-                feedbackBox.style.color = '#166534';
-                feedbackBox.innerHTML = "✅ Inscrição anterior encontrada! Os seus dados foram importados. Verifique-os na próxima etapa.";
-                feedbackBox.classList.remove('hidden');
-            }
-            triggerVibration(50);
-            setTimeout(() => { stepperNext(1, 2); }, 2000);
-        } else {
-            const feedbackBox = document.getElementById('cpf-feedback-box');
-            if (feedbackBox) {
-                feedbackBox.style.background = '#e0f2fe';
-                feedbackBox.style.color = '#0369a1';
-                feedbackBox.innerHTML = "✨ Novo Cadastro! Prossiga para preencher os seus dados.";
-                feedbackBox.classList.remove('hidden');
-            }
-            triggerVibration(50);
-            setTimeout(() => { stepperNext(1, 2); }, 1500);
-        }
+            // ✅ Caminho livre! Prosseguir com a sua lógica original de histórico.
+            try {
+                const res = await apiCall("verificarCpfRenovacao", { cpf: cpfRaw });
 
-    } catch (err) {
-        console.error("Erro na verificação de CPF:", err);
-        showToast("Falha de conexão. Tente novamente.", "error");
-    } finally {
-        btn.innerText = "VERIFICAR CPF";
-        btn.disabled = false;
-    }
+                if (!res.sucesso) {
+                    showToast(res.erro || "Erro ao verificar CPF.", "error");
+                    btn.innerText = "VERIFICAR CPF";
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (res.isRenovacao && res.dados) {
+                    // Auto-fill para renovação
+                    const d = res.dados;
+                    const elNome = document.getElementById('insc-nome');
+                    const elEmail = document.getElementById('insc-email');
+                    const elRg = document.getElementById('insc-rg');
+                    const elContato = document.getElementById('insc-contato');
+                    const elInst = document.getElementById('insc-instituicao');
+                    const elMat = document.getElementById('insc-matricula');
+                    const elRota = document.getElementById('insc-rota');
+
+                    if (elNome && d.nome) elNome.value = d.nome;
+                    if (elEmail && d.email) elEmail.value = d.email;
+                    if (elRg && d.rg) elRg.value = d.rg;
+                    if (elContato && d.contato) elContato.value = d.contato;
+                    if (elMat && d.matricula) elMat.value = d.matricula;
+
+                    if (elInst && d.instituicao) {
+                        _selecionarOpcaoSelect(elInst, d.instituicao);
+                    }
+                    if (elRota && d.rota) {
+                        _selecionarOpcaoSelect(elRota, d.rota);
+                    }
+
+                    const feedbackBox = document.getElementById('cpf-feedback-box');
+                    if (feedbackBox) {
+                        feedbackBox.style.background = '#ecfdf5';
+                        feedbackBox.style.color = '#166534';
+                        feedbackBox.innerHTML = "✅ Inscrição anterior encontrada! Os seus dados foram importados. Verifique-os na próxima etapa.";
+                        feedbackBox.classList.remove('hidden');
+                    }
+                    triggerVibration(50);
+                    setTimeout(() => { stepperNext(1, 2); }, 2000);
+                } else {
+                    const feedbackBox = document.getElementById('cpf-feedback-box');
+                    if (feedbackBox) {
+                        feedbackBox.style.background = '#e0f2fe';
+                        feedbackBox.style.color = '#0369a1';
+                        feedbackBox.innerHTML = "✨ Novo Cadastro! Prossiga para preencher os seus dados.";
+                        feedbackBox.classList.remove('hidden');
+                    }
+                    triggerVibration(50);
+                    setTimeout(() => { stepperNext(1, 2); }, 1500);
+                }
+
+            } catch (err) {
+                console.error("Erro na verificação de CPF (Histórico):", err);
+                showToast("Falha de conexão. Tente novamente.", "error");
+                btn.innerText = "VERIFICAR CPF";
+                btn.disabled = false;
+            }
+        })
+        .withFailureHandler(function(err) {
+            console.error("Erro de comunicação no Cão de Guarda:", err);
+            showToast("Falha de conexão ao servidor. Tente novamente.", "error");
+            btn.innerText = "VERIFICAR CPF";
+            btn.disabled = false;
+        })
+        .verificarDuplicidadeCPF(cpfRaw);
 }
 
 /**
