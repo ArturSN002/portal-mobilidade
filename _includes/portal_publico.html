@@ -64,8 +64,16 @@
           </div>
 
           <label class="input-label">CÓDIGO DE VALIDAÇÃO</label>
-          <input type="text" id="input-hash-validador" class="input-field" placeholder="Ex: SMEB-2026-A7KC3M" style="text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; text-align: center; font-size: 16px;">
-          <p style="font-size: 10px; color: var(--text-sub); margin: -5px 0 15px 0; text-align: center;">Insira o código impresso no rodapé da Declaração de Vínculo</p>
+          <input type="text" id="input-hash-validador" class="input-field" placeholder="Ex: SMEB-2026-A7KC3M" style="text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; text-align: center; font-size: 16px; margin-bottom: 10px;">
+          
+          <button class="btn-solid" id="btn-scanner-publico" style="background: #1e293b; margin-bottom: 15px;" onclick="iniciarScannerPublico()">📷 LER QR CODE</button>
+          
+          <div id="leitor-qr-publico-container" class="hidden" style="margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 2px solid #0d9488; background: #000;">
+            <div id="leitor-qr-publico"></div>
+            <button class="btn-solid text-danger" style="border-radius: 0; background: #222;" onclick="fecharScannerPublico()">❌ CANCELAR CÂMARA</button>
+          </div>
+
+          <p style="font-size: 10px; color: var(--text-sub); margin: -5px 0 15px 0; text-align: center;">Insira o código impresso no rodapé da Declaração de Vínculo ou leia o QR Code da Carteira Digital do Estudante</p>
 
           <button class="btn-solid" style="background: #0d9488;" onclick="verificarHashPublico()">VALIDAR DOCUMENTO</button>
 
