@@ -295,6 +295,49 @@ window.onload = function () {
 // CARTÓRIO DIGITAL — VERIFICAÇÃO PÚBLICA DE DOCUMENTOS (V10.1)
 // ========================================================================
 
+let scannerPublico = null;
+
+function iniciarScannerPublico() {
+  const container = document.getElementById('leitor-qr-publico-container');
+  const btn = document.getElementById('btn-scanner-publico');
+  
+  if (container) container.classList.remove('hidden');
+  if (btn) btn.classList.add('hidden');
+  
+  if (typeof Html5QrcodeScanner !== 'undefined') {
+    scannerPublico = new Html5QrcodeScanner(
+      "leitor-qr-publico", { fps: 10, qrbox: 250 }, false);
+    
+    scannerPublico.render((decodedText, decodedResult) => {
+      // Sucesso na leitura
+      fecharScannerPublico();
+      const input = document.getElementById('input-hash-validador');
+      if (input) {
+        input.value = decodedText;
+        verificarHashPublico();
+      }
+    }, (error) => {
+      // Ignorar erros de scan contínuo
+    });
+  } else {
+    showToast("Módulo de leitura QR não carregado.", "error");
+    fecharScannerPublico();
+  }
+}
+
+function fecharScannerPublico() {
+  const container = document.getElementById('leitor-qr-publico-container');
+  const btn = document.getElementById('btn-scanner-publico');
+  
+  if (scannerPublico) {
+    scannerPublico.clear().catch(error => console.error("Falha a limpar scanner público", error));
+    scannerPublico = null;
+  }
+  
+  if (container) container.classList.add('hidden');
+  if (btn) btn.classList.remove('hidden');
+}
+
 function verificarHashPublico() {
   const input = document.getElementById('input-hash-validador');
   const container = document.getElementById('res-validador');
@@ -310,39 +353,64 @@ function verificarHashPublico() {
 
   apiCall("validarDocumentoPublico", { hash: hash })
     .then(res => {
-      if (res.sucesso && res.valido) {
-        // DOCUMENTO VÁLIDO E ATIVO
-        container.innerHTML = `
-          <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center;">
-            <div style="font-size: 42px; margin-bottom: 8px;">✅</div>
-            <h3 style="color: #15803d; margin: 0 0 5px 0; font-size: 16px;">Documento Autêntico e Ativo</h3>
-            <p style="font-size: 11px; color: #166534; margin-bottom: 15px;">Verificação realizada com sucesso.</p>
-            <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
-              <div><strong>Nome:</strong> ${res.nome}</div>
-              <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
-              <div><strong>Instituição:</strong> ${res.instituicao}</div>
-              <div><strong>Status:</strong> <span style="color: #22c55e; font-weight: 700;">● ${res.status}</span></div>
-              <div><strong>Emissão:</strong> ${res.emissao || 'N/D'}</div>
-              <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #d1fae5;">Código: <code style="background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
-            </div>
-          </div>`;
-      } else if (res.sucesso && !res.valido) {
-        // DOCUMENTO ENCONTRADO MAS INATIVO / REVOGADO
-        const corStatus = res.status === 'CANCELADO' ? '#dc2626' : '#f59e0b';
-        const labelStatus = res.status === 'CANCELADO' ? 'Cancelado' : res.status === 'SUSPENSO' ? 'Suspenso' : 'Inativo';
-        container.innerHTML = `
-          <div style="background: #fefce8; border: 2px solid ${corStatus}; border-radius: 12px; padding: 20px; text-align: center;">
-            <div style="font-size: 42px; margin-bottom: 8px;">⚠️</div>
-            <h3 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">Documento Revogado</h3>
-            <p style="font-size: 11px; color: #78350f; margin-bottom: 15px;">Este documento não é mais válido.</p>
-            <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
-              <div><strong>Nome:</strong> ${res.nome}</div>
-              <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
-              <div><strong>Instituição:</strong> ${res.instituicao}</div>
-              <div><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: 700;">● ${labelStatus}</span></div>
-              <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #fde68a;">Código: <code style="background: #fef9c3; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
-            </div>
-          </div>`;
+      if (res.sucesso && res.tipo === "CARTEIRA") {
+        if (res.valido) {
+            container.innerHTML = `
+              <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="font-size: 42px; margin-bottom: 8px;">✅</div>
+                <h3 style="color: #15803d; margin: 0 0 5px 0; font-size: 16px;">Carteira de Estudante Válida</h3>
+                <div style="text-align: left; font-size: 14px; line-height: 1.8; color: #1e293b; margin-top: 15px;">
+                  <div><strong>Nome:</strong> ${res.nome}</div>
+                  <div><strong>Status:</strong> <span style="color: #22c55e; font-weight: 700;">● ${res.status}</span></div>
+                </div>
+              </div>`;
+        } else {
+            const corStatus = res.status === 'CANCELADO' ? '#dc2626' : '#f59e0b';
+            container.innerHTML = `
+              <div style="background: #fefce8; border: 2px solid ${corStatus}; border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="font-size: 42px; margin-bottom: 8px;">⚠️</div>
+                <h3 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">Carteira Inativa</h3>
+                <div style="text-align: left; font-size: 14px; line-height: 1.8; color: #1e293b; margin-top: 15px;">
+                  <div><strong>Nome:</strong> ${res.nome}</div>
+                  <div><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: 700;">● ${res.status}</span></div>
+                </div>
+              </div>`;
+        }
+      } else if (res.sucesso && res.tipo === "DECLARACAO") {
+        if (res.valido) {
+            // DOCUMENTO VÁLIDO E ATIVO
+            container.innerHTML = `
+              <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="font-size: 42px; margin-bottom: 8px;">✅</div>
+                <h3 style="color: #15803d; margin: 0 0 5px 0; font-size: 16px;">Documento Autêntico e Ativo</h3>
+                <p style="font-size: 11px; color: #166534; margin-bottom: 15px;">Verificação realizada com sucesso.</p>
+                <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
+                  <div><strong>Nome:</strong> ${res.nome}</div>
+                  <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
+                  <div><strong>Instituição:</strong> ${res.instituicao}</div>
+                  <div><strong>Status:</strong> <span style="color: #22c55e; font-weight: 700;">● ${res.status}</span></div>
+                  <div><strong>Emissão:</strong> ${res.emissao || 'N/D'}</div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #d1fae5;">Código: <code style="background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
+                </div>
+              </div>`;
+          } else {
+            // DOCUMENTO ENCONTRADO MAS INATIVO / REVOGADO
+            const corStatus = res.status === 'CANCELADO' ? '#dc2626' : '#f59e0b';
+            const labelStatus = res.status === 'CANCELADO' ? 'Cancelado' : res.status === 'SUSPENSO' ? 'Suspenso' : 'Inativo';
+            container.innerHTML = `
+              <div style="background: #fefce8; border: 2px solid ${corStatus}; border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="font-size: 42px; margin-bottom: 8px;">⚠️</div>
+                <h3 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">Documento Revogado</h3>
+                <p style="font-size: 11px; color: #78350f; margin-bottom: 15px;">Este documento não é mais válido.</p>
+                <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
+                  <div><strong>Nome:</strong> ${res.nome}</div>
+                  <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
+                  <div><strong>Instituição:</strong> ${res.instituicao}</div>
+                  <div><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: 700;">● ${labelStatus}</span></div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #fde68a;">Código: <code style="background: #fef9c3; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
+                </div>
+              </div>`;
+          }
       } else {
         // HASH NÃO ENCONTRADO
         container.innerHTML = `
