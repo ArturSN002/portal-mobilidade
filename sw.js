@@ -1,7 +1,7 @@
 /**
  * ============================================================================
- * SERVICE WORKER - PORTAL MAESTRO (V9.2.6 - RBAC & MESA DE AUDITORIA)
- * Responsável pelo cache da aplicação e por receber Notificações em Background.
+ * SERVICE WORKER - PORTAL MAESTRO (V10.3 - MODO OFFLINE & PRIVACIDADE)
+ * Responsável pelo cache da aplicação, imagens dinâmicas e Notificações Push.
  * ============================================================================
  */
 
@@ -24,8 +24,10 @@ try {
   console.log("Firebase SW já inicializado ou erro na configuração.");
 }
 
-// V9.2.8: NOME ATUALIZADO PARA FORÇAR DOWNLOAD DA NOVA INTERFACE WEB
-const CACHE_NAME = 'maestro-cache-v10.2';
+// CACHES DA VERSÃO 10.3
+const CACHE_NAME = 'maestro-cache-v10.3';
+const DYNAMIC_CACHE = 'maestro-dynamic-v10.3'; // Novo cache para as fotos e logos
+
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -42,7 +44,7 @@ const ASSETS_TO_CACHE = [
   './manifest.json'
 ];
 
-// 1. Instalação: Guarda os ficheiros estáticos em Cache
+// 1. Instalação: Guarda os ficheiros estáticos (HTML/CSS/JS) no Cache
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -52,7 +54,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 2. Ativação: Limpa caches antigos e assume o controlo das abas
+// 2. Ativação: Limpa caches antigos de versões anteriores
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
@@ -60,7 +62,7 @@ self.addEventListener('activate', (event) => {
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cache) => {
-            if (cache !== CACHE_NAME) {
+            if (cache !== CACHE_NAME && cache !== DYNAMIC_CACHE) {
               return caches.delete(cache);
             }
           })
@@ -70,22 +72,42 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Estratégia de Fetch (Offline-First para ficheiros estáticos)
+// 3. Estratégias de Fetch (O cérebro do Modo Offline)
 self.addEventListener('fetch', (event) => {
-  // Ignora chamadas para a API da Google e Firebase (estes precisam de rede viva)
-  if (event.request.url.includes('script.google.com') ||
-    event.request.url.includes('firestore') ||
-    event.request.url.includes('googleapis')) {
+  const url = event.request.url;
+
+  // A. Ignorar API do Apps Script e Firestore (Estes precisam obrigatoriamente de rede)
+  if (url.includes('script.google.com') || url.includes('firestore') || (url.includes('googleapis') && !url.includes('fcm'))) {
     return;
   }
 
-  // Interceta pedidos de ficheiros locais (HTML, CSS, JS, PNG)
+  // B. CACHE DINÂMICO: Imagens do Google Drive (Logos e Foto 3x4 do Estudante)
+  // Estratégia: Stale-While-Revalidate (Mostra o cache rápido, atualiza em background)
+  if (url.includes('drive.google.com/thumbnail') || url.includes('drive.google.com/uc')) {
+    event.respondWith(
+      caches.open(DYNAMIC_CACHE).then((cache) => {
+        return cache.match(event.request).then((response) => {
+          const fetchPromise = fetch(event.request).then((networkResponse) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          }).catch(() => response); // Se falhar a rede, não quebra, usa a imagem salva
+          
+          return response || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // C. CACHE ESTÁTICO: Ficheiros da Aplicação PWA
+  // Estratégia: Cache-First (Tenta o cache, se falhar vai à rede)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).catch(() => {
+        // Se o utilizador estiver totalmente offline e tentar navegar, mostra o index
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
@@ -104,9 +126,9 @@ if (firebase.messaging.isSupported()) {
       body: payload.notification.body,
       icon: payload.notification.icon || './icone.png',
       badge: './icone.png',
-      vibrate: [200, 100, 200, 100, 200], // Vibração padrão de alerta
-      data: payload.data || { click_action: "/" }, // Para onde ir ao clicar
-      requireInteraction: true // Mantém a notificação no ecrã até o utilizador interagir (em dispositivos compatíveis)
+      vibrate: [200, 100, 200, 100, 200],
+      data: payload.data || { click_action: "/" }, 
+      requireInteraction: true 
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -115,21 +137,18 @@ if (firebase.messaging.isSupported()) {
 
 // 5. Ação ao CLICAR na Notificação (Abrir a App)
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close(); // Fecha a notificação do sistema
+  event.notification.close();
 
-  // Lê a rota para onde a notificação deve apontar (geralmente a raiz do portal)
   const urlToOpen = new URL(event.notification.data.click_action || "/", self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Se a App já estiver aberta num separador, foca nesse separador
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
         if (client.url === urlToOpen && 'focus' in client) {
           return client.focus();
         }
       }
-      // Se a App estiver fechada, abre um novo separador/janela PWA
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
