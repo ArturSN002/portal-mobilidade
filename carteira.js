@@ -83,110 +83,83 @@ function mostrarSkeletonWallet() {
 }
 
 async function loginCarteira() {
-    const id = document.getElementById('login-id').value.trim();
-    const senha = document.getElementById('login-senha').value.trim();
-    const btn = document.getElementById('btn-login');
-    const resBox = document.getElementById('res-login');
+  const id = document.getElementById('login-id').value.trim();
+  const senha = document.getElementById('login-senha').value.trim();
+  const btn = document.getElementById('btn-login');
+  const resBox = document.getElementById('res-login');
 
-    if (!id || !senha) {
-        resBox.innerText = "Preencha o ID e a Senha.";
-        resBox.classList.remove('hidden');
-        triggerVibration([50, 50]);
-        return;
+  if (!id || !senha) {
+    resBox.innerText = "Preencha o ID e a Senha.";
+    resBox.classList.remove('hidden');
+    return;
+  }
+
+  btn.innerText = "A AUTENTICAR...";
+  btn.disabled = true;
+  resBox.classList.add('hidden');
+
+  try {
+    const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
+    btn.innerText = "ENTRAR NO COFRE";
+    btn.disabled = false;
+
+    if (res.erro) {
+      resBox.innerText = res.erro;
+      resBox.classList.remove('hidden');
+    } else if (res.sucesso) {
+      currentWalletId = id;
+      currentWalletSenha = senha;
+      currentStudentName = res.nome;
+      
+      if (res.token) localStorage.setItem("MAESTRO_EST_TOKEN", res.token);
+      localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
+      localStorage.setItem("MAESTRO_WALLET_CREDS", JSON.stringify({id: id, senha: senha}));
+
+      renderizarCarteira(res);
+      switchView('view-wallet');
+      document.getElementById('login-id').value = '';
+      document.getElementById('login-senha').value = '';
+      
+      armarRelogioSessaoEstudante(); 
+      
+      // NOVO: Verifica se o aluno permitiu as notificações nas configurações
+      if (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true') {
+          const tokenTemp = localStorage.getItem("MAESTRO_FCM_TOKEN_TEMP");
+          if (tokenTemp) {
+              if (typeof registrarTokenPush === 'function') registrarTokenPush(tokenTemp);
+          } else {
+              setTimeout(inicializarPushNotifications, 2000); 
+          }
+      }
     }
-
-    btn.innerText = "A AUTENTICAR...";
-    btn.disabled = true;
-    resBox.classList.add('hidden');
-
-    switchView('view-wallet');
-    mostrarSkeletonWallet();
-
-    try {
-        const res = await apiCall("autenticarCarteiraDigital", { id: id, senha: senha });
-
-        if (res.erro) {
-            switchView('view-login');
-            resBox.innerText = res.erro;
-            resBox.classList.remove('hidden');
-            triggerVibration([50, 50, 50]);
-        } else if (res.sucesso) {
-            currentWalletId = id;
-            currentWalletSenha = senha;
-            currentStudentName = res.nome;
-
-            triggerVibration(50);
-
-            if (res.token) localStorage.setItem("MAESTRO_EST_TOKEN", res.token);
-            localStorage.setItem("MAESTRO_WALLET_CREDS", JSON.stringify({ id: id, senha: senha }));
-
-            const offlineWallet = {
-                nome: res.nome,
-                cpfMascarado: res.cpfMascarado,
-                instituicao: res.instituicao,
-                turno: res.turno,
-                rota: res.rota,
-                fotoBase64: res.fotoUrl,
-                idCarteira: res.idCarteira || id,
-                validade: res.validade,
-                themePrimary: window.THEME_COLOR || "#0A3D6B",
-                themeSecondary: window.BG_COLOR || "#f0f0f0",
-                cidade: res.cidade
-            };
-            localStorage.setItem("MAESTRO_OFFLINE_WALLET", JSON.stringify(offlineWallet));
-            localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
-
-            // ... código do login ...
-              renderizarCarteira(res);
-              switchView('view-wallet');
-              document.getElementById('login-id').value = '';
-              document.getElementById('login-senha').value = '';
-              
-              armarRelogioSessaoEstudante(); 
-              
-              // NOVO: Verifica se ele ativou o Push nas configurações
-              if (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true') {
-                  const tokenTemp = localStorage.getItem("MAESTRO_FCM_TOKEN_TEMP");
-                  // Se já gerou o token antes, envia para a Planilha
-                  if (tokenTemp) {
-                      registrarTokenPush(tokenTemp);
-                  } else {
-                      // Se não, tenta gerar agora
-                      setTimeout(inicializarPushNotifications, 2000); 
-                  }
-              }
-            }
-          } catch(err) {
-// ... resto da função catch(err)
-        }
-    } catch (err) {
-        const cachedData = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
-        const cachedCreds = localStorage.getItem("MAESTRO_WALLET_CREDS");
-
-        if (cachedData && cachedCreds) {
-            const creds = JSON.parse(cachedCreds);
-            if (creds.id.toUpperCase() === id.toUpperCase() && creds.senha === senha) {
-                currentWalletId = id;
-                currentWalletSenha = senha;
-                const resCached = JSON.parse(cachedData);
-                currentStudentName = resCached.nome;
-
-                triggerVibration(50);
-                showToast("Modo Offline Ativado. Funções limitadas.", "warning");
-                if (resCached.themePrimary) {
-                    renderizarCarteiraOffline(resCached);
-                } else {
-                    renderizarCarteira(resCached);
-                }
-                armarRelogioSessaoEstudante();
-                return;
-            }
-        }
-        switchView('view-login');
-        resBox.innerText = "Falha de ligação. Necessita de internet.";
-        resBox.classList.remove('hidden');
-        triggerVibration([50, 50, 50]);
-    } finally {
+  } catch(err) {
+    btn.innerText = "ENTRAR NO COFRE";
+    btn.disabled = false;
+    
+    const cachedData = localStorage.getItem("MAESTRO_WALLET_CACHE");
+    const cachedCreds = localStorage.getItem("MAESTRO_WALLET_CREDS");
+    
+    if (cachedData && cachedCreds) {
+       const creds = JSON.parse(cachedCreds);
+       if (creds.id.toUpperCase() === id.toUpperCase() && creds.senha === senha) {
+          currentWalletId = id;
+          currentWalletSenha = senha;
+          const resCached = JSON.parse(cachedData);
+          currentStudentName = resCached.nome;
+          
+          showToast("Modo Offline Ativado. Funções limitadas.", "warning");
+          renderizarCarteira(resCached);
+          switchView('view-wallet');
+          armarRelogioSessaoEstudante();
+          return;
+       }
+    }
+    resBox.innerText = "Falha de ligação. Necessita de internet.";
+    resBox.classList.remove('hidden');
+  }
+}
+      
+finally {
         if (!document.getElementById('view-login').classList.contains('hidden')) {
             btn.innerText = "ENTRAR NO COFRE";
             btn.disabled = false;
