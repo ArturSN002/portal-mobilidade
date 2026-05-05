@@ -8,18 +8,23 @@
 importScripts("https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js");
 importScripts("https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js");
 
-// ⚠️ ATENÇÃO: COLE AQUI AS CREDENCIAIS DO SEU FIREBASE (As mesmas do app.js)
+// Puxa as variáveis dinamicamente da URL de registo do Service Worker
+const params = new URL(location).searchParams;
+
 const firebaseConfig = {
-  apiKey: "COLE_SUA_API_KEY",
-  authDomain: "COLE_SEU_PROJECT_ID.firebaseapp.com",
-  projectId: "COLE_SEU_PROJECT_ID",
-  storageBucket: "COLE_SEU_PROJECT_ID.appspot.com",
-  messagingSenderId: "COLE_SEU_SENDER_ID",
-  appId: "COLE_SEU_APP_ID"
+  apiKey: params.get('apiKey'),
+  authDomain: params.get('projectId') + ".firebaseapp.com",
+  projectId: params.get('projectId'),
+  storageBucket: params.get('projectId') + ".appspot.com",
+  messagingSenderId: params.get('senderId'),
+  appId: params.get('appId')
 };
 
 try {
-  firebase.initializeApp(firebaseConfig);
+  // Só inicializa se realmente recebeu a apiKey (evita erros no primeiro carregamento sem internet)
+  if (firebaseConfig.apiKey) {
+      firebase.initializeApp(firebaseConfig);
+  }
 } catch (e) {
   console.log("Firebase SW já inicializado ou erro na configuração.");
 }
