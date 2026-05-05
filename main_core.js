@@ -222,31 +222,42 @@ async function inicializarPushNotifications() {
     if (typeof firebase !== 'undefined' && !firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
-  } catch (e) { return; }
+  } catch(e) { console.warn("Firebase Init falhou:", e); return; }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof firebase === 'undefined') {
-    return;
+     console.log("Push não suportado ou Firebase não carregado.");
+     return;
   }
 
-  // Só permite Push se a app estiver instalada como PWA (standalone)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (!isStandalone) return;
+  if (!isStandalone) return; 
 
   try {
     const messaging = firebase.messaging();
+    const permission = await Notification.requestPermission();
     
-    // IMPORTANTE: Só tenta buscar token se o utilizador já tiver concedido permissão prévia
-    if (Notification.permission === 'granted') {
-      const token = await messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY });
+    if (permission === 'granted') {
+      // Tenta obter o token (Se tiver window.FIREBASE_VAPID_KEY usa, senão tenta o padrão)
+      const opcoesToken = window.FIREBASE_VAPID_KEY ? { vapidKey: window.FIREBASE_VAPID_KEY } : {};
+      const token = await messaging.getToken(opcoesToken);
+      
       if (token) {
-        const tokenSalvoLocal = localStorage.getItem("MAESTRO_FCM_TOKEN");
-        if (token !== tokenSalvoLocal || !localStorage.getItem("FCM_SYNCED_ID")) {
-          await registrarTokenPush(token);
-        }
+         // Guarda o token no telemóvel para não perder
+         localStorage.setItem("MAESTRO_FCM_TOKEN_TEMP", token);
+         
+         // Se o aluno já estiver com o ID carregado (Cofre Aberto), envia para a Planilha
+         if (typeof currentWalletId !== 'undefined' && currentWalletId !== "") {
+            await registrarTokenPush(token);
+         }
       }
+    } else {
+      // Se negou permissão no navegador, desliga o botão nas configurações
+      localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
+      const togglePush = document.getElementById('pref-push');
+      if (togglePush) togglePush.checked = false;
     }
   } catch (error) {
-    // Permissão não concedida ou erro
+    console.warn("Permissão de Push negada ou falhou:", error);
   }
 }
 
