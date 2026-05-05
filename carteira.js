@@ -224,9 +224,8 @@ function renderizarCarteira(dados) {
     </div>
   </div>
   
-  <div style="display:flex; gap:10px; margin-top:20px;">
-      <button id="btn-dw-carteira" class="btn-solid" style="flex:1; margin:0;" onclick="baixarDocumento('CARTEIRA')">🪪 Baixar ID</button>
-      <button id="btn-dw-declaracao" class="btn-solid dark-bg" style="flex:1; margin:0;" onclick="baixarDocumento('DECLARACAO')">📄 Declaração</button>
+  <div style="display:flex; margin-top:20px;">
+      <button id="btn-dw-declaracao" class="btn-solid dark-bg" style="width:100%; margin:0;" onclick="baixarDocumento('DECLARACAO')">📄 Baixar Declaração de Vínculo</button>
   </div>`;
 
     container.innerHTML = html;
@@ -292,9 +291,8 @@ function renderizarCarteiraOffline(dados) {
     </div>
   </div>
   
-  <div style="display:flex; gap:10px; margin-top:20px;">
-      <button class="btn-solid" style="flex:1; margin:0; background: #ccc; cursor: not-allowed;" disabled>🪪 Baixar ID</button>
-      <button class="btn-solid dark-bg" style="flex:1; margin:0; background: #ccc; cursor: not-allowed;" disabled>📄 Declaração</button>
+  <div style="display:flex; margin-top:20px;">
+      <button class="btn-solid dark-bg" style="width:100%; margin:0; background: #ccc; cursor: not-allowed;" disabled>📄 Baixar Declaração de Vínculo</button>
   </div>`;
 
     container.innerHTML = html;
