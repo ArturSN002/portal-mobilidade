@@ -327,10 +327,10 @@ function _renderizarETAFallbackSemGPS(slot, coordenadasBus) {
 }
 
 async function solicitarSerGuia() {
-    try {
-        const res = await apiCall("solicitarCargoGuia", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
-        if (res.sucesso) {
-            iniciarTransmissaoGpsComoGuia();
+    // BLOQUEIO DE PRIVACIDADE: Aborta se o aluno desligou o GPS
+    if (localStorage.getItem('MAESTRO_PREF_GPS') === 'false') return;
+
+    showToast("A solicitar permissão ao servidor...", "loading");
         }
         // Silencioso: sem toasts de erro para não interromper a UX
     } catch (e) {
