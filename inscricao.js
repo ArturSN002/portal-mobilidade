@@ -691,8 +691,16 @@ function _resetarFormularioInscricao() {
     const viewfinder = document.getElementById('camera-viewfinder');
     if (viewfinder) viewfinder.classList.add('hidden');
 
-    // Reset hybrid photo toggle (câmera é o padrão)
-    toggleModoFoto('camera');
+   // Reset hybrid photo toggle com base na política de privacidade
+    if (localStorage.getItem('MAESTRO_PREF_CAMERA') === 'false') {
+        toggleModoFoto('upload');
+        const btnCamera = document.getElementById('btn-modo-camera');
+        if (btnCamera) btnCamera.classList.add('hidden'); // Esconde o botão se a câmera estiver proibida
+    } else {
+        const btnCamera = document.getElementById('btn-modo-camera');
+        if (btnCamera) btnCamera.classList.remove('hidden');
+        toggleModoFoto('camera');
+    }
 
     // Reset state
     inscricaoArquivos = {};
