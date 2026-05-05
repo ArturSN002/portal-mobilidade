@@ -136,12 +136,28 @@ async function loginCarteira() {
             localStorage.setItem("MAESTRO_OFFLINE_WALLET", JSON.stringify(offlineWallet));
             localStorage.setItem("MAESTRO_WALLET_CACHE", JSON.stringify(res));
 
-            renderizarCarteira(res);
-            document.getElementById('login-id').value = '';
-            document.getElementById('login-senha').value = '';
-
-            armarRelogioSessaoEstudante();
-            setTimeout(inicializarPushNotifications, 2000);
+            // ... código do login ...
+              renderizarCarteira(res);
+              switchView('view-wallet');
+              document.getElementById('login-id').value = '';
+              document.getElementById('login-senha').value = '';
+              
+              armarRelogioSessaoEstudante(); 
+              
+              // NOVO: Verifica se ele ativou o Push nas configurações
+              if (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true') {
+                  const tokenTemp = localStorage.getItem("MAESTRO_FCM_TOKEN_TEMP");
+                  // Se já gerou o token antes, envia para a Planilha
+                  if (tokenTemp) {
+                      registrarTokenPush(tokenTemp);
+                  } else {
+                      // Se não, tenta gerar agora
+                      setTimeout(inicializarPushNotifications, 2000); 
+                  }
+              }
+            }
+          } catch(err) {
+// ... resto da função catch(err)
         }
     } catch (err) {
         const cachedData = localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE");
