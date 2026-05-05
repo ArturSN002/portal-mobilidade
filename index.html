@@ -77,12 +77,26 @@
         <button onclick="fecharMenuConfiguracoes()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-sub);">✖</button>
       </div>
       
+      <!-- Central de Preferências e Privacidade -->
+      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <p class="desc-xs" style="margin: 0; font-weight: 600;">🌗 Modo Escuro</p>
+        <label class="switch"><input type="checkbox" id="pref-dark" onchange="toggleDarkMode()"><span class="slider"></span></label>
+      </div>
+      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <p class="desc-xs" style="margin: 0; font-weight: 600;">🔔 Notificações da Secretaria</p>
+        <label class="switch"><input type="checkbox" id="pref-push" onchange="togglePref('push', this)"><span class="slider"></span></label>
+      </div>
+      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <p class="desc-xs" style="margin: 0; font-weight: 600;">📍 Partilhar GPS (Ao Embarcar)</p>
+        <label class="switch"><input type="checkbox" id="pref-gps" onchange="togglePref('gps', this)"><span class="slider"></span></label>
+      </div>
+      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <p class="desc-xs" style="margin: 0; font-weight: 600;">📷 Acesso à Câmera (Inscrição)</p>
+        <label class="switch"><input type="checkbox" id="pref-camera" onchange="togglePref('camera', this)"><span class="slider"></span></label>
+      </div>
       <div class="switch-row" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-        <p class="desc-xs" style="margin: 0;">Modo Escuro (Dark Mode)</p>
-        <label class="switch">
-          <input type="checkbox" id="dark-mode-toggle-settings" onchange="toggleDarkMode()">
-          <span class="slider"></span>
-        </label>
+        <p class="desc-xs" style="margin: 0; font-weight: 700; color: var(--accent);">✈️ Forçar Modo Offline (Poupe Dados)</p>
+        <label class="switch"><input type="checkbox" id="pref-offline" onchange="togglePref('offline', this)"><span class="slider"></span></label>
       </div>
 
       <button class="menu-card outline-card" onclick="navegarPeloMenu('view-validador')" style="border-color: #0d9488; background: rgba(13,148,136,0.04); margin-bottom: 10px; padding: 12px;">
