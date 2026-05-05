@@ -20,10 +20,13 @@ const firebaseConfig = {
   appId: params.get('appId')
 };
 
+let firebaseInicializado = false;
+
 try {
-  // Só inicializa se realmente recebeu a apiKey (evita erros no primeiro carregamento sem internet)
-  if (firebaseConfig.apiKey) {
+  // Só inicializa se realmente recebeu a apiKey (evita erros no carregamento sem chaves)
+  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== 'null') {
       firebase.initializeApp(firebaseConfig);
+      firebaseInicializado = true;
   }
 } catch (e) {
   console.log("Firebase SW já inicializado ou erro na configuração.");
@@ -31,7 +34,7 @@ try {
 
 // CACHES DA VERSÃO 10.3
 const CACHE_NAME = 'maestro-cache-v10.3';
-const DYNAMIC_CACHE = 'maestro-dynamic-v10.3'; // Novo cache para as fotos e logos
+const DYNAMIC_CACHE = 'maestro-dynamic-v10.3';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -59,7 +62,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 2. Ativação: Limpa caches antigos de versões anteriores
+// 2. Ativação: Limpa caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
@@ -77,17 +80,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Estratégias de Fetch (O cérebro do Modo Offline)
+// 3. Estratégias de Fetch
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
-  // A. Ignorar API do Apps Script e Firestore (Estes precisam obrigatoriamente de rede)
   if (url.includes('script.google.com') || url.includes('firestore') || (url.includes('googleapis') && !url.includes('fcm'))) {
     return;
   }
 
-  // B. CACHE DINÂMICO: Imagens do Google Drive (Logos e Foto 3x4 do Estudante)
-  // Estratégia: Stale-While-Revalidate (Mostra o cache rápido, atualiza em background)
   if (url.includes('drive.google.com/thumbnail') || url.includes('drive.google.com/uc')) {
     event.respondWith(
       caches.open(DYNAMIC_CACHE).then((cache) => {
@@ -95,7 +95,7 @@ self.addEventListener('fetch', (event) => {
           const fetchPromise = fetch(event.request).then((networkResponse) => {
             cache.put(event.request, networkResponse.clone());
             return networkResponse;
-          }).catch(() => response); // Se falhar a rede, não quebra, usa a imagem salva
+          }).catch(() => response); 
           
           return response || fetchPromise;
         });
@@ -104,15 +104,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // C. CACHE ESTÁTICO: Ficheiros da Aplicação PWA
-  // Estratégia: Cache-First (Tenta o cache, se falhar vai à rede)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).catch(() => {
-        // Se o utilizador estiver totalmente offline e tentar navegar, mostra o index
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
@@ -121,29 +118,32 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 4. Receção de PUSH em BACKGROUND (App fechada ou em segundo plano)
-if (firebase.messaging.isSupported()) {
-  const messaging = firebase.messaging();
+// 4. Receção de PUSH em BACKGROUND (Segurança Adicionada)
+try {
+  if (firebaseInicializado && firebase.messaging.isSupported()) {
+    const messaging = firebase.messaging();
 
-  messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification.title || "Novo Aviso - Maestro";
-    const notificationOptions = {
-      body: payload.notification.body,
-      icon: payload.notification.icon || './icone.png',
-      badge: './icone.png',
-      vibrate: [200, 100, 200, 100, 200],
-      data: payload.data || { click_action: "/" }, 
-      requireInteraction: true 
-    };
+    messaging.onBackgroundMessage((payload) => {
+      const notificationTitle = payload.notification.title || "Novo Aviso - Maestro";
+      const notificationOptions = {
+        body: payload.notification.body,
+        icon: payload.notification.icon || './icone.png',
+        badge: './icone.png',
+        vibrate: [200, 100, 200, 100, 200],
+        data: payload.data || { click_action: "/" }, 
+        requireInteraction: true 
+      };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
+      self.registration.showNotification(notificationTitle, notificationOptions);
+    });
+  }
+} catch (error) {
+  console.log("Push em background ignorado:", error);
 }
 
-// 5. Ação ao CLICAR na Notificação (Abrir a App)
+// 5. Ação ao CLICAR na Notificação
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
   const urlToOpen = new URL(event.notification.data.click_action || "/", self.location.origin).href;
 
   event.waitUntil(
