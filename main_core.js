@@ -256,6 +256,14 @@ async function inicializarPushNotifications() {
       // ... e obriga o Firebase a usá-lo em vez de procurar o "firebase-messaging-sw.js" (Evita o Erro 404)
       messaging.useServiceWorker(swRegistration);
 
+      // NOVO: Captura notificações com a App ABERTA no ecrã
+      messaging.onMessage((payload) => {
+          console.log('Mensagem recebida em primeiro plano:', payload);
+          const titulo = payload.notification?.title || "Novo Aviso";
+          const corpo = payload.notification?.body || "Você tem uma nova mensagem.";
+          showToast(`🔔 ${titulo}: ${corpo}`, "info");
+      });
+
       const opcoesToken = window.FIREBASE_VAPID_KEY ? { vapidKey: window.FIREBASE_VAPID_KEY } : {};
       const token = await messaging.getToken(opcoesToken);
       
@@ -278,12 +286,18 @@ async function inicializarPushNotifications() {
 async function registrarTokenPush(token) {
   if (!currentWalletId) return;
   try {
-    const res = await apiCall("registrarPushToken", { idEstudante: currentWalletId, pushToken: token });
+    // Enviamos o token nas duas variáveis conhecidas para garantir que a planilha preenche todas as colunas
+    const res = await apiCall("registrarPushToken", { 
+        idEstudante: currentWalletId, 
+        pushToken: token,
+        tokenDispositivo: token 
+    });
+    
     if (res.sucesso) {
       localStorage.setItem("MAESTRO_FCM_TOKEN", token);
       localStorage.setItem("FCM_SYNCED_ID", currentWalletId);
     }
-  } catch (err) { }
+  } catch (err) { console.error("Erro ao registrar token", err); }
 }
 
 function toggleDarkMode() {
