@@ -3,6 +3,8 @@
 // ========================================================================
 
 let arrayAlunosAuditoria = [];
+let paginaAtualAuditoria = 1;     // NOVO: Guarda a página atual
+const ITENS_POR_PAGINA = 10;      // NOVO: Exibe 10 alunos por bloco
 
 function formatarNomeProprio(nome) {
   if (!nome) return "Estudante";
@@ -23,6 +25,9 @@ async function carregarFilaAuditoria(ehPesquisa = false) {
     const container = document.getElementById('auditoria-fila-container');
     const inputPesquisa = document.getElementById('auditoria-pesquisa').value.trim();
     const termo = ehPesquisa ? inputPesquisa : "";
+    
+    // Sempre que carregar a lista ou pesquisar, volta à página 1
+    paginaAtualAuditoria = 1;
     
     container.innerHTML = '<div class="text-center" style="padding: 30px;"><div class="loader" style="margin: 0 auto;"></div><p style="font-size: 11px; margin-top: 10px;">A puxar a fila de trabalho...</p></div>';
     
@@ -47,8 +52,14 @@ function renderizarListaAuditoria() {
         return;
     }
     
+    // Matemática da Paginação
+    const totalPaginas = Math.ceil(arrayAlunosAuditoria.length / ITENS_POR_PAGINA);
+    const inicio = (paginaAtualAuditoria - 1) * ITENS_POR_PAGINA;
+    const fim = inicio + ITENS_POR_PAGINA;
+    const itensPagina = arrayAlunosAuditoria.slice(inicio, fim);
+    
     let html = '';
-    arrayAlunosAuditoria.forEach(aluno => {
+    itensPagina.forEach(aluno => {
         let corBadge = '#333'; let bgBadge = '#f0f0f0';
         if (aluno.statusAuditoria === "ANALISE_HUMANA" || aluno.statusAuditoria === "PENDENCIA") { corBadge = '#d97706'; bgBadge = '#fef3c7'; }
         else if (aluno.statusAuditoria === "ALERTA_FRAUDE" || aluno.statusAtividade === "SUSPENSO") { corBadge = '#dc2626'; bgBadge = '#fee2e2'; }
@@ -72,7 +83,28 @@ function renderizarListaAuditoria() {
         </div>`;
     });
     
+    // Rodapé de Paginação
+    if (totalPaginas > 1) {
+        const btnPrevDisabled = paginaAtualAuditoria === 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : `onclick="mudarPaginaAuditoria(-1)"`;
+        const btnNextDisabled = paginaAtualAuditoria === totalPaginas ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : `onclick="mudarPaginaAuditoria(1)"`;
+
+        html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: var(--secondary); border-radius: 8px; border: 1px solid var(--border);">
+            <button class="btn-solid dark-bg" style="width: auto; margin: 0; padding: 8px 15px;" ${btnPrevDisabled}>⬅ Ant.</button>
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Pág. ${paginaAtualAuditoria} de ${totalPaginas}</span>
+            <button class="btn-solid dark-bg" style="width: auto; margin: 0; padding: 8px 15px;" ${btnNextDisabled}>Próx. ➡</button>
+        </div>`;
+    }
+    
     container.innerHTML = html;
+}
+
+// NOVA FUNÇÃO: Acionada pelas setas de paginação
+function mudarPaginaAuditoria(direcao) {
+    paginaAtualAuditoria += direcao;
+    renderizarListaAuditoria();
+    // Faz scroll suave até ao topo da lista
+    document.getElementById('view-auditoria').scrollIntoView({ behavior: 'smooth' });
 }
 
 function abrirModalRaioX(linhaBase) {
