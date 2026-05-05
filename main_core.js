@@ -271,22 +271,23 @@ function toggleDarkMode() {
 }
 
 // NOVA FUNÇÃO: Motor injetor de CSS e Logo
+// NOVA FUNÇÃO: Motor injetor de CSS e Logo
 function aplicarTemaAtual() {
   if (!window.THEME_LIGHT || !window.THEME_DARK) return;
   
   const isDark = document.body.classList.contains('dark-theme');
   const theme = isDark ? window.THEME_DARK : window.THEME_LIGHT;
   
-  // Atualiza as variáveis CSS globais do portal
-  document.documentElement.style.setProperty('--primary', theme.primary);
-  document.documentElement.style.setProperty('--secondary', theme.secondary);
-  document.documentElement.style.setProperty('--accent', theme.accent);
+  // Aplicar diretamente no BODY com 'important' para sobrepor o style.css
+  document.body.style.setProperty('--primary', theme.primary, 'important');
+  document.body.style.setProperty('--secondary', theme.secondary, 'important');
+  document.body.style.setProperty('--accent', theme.accent, 'important');
   
   // Salva para o cache offline da Carteira
   window.THEME_COLOR = theme.primary;
   window.BG_COLOR = theme.secondary;
   
-  // Atualiza a cor da barra de status do telemóvel (Android/iOS)
+  // Atualiza a cor da barra de status do telemóvel
   const metaThemeColor = document.getElementById('meta-theme-color');
   if (metaThemeColor) metaThemeColor.content = theme.primary;
   
