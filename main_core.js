@@ -12,79 +12,64 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 async function bootSystem() {
-  if (!navigator.onLine) {
-    const offlineWallet = localStorage.getItem("MAESTRO_OFFLINE_WALLET");
-    if (offlineWallet) {
-      showToast("Modo Offline Ativado. Funções limitadas.", "warning");
-      ocultarSplashScreen();
-      switchView('view-wallet');
-      if (typeof renderizarCarteiraOffline === "function") {
-        renderizarCarteiraOffline(JSON.parse(offlineWallet));
-      }
-      return;
-    }
-  }
-
   try {
     const res = await apiCall("getConfiguracoesPWA");
-
+    
     if (res.sucesso) {
       window.PWA_NOME = res.pwa.NOME;
       window.PWA_ICONE = res.pwa.ICONE;
       
-      // 1. Guardar os dois temas na memória global
-      window.THEME_LIGHT = { 
-        primary: res.ui.COR_PRIMARIA_LIGHT, 
-        secondary: res.ui.COR_SECUNDARIA_LIGHT, 
-        accent: res.ui.COR_DE_DESTAQUE_LIGHT, 
-        logo: res.ui.LOGO_LIGHT 
-      };
-      
-      window.THEME_DARK = { 
-        primary: res.ui.COR_PRIMARIA_DARK, 
-        secondary: res.ui.COR_SECUNDARIA_DARK, 
-        accent: res.ui.COR_DE_DESTAQUE_DARK, 
-        logo: res.ui.LOGO_DARK 
-      };
+      // Temas Light/Dark
+      window.THEME_LIGHT = { primary: res.ui.COR_PRIMARIA_LIGHT, secondary: res.ui.COR_SECUNDARIA_LIGHT, accent: res.ui.COR_DE_DESTAQUE_LIGHT, logo: res.ui.LOGO_LIGHT };
+      window.THEME_DARK = { primary: res.ui.COR_PRIMARIA_DARK, secondary: res.ui.COR_SECUNDARIA_DARK, accent: res.ui.COR_DE_DESTAQUE_DARK, logo: res.ui.LOGO_DARK };
+
+      // NOVO: Firebase Config Dinâmico "White-Label"
+      if (res.firebase) {
+          window.FIREBASE_CONFIG = {
+              apiKey: res.firebase.API_KEY,
+              authDomain: res.firebase.AUTH_DOMAIN,
+              projectId: res.firebase.PROJECT_ID,
+              storageBucket: res.firebase.STORAGE_BUCKET,
+              messagingSenderId: res.firebase.MESSAGING_SENDER_ID,
+              appId: res.firebase.APP_ID
+          };
+          window.FIREBASE_VAPID_KEY = res.firebase.VAPID_KEY;
+      }
 
       document.title = window.PWA_NOME;
-
-      // 2. Aplicar o tema atual baseado na preferência do utilizador
-      aplicarTemaAtual();
-
+      if (typeof aplicarTemaAtual === 'function') aplicarTemaAtual();
+      
       const elNome = document.getElementById('ui-nome-sistema');
       if (elNome) elNome.innerText = window.PWA_NOME.toUpperCase();
-
+      
       const elSetor = document.getElementById('ui-nome-setor');
       if (elSetor) elSetor.innerText = res.ui.NOME_SISTEMA;
 
       const elEnd = document.getElementById('ui-endereco');
       if (elEnd && res.contato.ENDERECO) { elEnd.innerText = res.contato.ENDERECO; elEnd.classList.remove('hidden'); }
-
+      
       const elEmail = document.getElementById('ui-email');
       if (elEmail && res.contato.EMAIL) { elEmail.innerText = res.contato.EMAIL; elEmail.classList.remove('hidden'); }
-
+      
       const elCnpj = document.getElementById('ui-cnpj');
       if (elCnpj && res.contato.CNPJ) { elCnpj.innerText = "CNPJ: " + res.contato.CNPJ; elCnpj.classList.remove('hidden'); }
-
+      
       initPWA();
-      
-      // UX: Apenas sugere a instalação se tudo carregou com sucesso e o banner existe
-      if (deferredPrompt) {
-        const banner = document.getElementById('pwa-install-banner');
-        if (banner) banner.classList.remove('hidden');
-      }
-      
-      carregarAvisosSMEB();
     }
-  } catch (e) {
-    // Falha silenciosa amigável, permite o uso da PWA no modo offline
+  } catch(e) {
+    console.warn("A arrancar em modo offline persistente.");
   }
-
-  ocultarSplashScreen();
-  switchView('view-hub');
+  
+  // NOVO: Lê a última tela da memória (ou vai para o Hub se for a primeira vez)
+  const lastView = sessionStorage.getItem('MAESTRO_LAST_VIEW') || 'view-hub';
+  switchView(lastView);
+  
+  carregarAvisosSMEB(); 
   verificarSessaoAtiva();
   restaurarSessaoEstudante();
+  
+  // Levanta a cortina DEPOIS de a tela correta estar montada
+  ocultarSplashScreen();
 }
 
 function ocultarSplashScreen() {
@@ -126,10 +111,10 @@ function switchView(viewId) {
   const views = document.querySelectorAll('.view-section');
   views.forEach(v => {
     v.classList.remove('active-view');
-    v.classList.remove('slide-in-right');
+    v.classList.remove('slide-in-right'); // Se tiver a animação
     v.style.display = 'none';
   });
-
+  
   const target = document.getElementById(viewId);
   if (target) {
     target.style.display = 'block';
@@ -137,6 +122,9 @@ function switchView(viewId) {
       target.classList.add('active-view');
       target.classList.add('slide-in-right');
     }, 10);
+    
+    // NOVO: Guarda a última tela na memória RAM (Session Storage)
+    sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
   const muralAvisos = document.getElementById('mural-avisos');
@@ -209,17 +197,6 @@ function showToast(msg, type = 'info') {
 
 // Inicialização das Push Notifications foi adaptada para ser chamada após consentimento (no estudante.js)
 async function inicializarPushNotifications() {
-  // 1. Insira aqui as suas chaves reais do Firebase para o Push funcionar
-  const firebaseConfig = {
-    apiKey: "COLE_SUA_API_KEY",
-    authDomain: "COLE_SEU_PROJECT_ID.firebaseapp.com",
-    projectId: "COLE_SEU_PROJECT_ID",
-    storageBucket: "COLE_SEU_PROJECT_ID.appspot.com",
-    messagingSenderId: "COLE_SEU_SENDER_ID",
-    appId: "COLE_SEU_APP_ID"
-  };
-
-  // Função auxiliar para reverter o botão em caso de falha
   const desligarTogglePush = (mensagem) => {
       localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
       const togglePush = document.getElementById('pref-push');
@@ -227,9 +204,19 @@ async function inicializarPushNotifications() {
       if (mensagem) showToast(mensagem, "error");
   };
 
+  // Bloqueio de Privacidade
+  if (localStorage.getItem('MAESTRO_PREF_PUSH') === 'false') return;
+
+  // Usa as configurações que chegaram da Planilha!
+  if (!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey) {
+      console.warn("Chaves do Firebase não configuradas na planilha.");
+      desligarTogglePush("Chaves do Firebase ausentes no sistema.");
+      return;
+  }
+
   try {
     if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+      firebase.initializeApp(window.FIREBASE_CONFIG);
     }
   } catch(e) { 
       console.warn("Firebase Init falhou:", e); 
@@ -242,8 +229,6 @@ async function inicializarPushNotifications() {
      return;
   }
 
-  // Trava isStandalone removida para permitir testes em abas normais do navegador
-
   try {
     const messaging = firebase.messaging();
     const permission = await Notification.requestPermission();
@@ -255,7 +240,7 @@ async function inicializarPushNotifications() {
       if (token) {
          localStorage.setItem("MAESTRO_FCM_TOKEN_TEMP", token);
          if (typeof currentWalletId !== 'undefined' && currentWalletId !== "") {
-            await registrarTokenPush(token);
+            if (typeof registrarTokenPush === 'function') await registrarTokenPush(token);
          }
          showToast("Notificações ativadas com sucesso!", "success");
       }
