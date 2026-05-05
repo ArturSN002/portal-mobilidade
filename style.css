@@ -739,3 +739,54 @@ body.dark-theme {
 body.dark-theme .bottom-sheet-content {
   background: var(--bg-dark);
 }
+/* ======================================================== */
+/* V10.5: CORREÇÕES DINÂMICAS DE CONTRASTE PARA DARK MODE   */
+/* ======================================================== */
+
+/* 1. Força as caixas a ficarem escuras e elimina os fundos brancos fixos */
+body.dark-theme .menu-card,
+body.dark-theme .form-card,
+body.dark-theme .aviso-card {
+  background-color: var(--card-dark);
+  border-color: #333;
+}
+
+/* 2. Corrige o texto dentro dos botões do menu inicial */
+body.dark-theme .menu-card .info strong {
+  color: var(--text-main);
+}
+body.dark-theme .menu-card.primary-card .info strong {
+  color: var(--accent); /* Mantém o verde/laranja de destaque */
+}
+
+/* 3. Força os títulos que usavam a Cor Primária a ficarem brancos */
+body.dark-theme .brand-title,
+body.dark-theme .form-header h2,
+body.dark-theme .step-section-title,
+body.dark-theme .aviso-titulo {
+  color: var(--text-main);
+}
+
+/* 4. Corrige a assinatura de rodapé "POWERED BY MAESTRO" */
+body.dark-theme .watermark {
+  color: var(--text-sub);
+}
+
+/* 5. Corrige os campos de texto (inputs) que não estejam dentro da zona restrita */
+body.dark-theme .input-field {
+  background-color: #121212;
+  color: var(--text-main);
+  border-color: #333;
+}
+body.dark-theme .input-field:focus {
+  border-color: var(--accent);
+}
+
+/* 6. Corrige os botões de seleção tipo "chip" na Inscrição e Resgate */
+body.dark-theme .insc-check-label,
+body.dark-theme .insc-radio-label,
+body.dark-theme .upload-block,
+body.dark-theme .btn-file-custom {
+  background-color: var(--bg-dark);
+  border-color: #333;
+}
