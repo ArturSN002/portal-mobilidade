@@ -479,11 +479,20 @@ function abrirMenuConfiguracoes() {
   if (!modal) return;
   modal.classList.remove('hidden');
   
-  // Lê as preferências do telemóvel ao abrir o menu
+  // 1. Modo Escuro
   document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
-  document.getElementById('pref-push').checked = localStorage.getItem('MAESTRO_PREF_PUSH') !== 'false';
-  document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') !== 'false';
+  
+  // 2. Notificações: Só fica ligado se ativou nas configurações E o navegador/telemóvel permitiu
+  const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
+  document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
+  
+  // 3. GPS: Padrão Desligado (Opt-in)
+  document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
+  
+  // 4. Câmara: Padrão Ligado (É essencial para a foto 3x4 na inscrição)
   document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
+  
+  // 5. Offline: Padrão Desligado
   document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
   
   void modal.offsetWidth; // force reflow
