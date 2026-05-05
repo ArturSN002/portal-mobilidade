@@ -209,6 +209,7 @@ function showToast(msg, type = 'info') {
 
 // Inicialização das Push Notifications foi adaptada para ser chamada após consentimento (no estudante.js)
 async function inicializarPushNotifications() {
+  // 1. Insira aqui as suas chaves reais do Firebase para o Push funcionar
   const firebaseConfig = {
     apiKey: "COLE_SUA_API_KEY",
     authDomain: "COLE_SEU_PROJECT_ID.firebaseapp.com",
@@ -218,46 +219,52 @@ async function inicializarPushNotifications() {
     appId: "COLE_SEU_APP_ID"
   };
 
+  // Função auxiliar para reverter o botão em caso de falha
+  const desligarTogglePush = (mensagem) => {
+      localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
+      const togglePush = document.getElementById('pref-push');
+      if (togglePush) togglePush.checked = false;
+      if (mensagem) showToast(mensagem, "error");
+  };
+
   try {
     if (typeof firebase !== 'undefined' && !firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
-  } catch(e) { console.warn("Firebase Init falhou:", e); return; }
+  } catch(e) { 
+      console.warn("Firebase Init falhou:", e); 
+      desligarTogglePush("Erro ao iniciar Firebase. Verifique as chaves.");
+      return; 
+  }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof firebase === 'undefined') {
-     console.log("Push não suportado ou Firebase não carregado.");
+     desligarTogglePush("Notificações não suportadas neste navegador.");
      return;
   }
 
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (!isStandalone) return; 
+  // Trava isStandalone removida para permitir testes em abas normais do navegador
 
   try {
     const messaging = firebase.messaging();
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
-      // Tenta obter o token (Se tiver window.FIREBASE_VAPID_KEY usa, senão tenta o padrão)
       const opcoesToken = window.FIREBASE_VAPID_KEY ? { vapidKey: window.FIREBASE_VAPID_KEY } : {};
       const token = await messaging.getToken(opcoesToken);
       
       if (token) {
-         // Guarda o token no telemóvel para não perder
          localStorage.setItem("MAESTRO_FCM_TOKEN_TEMP", token);
-         
-         // Se o aluno já estiver com o ID carregado (Cofre Aberto), envia para a Planilha
          if (typeof currentWalletId !== 'undefined' && currentWalletId !== "") {
             await registrarTokenPush(token);
          }
+         showToast("Notificações ativadas com sucesso!", "success");
       }
     } else {
-      // Se negou permissão no navegador, desliga o botão nas configurações
-      localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
-      const togglePush = document.getElementById('pref-push');
-      if (togglePush) togglePush.checked = false;
+      desligarTogglePush("Permissão negada no navegador.");
     }
   } catch (error) {
-    console.warn("Permissão de Push negada ou falhou:", error);
+    console.warn("Falha de Push:", error);
+    desligarTogglePush("Falha ao gerar Token. Verifique as chaves do Firebase.");
   }
 }
 
