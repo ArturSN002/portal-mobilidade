@@ -84,11 +84,28 @@ function initPWA() {
   if (!window.PWA_NOME) return;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-      .catch(err => {
-         // Silencia erros de SW em produção
-      });
-  }
+  window.addEventListener('load', () => {
+    // Verifica se as chaves da planilha já chegaram
+    if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
+        
+        // Monta a URL com os parâmetros dinâmicos
+        const swUrl = `./sw.js?apiKey=${window.FIREBASE_CONFIG.apiKey}&projectId=${window.FIREBASE_CONFIG.projectId}&senderId=${window.FIREBASE_CONFIG.messagingSenderId}&appId=${window.FIREBASE_CONFIG.appId}`;
+        
+        navigator.serviceWorker.register(swUrl)
+          .then(registration => {
+            console.log('SW registado com sucesso com chaves dinâmicas!', registration.scope);
+          })
+          .catch(err => {
+            console.log('Falha ao registar SW:', err);
+          });
+          
+    } else {
+        // Fallback: regista sem chaves só para o cache offline funcionar caso não haja Firebase
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('SW registado em modo apenas-offline.'));
+    }
+  });
+}
 }
 
 function instalarPWA() {
