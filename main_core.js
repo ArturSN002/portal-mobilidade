@@ -224,7 +224,7 @@ async function inicializarPushNotifications() {
   // Bloqueio de Privacidade
   if (localStorage.getItem('MAESTRO_PREF_PUSH') === 'false') return;
 
-  // Usa as configurações que chegaram da Planilha!
+  // Usa as configurações que chegaram da Planilha
   if (!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey) {
       console.warn("Chaves do Firebase não configuradas na planilha.");
       desligarTogglePush("Chaves do Firebase ausentes no sistema.");
@@ -251,6 +251,13 @@ async function inicializarPushNotifications() {
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
+      
+      // NOVO: Espera o nosso sw.js estar pronto...
+      const swRegistration = await navigator.serviceWorker.ready;
+      
+      // ... e obriga o Firebase a usá-lo em vez de procurar o "firebase-messaging-sw.js" (Evita o Erro 404)
+      messaging.useServiceWorker(swRegistration);
+
       const opcoesToken = window.FIREBASE_VAPID_KEY ? { vapidKey: window.FIREBASE_VAPID_KEY } : {};
       const token = await messaging.getToken(opcoesToken);
       
@@ -266,7 +273,7 @@ async function inicializarPushNotifications() {
     }
   } catch (error) {
     console.warn("Falha de Push:", error);
-    desligarTogglePush("Falha ao gerar Token. Verifique as chaves do Firebase.");
+    desligarTogglePush("Falha ao gerar Token. Verifique as configurações do Firebase.");
   }
 }
 
