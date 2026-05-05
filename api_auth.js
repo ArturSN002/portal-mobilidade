@@ -79,10 +79,13 @@ function salvarCliente() {
 }
 
 async function apiCall(action, payload = {}) {
-  let tokenToUse = localStorage.getItem("MAESTRO_OP_TOKEN");
-  if (!tokenToUse) {
-     tokenToUse = localStorage.getItem("MAESTRO_EST_TOKEN"); 
+  // BLOQUEIO: Se o aluno ligou a poupança de dados/offline, bloqueia a chamada API (exceto logout)
+  if (localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true' && action !== "invalidarTokenSessao") {
+      throw new Error("O Modo Offline forçado está ativo.");
   }
+
+  let tokenToUse = localStorage.getItem("MAESTRO_OP_TOKEN");
+  // ... resto do código da função
   
   try {
     const response = await fetch(GAS_URL, {
