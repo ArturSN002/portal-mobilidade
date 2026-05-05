@@ -331,10 +331,20 @@ async function solicitarSerGuia() {
     if (localStorage.getItem('MAESTRO_PREF_GPS') === 'false') return;
 
     showToast("A solicitar permissão ao servidor...", "loading");
+    const boxRadar = document.getElementById('radar-dinamico-conteudo');
+    if (boxRadar) boxRadar.innerHTML = `<div class="loader" style="margin: 0 auto;"></div>`;
+
+    try {
+        const res = await apiCall("solicitarCargoGuia", { idOnibus: onibusSelecionadoGPS, idEstudante: currentWalletId });
+        if (res.sucesso) {
+            iniciarTransmissaoGpsComoGuia(); 
+        } else {
+            showToast(res.erro, "warning");
+            atualizarRadarDinamico(); 
         }
-        // Silencioso: sem toasts de erro para não interromper a UX
-    } catch (e) {
-        // Silencioso: recrutamento falhado não afeta o passageiro
+    } catch(e) {
+        showToast("Erro ao contactar o servidor.", "error");
+        atualizarRadarDinamico();
     }
 }
 
