@@ -157,12 +157,6 @@ async function loginCarteira() {
     resBox.innerText = "Falha de ligação. Necessita de internet.";
     resBox.classList.remove('hidden');
 
-    finally {
-        if (!document.getElementById('view-login').classList.contains('hidden')) {
-            btn.innerText = "ENTRAR NO COFRE";
-            btn.disabled = false;
-        }
-    }
   }
 }
       
