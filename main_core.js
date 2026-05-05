@@ -84,7 +84,6 @@ function initPWA() {
   if (!window.PWA_NOME) return;
 
   if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
     // Verifica se as chaves da planilha já chegaram
     if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
         
@@ -104,8 +103,7 @@ function initPWA() {
         navigator.serviceWorker.register('./sw.js')
           .then(() => console.log('SW registado em modo apenas-offline.'));
     }
-  });
-}
+  }
 }
 
 function instalarPWA() {
