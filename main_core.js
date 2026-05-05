@@ -479,14 +479,55 @@ function abrirMenuConfiguracoes() {
   if (!modal) return;
   modal.classList.remove('hidden');
   
-  const toggle = document.getElementById('dark-mode-toggle-settings');
-  if (toggle) {
-    toggle.checked = document.body.classList.contains('dark-theme');
-  }
+  // Lê as preferências do telemóvel ao abrir o menu
+  document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
+  document.getElementById('pref-push').checked = localStorage.getItem('MAESTRO_PREF_PUSH') !== 'false';
+  document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') !== 'false';
+  document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
+  document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
   
-  // force reflow
-  void modal.offsetWidth;
+  void modal.offsetWidth; // force reflow
   modal.classList.add('active');
+}
+
+async function togglePref(tipo, elemento) {
+    const isLigado = elemento.checked;
+    
+    if (tipo === 'push') {
+        if (isLigado) {
+            localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
+            showToast("A pedir permissão...", "loading");
+            if (typeof inicializarPushNotifications === 'function') inicializarPushNotifications(); 
+        } else {
+            localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
+            showToast("Notificações silenciadas.", "info");
+            
+            // Apaga o token localmente e envia o comando vazio para a API apagar na planilha
+            const tokenLocal = localStorage.getItem("MAESTRO_FCM_TOKEN");
+            if (tokenLocal && typeof currentWalletId !== 'undefined' && currentWalletId) {
+                try { await apiCall("registrarPushToken", { idEstudante: currentWalletId, pushToken: "" }); } catch(e) {}
+            }
+            localStorage.removeItem("MAESTRO_FCM_TOKEN");
+            localStorage.removeItem("FCM_SYNCED_ID");
+        }
+    }
+    else if (tipo === 'gps') {
+        localStorage.setItem('MAESTRO_PREF_GPS', isLigado ? 'true' : 'false');
+        if (!isLigado && typeof abdicarSerGuia === 'function') abdicarSerGuia();
+        showToast(isLigado ? "GPS permitido na viagem." : "Partilha de GPS bloqueada.", "info");
+    }
+    else if (tipo === 'camera') {
+        localStorage.setItem('MAESTRO_PREF_CAMERA', isLigado ? 'true' : 'false');
+        showToast(isLigado ? "Acesso à câmara ativo." : "Câmera desativada (Usará upload).", "info");
+    }
+    else if (tipo === 'offline') {
+        localStorage.setItem('MAESTRO_PREF_OFFLINE', isLigado ? 'true' : 'false');
+        showToast(isLigado ? "Modo Offline Forçado ativo." : "Modo Online restaurado.", "warning");
+        if (isLigado && typeof abrirTelaCofreOuEntrarDireto === 'function') {
+            fecharMenuConfiguracoes();
+            abrirTelaCofreOuEntrarDireto(); // Leva o aluno direto para a carteira salva
+        }
+    }
 }
 
 function fecharMenuConfiguracoes() {
