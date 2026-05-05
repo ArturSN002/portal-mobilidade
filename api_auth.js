@@ -6,7 +6,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbw4P6YnENUDdHjW162NTh4RanozcZxK-ms3Z6qMpS6a9DYiytLzds070rGLpP0UmrhziA/exec",
+  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbwrA60cxbCp5Eb8nDTqC_YrVsT0fW4DKiJg6RFsk_9dmNAsg4uWmPwKRJ9LYFHU_whM3A/exec",
 };
 
 async function checkClientGateway() {
