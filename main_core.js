@@ -31,21 +31,26 @@ async function bootSystem() {
     if (res.sucesso) {
       window.PWA_NOME = res.pwa.NOME;
       window.PWA_ICONE = res.pwa.ICONE;
-      window.THEME_COLOR = res.ui.COR_PRIMARIA;
-      window.BG_COLOR = res.ui.COR_SECUNDARIA;
+      
+      // 1. Guardar os dois temas na memória global
+      window.THEME_LIGHT = { 
+        primary: res.ui.COR_PRIMARIA_LIGHT, 
+        secondary: res.ui.COR_SECUNDARIA_LIGHT, 
+        accent: res.ui.COR_DE_DESTAQUE_LIGHT, 
+        logo: res.ui.LOGO_LIGHT 
+      };
+      
+      window.THEME_DARK = { 
+        primary: res.ui.COR_PRIMARIA_DARK, 
+        secondary: res.ui.COR_SECUNDARIA_DARK, 
+        accent: res.ui.COR_DE_DESTAQUE_DARK, 
+        logo: res.ui.LOGO_DARK 
+      };
 
       document.title = window.PWA_NOME;
 
-      document.documentElement.style.setProperty('--primary', res.ui.COR_PRIMARIA);
-      document.documentElement.style.setProperty('--secondary', res.ui.COR_SECUNDARIA);
-      document.documentElement.style.setProperty('--accent', res.ui.COR_DE_DESTAQUE);
-
-      if (res.ui.LOGO && res.ui.LOGO !== "") {
-        const logoEl = document.getElementById('ui-logo');
-        const splashLogo = document.getElementById('splash-logo');
-        if (logoEl) { logoEl.src = res.ui.LOGO; logoEl.classList.remove('hidden'); }
-        if (splashLogo) { splashLogo.src = res.ui.LOGO; splashLogo.classList.remove('hidden'); }
-      }
+      // 2. Aplicar o tema atual baseado na preferência do utilizador
+      aplicarTemaAtual();
 
       const elNome = document.getElementById('ui-nome-sistema');
       if (elNome) elNome.innerText = window.PWA_NOME.toUpperCase();
@@ -260,6 +265,38 @@ function toggleDarkMode() {
   document.body.classList.toggle('dark-theme');
   const isDark = document.body.classList.contains('dark-theme');
   localStorage.setItem('MAESTRO_DARK_MODE', isDark ? 'true' : 'false');
+  
+  // Atualiza as cores e o logótipo em tempo real
+  if (typeof aplicarTemaAtual === 'function') aplicarTemaAtual();
+}
+
+// NOVA FUNÇÃO: Motor injetor de CSS e Logo
+function aplicarTemaAtual() {
+  if (!window.THEME_LIGHT || !window.THEME_DARK) return;
+  
+  const isDark = document.body.classList.contains('dark-theme');
+  const theme = isDark ? window.THEME_DARK : window.THEME_LIGHT;
+  
+  // Atualiza as variáveis CSS globais do portal
+  document.documentElement.style.setProperty('--primary', theme.primary);
+  document.documentElement.style.setProperty('--secondary', theme.secondary);
+  document.documentElement.style.setProperty('--accent', theme.accent);
+  
+  // Salva para o cache offline da Carteira
+  window.THEME_COLOR = theme.primary;
+  window.BG_COLOR = theme.secondary;
+  
+  // Atualiza a cor da barra de status do telemóvel (Android/iOS)
+  const metaThemeColor = document.getElementById('meta-theme-color');
+  if (metaThemeColor) metaThemeColor.content = theme.primary;
+  
+  // Alterna o Logótipo (Claro/Escuro)
+  if (theme.logo && theme.logo !== "") {
+    const logoEl = document.getElementById('ui-logo');
+    const splashLogo = document.getElementById('splash-logo');
+    if (logoEl) { logoEl.src = theme.logo; logoEl.classList.remove('hidden'); }
+    if (splashLogo) { splashLogo.src = theme.logo; splashLogo.classList.remove('hidden'); }
+  }
 }
 
 window.onload = function () {
