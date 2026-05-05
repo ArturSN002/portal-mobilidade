@@ -156,17 +156,16 @@ async function loginCarteira() {
     }
     resBox.innerText = "Falha de ligação. Necessita de internet.";
     resBox.classList.remove('hidden');
-  }
-}
-      
-finally {
+
+    finally {
         if (!document.getElementById('view-login').classList.contains('hidden')) {
             btn.innerText = "ENTRAR NO COFRE";
             btn.disabled = false;
         }
     }
+  }
 }
-
+      
 function armarRelogioSessaoEstudante() {
     if (timeoutSessaoEstudanteID) clearTimeout(timeoutSessaoEstudanteID);
     timeoutSessaoEstudanteID = setTimeout(() => {
