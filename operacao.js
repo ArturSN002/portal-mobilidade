@@ -1242,16 +1242,21 @@ function fecharModalSelecaoRota() {
 // ========================================================================
 
 // Esta função leva o Motorista/Moderador para o mesmo "terreno" do Fiscal antes de ligar a câmera
+// ========================================================================
+// CORREÇÃO: MODO FISCALIZAÇÃO (Redirecionamento Direto para a Câmara)
+// ========================================================================
+
 function abrirModoFiscalizacaoGlobal() {
-    switchView('view-admin-hub'); // Entra no modelo existente
-    iniciarScanner();             // Liga a câmera
+    // ERRO ANTERIOR: switchView('view-admin-hub');
+    // CORREÇÃO: Abre a tela isolada da câmara
+    switchView('view-fiscal'); 
+    iniciarScanner();
 }
 
-// Atualize a função de fechar existente para ter "memória" de onde o usuário veio
 function fecharModoFiscalizacao() {
     fecharScanner();
     
-    // Lê a patente do usuário para devolvê-lo ao painel correto
+    // Lê a patente do operador para o devolver à tela de origem
     const nivel = localStorage.getItem("MAESTRO_OPERADOR_NIVEL") || "";
     
     if (nivel === "MOTORISTA") {
@@ -1259,7 +1264,56 @@ function fecharModoFiscalizacao() {
     } else if (nivel === "MODERADOR") {
         switchView('view-moderador');
     } else {
-        switchView('view-admin-hub'); // Fiscais, Operadores e Supervisores
+        switchView('view-admin-hub');
+    }
+}
+
+// ========================================================================
+// MELHORIA: SELEÇÃO DE ROTAS (Bloqueio Visual por Horário)
+// ========================================================================
+
+async function popularSelectFrotaMotorista() {
+    const select = document.getElementById("select-frota-motorista");
+    if (!select) return;
+
+    select.innerHTML = '<option value="" disabled selected>A verificar as suas rotas...</option>';
+    
+    const turnosValidos = obterTurnosAtuais(); // Ex: ["MANHÃ"], ou ["TARDE", "NOITE"]
+    const emailMotorista = localStorage.getItem("MAESTRO_OPERADOR_EMAIL");
+
+    try {
+        // Futuramente: apiCall("getRotasMotorista", { email: emailMotorista }) para trazer só as do motorista logado
+        const res = await apiCall("getFiltrosPush"); 
+        
+        select.innerHTML = '<option value="" disabled selected>Escolha o seu veículo...</option>';
+
+        if (res.sucesso && res.filtros && res.filtros.rotas) {
+            res.filtros.rotas.forEach(rota => {
+                const rotaUpper = rota.toUpperCase();
+                let turnoDaRota = "";
+                
+                // Inferir o turno pelo nome da rota
+                if (rotaUpper.includes("MANHÃ") || rotaUpper.includes("MANHA")) turnoDaRota = "MANHÃ";
+                else if (rotaUpper.includes("TARDE")) turnoDaRota = "TARDE";
+                else if (rotaUpper.includes("NOITE")) turnoDaRota = "NOITE";
+                
+                const opt = document.createElement("option");
+                opt.value = rota;
+                
+                // Verifica se a rota pertence ao turno atual
+                if (turnoDaRota === "" || turnosValidos.includes(turnoDaRota)) {
+                    opt.innerText = `🟢 [DISPONÍVEL] ${rota}`;
+                    opt.disabled = false;
+                } else {
+                    opt.innerText = `🔴 [FORA DO HORÁRIO] ${rota}`;
+                    opt.disabled = true; // Impede a seleção
+                }
+                
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="" disabled selected>Erro ao carregar rotas.</option>';
     }
 }
 
