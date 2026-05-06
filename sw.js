@@ -33,8 +33,8 @@ try {
 }
 
 // CACHES DA VERSÃO 10.3
-const CACHE_NAME = 'maestro-cache-v10.3';
-const DYNAMIC_CACHE = 'maestro-dynamic-v10.3';
+const CACHE_NAME = 'maestro-cache-v11.0';
+const DYNAMIC_CACHE = 'maestro-dynamic-v11.0';
 
 const ASSETS_TO_CACHE = [
   './',
