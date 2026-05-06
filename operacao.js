@@ -1147,3 +1147,64 @@ function desenharGraficos(graficos) {
   renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
   renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
+
+// ========================================================================
+// 12. MÓDULO DO MOTORISTA (PONTE VISUAL PWA)
+// ========================================================================
+
+// Variável global temporária para guardar a placa do veículo em condução
+let veiculoConducaoAtual = "";
+
+async function uiIniciarRota() {
+    const select = document.getElementById("select-frota-motorista");
+    const placa = select.value;
+    
+    if (!placa) {
+        showToast("Selecione um veículo primeiro.", "warning");
+        return;
+    }
+    
+    veiculoConducaoAtual = placa;
+    
+    // 1. Chama a função central (que já criámos no main_core.js)
+    // A função btnIniciarRotaMotorista já cuida de avisar a API e ativar o Wake Lock + Tela Preta
+    await btnIniciarRotaMotorista(placa);
+    
+    // 2. Atualiza a UI para o ecrã de viagem (Tela Preta)
+    document.getElementById("viagem-placa-display").innerText = placa;
+    
+    // 3. Esconde o painel normal e mostra o ecrã gigante do modo viagem
+    document.getElementById("view-painel-motorista").style.display = "none";
+    document.getElementById("painel-viagem-ativa").style.display = "flex";
+    
+    // Nota: ativarModoViagemPWA(placa, email) já é chamado pelo btnIniciarRotaMotorista() internamente!
+}
+
+async function uiFinalizarRota() {
+    if(confirm("Tem a certeza que deseja finalizar a rota? O rastreio será interrompido e os alunos notificados.")) {
+        
+        // 1. Chama a função central (que envia o fim para o GAS e desliga o Wake Lock)
+        await btnFinalizarRotaMotorista(veiculoConducaoAtual);
+        
+        // 2. Restaura a UI normal
+        document.getElementById("painel-viagem-ativa").style.display = "none";
+        document.getElementById("view-painel-motorista").style.display = "block";
+        
+        // Limpa a placa e reseta o select
+        veiculoConducaoAtual = "";
+        document.getElementById("select-frota-motorista").value = "";
+    }
+}
+
+function uiDeclararSOS() {
+    // Reutiliza o modal de SOS já existente no sistema do Fiscal
+    if (typeof abrirModalSOS === "function") {
+        abrirModalSOS();
+        // Pré-preenche a placa se o modal tiver o input correspondente
+        const inputSosOnibus = document.getElementById('sos-id-onibus');
+        if (inputSosOnibus) inputSosOnibus.value = veiculoConducaoAtual;
+        showToast("Por favor, selecione o motivo da avaria no painel.", "warning");
+    } else {
+        showToast("Função de SOS acionada para " + veiculoConducaoAtual, "info");
+    }
+}
