@@ -112,6 +112,8 @@ function instalarPWA() {
   });
 }
 
+// ... (Código do Bootstrap e PWA mantido) ...
+
 function switchView(viewId) {
   const views = document.querySelectorAll('.view-section');
   views.forEach(v => {
@@ -127,34 +129,25 @@ function switchView(viewId) {
       target.classList.add('active-view');
       target.classList.add('slide-in-right');
     }, 10);
-
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
-  // LÓGICA DA ENGRENAGEM: Ocultar APENAS nas telas de município ou login. 
-  // Usa-se style.display para forçar a renderização sobre classes.
+  // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM)
   const btnConfig = document.getElementById('btn-config');
   if (btnConfig) {
-    if (viewId === 'view-gateway' || viewId === 'view-municipio' || viewId === 'view-login') {
+    // Oculta APENAS no Hub Inicial, Município ou Login
+    if (viewId === 'view-gateway' || viewId === 'view-hub' || viewId === 'view-login-fiscal' || viewId === 'view-login') {
       btnConfig.style.display = 'none';
-      btnConfig.classList.remove('hidden'); 
     } else {
       btnConfig.style.display = 'flex';
-      btnConfig.classList.remove('hidden');
     }
   }
 
-  const muralAvisos = document.getElementById('mural-avisos');
-  const muralHeader = document.getElementById('mural-avisos-header');
-
-  if (muralAvisos && muralAvisos.innerHTML.trim() !== '') {
-    if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu' || viewId === 'view-painel-motorista') {
-      muralAvisos.classList.remove('hidden');
-      if (muralHeader) muralHeader.classList.remove('hidden');
-    } else {
-      muralAvisos.classList.add('hidden');
-      if (muralHeader) muralHeader.classList.add('hidden');
-    }
+  // Mural de Avisos (Visibilidade Inteligente)
+  const mural = document.getElementById('mural-avisos');
+  if (mural && mural.innerHTML.trim() !== "") {
+    const viewsComMural = ['view-hub', 'view-admin-hub', 'view-painel-motorista'];
+    mural.style.display = viewsComMural.includes(viewId) ? 'block' : 'none';
   }
 }
 
