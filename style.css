@@ -790,3 +790,27 @@ body.dark-theme .btn-file-custom {
   background-color: var(--bg-dark);
   border-color: #333;
 }
+
+/* MODO VIAGEM (MOTORISTA) - Proteção de Bateria e Burn-in */
+body.modo-viagem-ativo {
+    background-color: #000000 !important;
+    color: #333333 !important; /* Texto muito escuro para não marcar o ecrã */
+}
+
+/* Ocultar elementos desnecessários durante a condução */
+body.modo-viagem-ativo .cabecalho,
+body.modo-viagem-ativo .menu-navegacao,
+body.modo-viagem-ativo .painel-estudante,
+body.modo-viagem-ativo .rodape {
+    display: none !important;
+}
+
+/* Container focado no Motorista (deve criar este HTML dps) */
+body.modo-viagem-ativo #painel-viagem-ativa {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
