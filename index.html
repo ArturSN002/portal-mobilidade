@@ -36,7 +36,13 @@
       <img id="ui-logo" src="icone.png" alt="Logo" class="hidden">
       <h1 id="ui-nome-sistema" class="brand-title">PORTAL MAESTRO</h1>
       <p id="ui-nome-setor" class="brand-subtitle">Acesso Estudantil</p>
-      <button id="btn-settings-gear" onclick="abrirMenuConfiguracoes()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 24px; cursor: pointer; z-index: 10;">⚙️</button>
+      
+      <button id="btn-config" class="icon-btn hidden" onclick="abrirMenuConfiguracoes()" title="Configurações do Sistema">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </header>
 
     <main class="app-content">
@@ -48,39 +54,31 @@
       {% include portal_estudante.html %}
       {% include portal_admin.html %}
 
-      <div id="view-painel-motorista" class="view-section" style="display: none;">
-          <div class="form-card">
-              <div class="form-header">
-                  <h2>Painel Operacional - Frota</h2>
-                  <p>Selecione o veículo para assumir o rastreamento mestre.</p>
-              </div>
+      <div id="view-painel-motorista" class="view-section hidden">
+          <div class="welcome-text">Central Logística do Motorista</div>
 
-              <div class="input-group">
-                  <label for="select-frota-motorista" class="input-label">Veículo / Rota:</label>
-                  <select id="select-frota-motorista" class="input-field">
-                      <option value="" disabled selected>Escolha um veículo...</option>
-                      <option value="MZJ-3059">MZJ-3059 (Rota Branco - Noite)</option>
-                      <option value="MZE-6331">MZE-6331 (Rota Luciano - Noite)</option>
-                      <option value="MXR-0070">MXR-0070 (Rota Conka - Noite)</option>
-                  </select>
-                  
-                  <button onclick="uiIniciarRota()" class="btn-solid accent-bg" style="width: 100%; padding: 15px; font-size: 1.1em; margin-top: 10px;">
-                      ▶ INICIAR ROTA
-                  </button>
+          <div class="menu-card primary-card" onclick="abrirModalSelecaoRota()">
+              <div class="icon">🚌</div>
+              <div class="info">
+                  <strong>Fluxo de Rotas</strong>
+                  <span>Iniciar ou finalizar viagem rastreada</span>
               </div>
           </div>
-      </div>
 
-      <div id="painel-viagem-ativa" style="display: none;">
-          <div class="viagem-status-container">
-              <div id="indicador-gps-mestre" class="bolinha-pulsante-verde" style="margin: 0 auto 15px auto;"></div>
-              <p style="font-weight: 700; letter-spacing: 1px;">TRANSMISSÃO GPS MESTRE ATIVA</p>
-              <h1 id="viagem-placa-display">ABC-1234</h1>
+          <div class="menu-card outline-card text-danger" onclick="uiDeclararSOS()">
+              <div class="icon">🚨</div>
+              <div class="info">
+                  <strong class="text-danger">SOS Avaria</strong>
+                  <span>Reportar problemas na frota</span>
+              </div>
           </div>
 
-          <div class="viagem-botoes-container" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-              <button onclick="uiDeclararSOS()" class="btn-sos-gigante">🚨 SOS AVARIA</button>
-              <button onclick="uiFinalizarRota()" class="btn-finalizar-gigante">⏹ FINALIZAR ROTA</button>
+          <div class="menu-card dark-card" onclick="iniciarScanner()">
+              <div class="icon">📷</div>
+              <div class="info">
+                  <strong>Modo Fiscalização</strong>
+                  <span>Ler QR Code do Estudante</span>
+              </div>
           </div>
       </div>
 
@@ -92,6 +90,32 @@
       <p id="ui-cnpj" class="hidden"></p> 
       <div class="watermark">⚡ POWERED BY MAESTRO</div>
     </footer>
+  </div>
+
+  <div id="modal-selecao-rota" class="bottom-sheet-overlay hidden">
+      <div class="bottom-sheet-content">
+          <div class="form-header">
+              <h2>Selecione o Veículo</h2>
+              <p>Apenas rotas do seu turno atual estão disponíveis.</p>
+          </div>
+          <label class="input-label">VEÍCULO / ROTA:</label>
+          <select id="select-frota-motorista" class="input-field"></select>
+          <button onclick="uiIniciarRota()" class="btn-solid" style="margin-top: 10px;">▶ INICIAR ROTA</button>
+          <button onclick="fecharModalSelecaoRota()" class="btn-text">Cancelar</button>
+      </div>
+  </div>
+
+  <div id="painel-viagem-ativa" style="display: none;">
+      <div class="viagem-status-container">
+          <div id="indicador-gps-mestre" class="bolinha-pulsante-verde"></div>
+          <p style="font-weight: 600; letter-spacing: 1px;">TRANSMISSÃO GPS MESTRE ATIVA</p>
+          <h1 id="viagem-placa-display">ABC-1234</h1>
+      </div>
+
+      <div class="viagem-botoes-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <button onclick="uiDeclararSOS()" class="btn-sos-gigante">🚨 SOS AVARIA</button>
+          <button onclick="uiFinalizarRota()" class="btn-finalizar-gigante">⏹ FINALIZAR ROTA</button>
+      </div>
   </div>
 
   <div id="toast"></div>
@@ -106,34 +130,38 @@
   <script src="inscricao.js?v=12.0"></script>
 
   <div id="modal-configuracoes" class="bottom-sheet-overlay hidden">
-    <div class="bottom-sheet-content">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="bottom-sheet-content" style="padding-bottom: 30px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
         <h3 style="margin: 0; font-size: 18px; color: var(--primary);">Configurações</h3>
         <button onclick="fecharMenuConfiguracoes()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-sub);">✖</button>
       </div>
       
-      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
-        <p class="desc-xs" style="margin: 0; font-weight: 600;">🌗 Modo Escuro</p>
-        <label class="switch"><input type="checkbox" id="pref-dark" onchange="toggleDarkMode()"><span class="slider"></span></label>
-      </div>
-      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
-        <p class="desc-xs" style="margin: 0; font-weight: 600;">🔔 Notificações da Secretaria</p>
-        <label class="switch"><input type="checkbox" id="pref-push" onchange="togglePref('push', this)"><span class="slider"></span></label>
-      </div>
-      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
-        <p class="desc-xs" style="margin: 0; font-weight: 600;">📍 Partilhar GPS (Ao Embarcar)</p>
-        <label class="switch"><input type="checkbox" id="pref-gps" onchange="togglePref('gps', this)"><span class="slider"></span></label>
-      </div>
-      <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
-        <p class="desc-xs" style="margin: 0; font-weight: 600;">📷 Acesso à Câmera (Inscrição)</p>
-        <label class="switch"><input type="checkbox" id="pref-camera" onchange="togglePref('camera', this)"><span class="slider"></span></label>
-      </div>
-      <div class="switch-row" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-        <p class="desc-xs" style="margin: 0; font-weight: 700; color: var(--accent);">✈️ Forçar Modo Offline (Poupe Dados)</p>
-        <label class="switch"><input type="checkbox" id="pref-offline" onchange="togglePref('offline', this)"><span class="slider"></span></label>
+      <div class="prefs-group" style="margin-top: 20px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+        <p class="input-label" style="margin-bottom: 15px; text-align: left;">PREFERÊNCIAS DO SISTEMA</p>
+        
+        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+          <p class="desc-xs" style="margin: 0; font-weight: 600;">🌗 Modo Escuro</p>
+          <label class="switch"><input type="checkbox" id="pref-dark" onchange="toggleDarkMode()"><span class="slider"></span></label>
+        </div>
+        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+          <p class="desc-xs" style="margin: 0; font-weight: 600;">🔔 Notificações da Secretaria</p>
+          <label class="switch"><input type="checkbox" id="pref-push" onchange="togglePref('push', this)"><span class="slider"></span></label>
+        </div>
+        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+          <p class="desc-xs" style="margin: 0; font-weight: 600;">📍 Partilhar GPS (Ao Embarcar)</p>
+          <label class="switch"><input type="checkbox" id="pref-gps" onchange="togglePref('gps', this)"><span class="slider"></span></label>
+        </div>
+        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+          <p class="desc-xs" style="margin: 0; font-weight: 600;">📷 Acesso à Câmera (Inscrição)</p>
+          <label class="switch"><input type="checkbox" id="pref-camera" onchange="togglePref('camera', this)"><span class="slider"></span></label>
+        </div>
+        <div class="switch-row" style="padding-bottom: 5px;">
+          <p class="desc-xs" style="margin: 0; font-weight: 700; color: var(--accent);">✈️ Forçar Modo Offline</p>
+          <label class="switch"><input type="checkbox" id="pref-offline" onchange="togglePref('offline', this)"><span class="slider"></span></label>
+        </div>
       </div>
 
-      <button class="menu-card outline-card" onclick="navegarPeloMenu('view-validador')" style="border-color: #0d9488; background: rgba(13,148,136,0.04); margin-bottom: 10px; padding: 12px;">
+      <button class="menu-card outline-card" onclick="navegarPeloMenu('view-validador')" style="border-color: #0d9488; background: rgba(13,148,136,0.04); margin-top: 15px; margin-bottom: 10px; padding: 12px;">
         <span class="icon" style="font-size: 24px; margin-right: 12px;">🛡️</span>
         <div class="info">
           <strong style="color: #0d9488; font-size: 14px;">Validar Documento</strong>
@@ -141,13 +169,22 @@
         </div>
       </button>
 
-      <button class="menu-card dark-card" onclick="navegarPeloMenu('view-login-fiscal')" style="margin-bottom: 0; padding: 12px;">
+      <button class="menu-card dark-card" onclick="navegarPeloMenu('view-login-fiscal')" style="margin-bottom: 15px; padding: 12px;">
         <span class="icon" style="font-size: 24px; margin-right: 12px;">🔐</span>
         <div class="info">
           <strong style="font-size: 14px;">Acesso da Secretaria</strong>
           <span style="font-size: 10px;">Acesso Restrito</span>
         </div>
       </button>
+
+      <div id="pwa-install-banner" class="banner-pwa" onclick="instalarPWA()" style="margin-top: 15px; margin-bottom: 0;">
+          <div class="icon">📱</div>
+          <div class="text">
+              <strong>Instalar Maestro</strong>
+              <span>Adicionar ao ecrã inicial</span>
+          </div>
+      </div>
+
     </div>
   </div>
 </body>
