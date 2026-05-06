@@ -132,11 +132,10 @@ function switchView(viewId) {
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
-  // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM)
+  // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM) CORRIGIDO
   const btnConfig = document.getElementById('btn-config');
   if (btnConfig) {
-    // Oculta APENAS no Hub Inicial, Município ou Login
-    if (viewId === 'view-gateway' || viewId === 'view-hub' || viewId === 'view-login-fiscal' || viewId === 'view-login') {
+    if (viewId === 'view-gateway' || viewId === 'view-login-fiscal' || viewId === 'view-login') {
       btnConfig.style.display = 'none';
     } else {
       btnConfig.style.display = 'flex';
@@ -145,9 +144,16 @@ function switchView(viewId) {
 
   // Mural de Avisos (Visibilidade Inteligente)
   const mural = document.getElementById('mural-avisos');
-  if (mural && mural.innerHTML.trim() !== "") {
-    const viewsComMural = ['view-hub', 'view-admin-hub', 'view-painel-motorista'];
-    mural.style.display = viewsComMural.includes(viewId) ? 'block' : 'none';
+  const muralHeader = document.getElementById('mural-avisos-header');
+
+  if (mural && mural.innerHTML.trim() !== '') {
+    if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu' || viewId === 'view-painel-motorista') {
+      mural.classList.remove('hidden');
+      if (muralHeader) muralHeader.classList.remove('hidden');
+    } else {
+      mural.classList.add('hidden');
+      if (muralHeader) muralHeader.classList.add('hidden');
+    }
   }
 }
 
