@@ -1,4 +1,4 @@
-      <section id="view-login-fiscal" class="view-section">
+<section id="view-login-fiscal" class="view-section">
         <div class="form-card dark-form">
           <div class="form-header">
             <span style="font-size: 36px; display: block; margin-bottom: 5px;">🛡️</span>
@@ -76,6 +76,14 @@
         <div id="menu-grupo-secretaria" class="hidden">
             <div class="divider-text" style="color: #666; margin-top: 25px;">SECRETARIA E LOGÍSTICA</div>
             
+            <button class="menu-card primary-card" onclick="abrirModalSelecaoRota()">
+              <span class="icon" style="background: none; filter: none;">🚌</span>
+              <div class="info">
+                <strong>Fluxo de Rotas (GPS)</strong>
+                <span>Assumir Rastreio ou Finalizar Viagem</span>
+              </div>
+            </button>
+
             <button class="menu-card outline-card" style="border-color: var(--primary);" onclick="abrirMesaAuditoria()">
               <span class="icon" style="background: none; filter: none;">📂</span>
               <div class="info">
@@ -190,6 +198,14 @@
                <button class="btn-solid" style="background: #4b5563; font-size: 12px; padding: 10px; margin-bottom: 0;" onclick="forcarMotor('EMAIL')">📧 Fila de E-mails</button>
             </div>
             
+            <button class="menu-card primary-card" style="margin-bottom: 20px;" onclick="abrirModalSelecaoRota()">
+              <span class="icon" style="background: none; filter: none;">🚌</span>
+              <div class="info">
+                <strong>Fluxo de Rotas (GPS)</strong>
+                <span>Assumir Rastreio ou Finalizar Viagem</span>
+              </div>
+            </button>
+
             <button class="btn-solid dark-bg" onclick="switchView('view-admin-hub')">Voltar ao Menu</button>
          </div>
       </section>
