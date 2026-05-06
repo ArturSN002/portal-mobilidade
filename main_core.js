@@ -256,11 +256,16 @@ async function inicializarPushNotifications() {
       // ... e obriga o Firebase a usá-lo em vez de procurar o "firebase-messaging-sw.js" (Evita o Erro 404)
       messaging.useServiceWorker(swRegistration);
 
-      // NOVO: Captura notificações com a App ABERTA no ecrã
+      // NOVO: Captura notificações com a App ABERTA no ecrã (Compatível com HTTP v1)
       messaging.onMessage((payload) => {
           console.log('Mensagem recebida em primeiro plano:', payload);
-          const titulo = payload.notification?.title || "Novo Aviso";
-          const corpo = payload.notification?.body || "Você tem uma nova mensagem.";
+          
+          // Na HTTP v1, extraímos do nó notification ou do nó data para maior resiliência
+          const notificationObj = payload.notification || payload.data || {};
+          
+          const titulo = notificationObj.title || "Novo Aviso";
+          const corpo = notificationObj.body || "Você tem uma nova mensagem.";
+          
           showToast(`🔔 ${titulo}: ${corpo}`, "info");
       });
 
@@ -309,7 +314,6 @@ function toggleDarkMode() {
   if (typeof aplicarTemaAtual === 'function') aplicarTemaAtual();
 }
 
-// NOVA FUNÇÃO: Motor injetor de CSS e Logo
 // NOVA FUNÇÃO: Motor injetor de CSS e Logo
 function aplicarTemaAtual() {
   if (!window.THEME_LIGHT || !window.THEME_DARK) return;
