@@ -131,10 +131,11 @@ function switchView(viewId) {
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
-  // Ocultar Engrenagem no Hub e Login
+  // LÓGICA DA ENGRENAGEM: Ocultar APENAS nas telas de município ou login. 
+  // Nunca ocultar no 'view-hub' (que é o menu principal).
   const btnConfig = document.getElementById('btn-config');
   if (btnConfig) {
-      if (viewId === 'view-hub' || viewId === 'view-login') {
+      if (viewId === 'view-gateway' || viewId === 'view-municipio' || viewId === 'view-login') {
           btnConfig.classList.add('hidden');
       } else {
           btnConfig.classList.remove('hidden');
