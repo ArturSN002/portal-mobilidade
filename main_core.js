@@ -7,8 +7,6 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  // Apenas mostramos o banner após a App ter carregado com sucesso (evita spam no boot).
-  // Movido para dentro do bootSystem() na via de sucesso.
 });
 
 async function bootSystem() {
@@ -23,7 +21,7 @@ async function bootSystem() {
       window.THEME_LIGHT = { primary: res.ui.COR_PRIMARIA_LIGHT, secondary: res.ui.COR_SECUNDARIA_LIGHT, accent: res.ui.COR_DE_DESTAQUE_LIGHT, logo: res.ui.LOGO_LIGHT };
       window.THEME_DARK = { primary: res.ui.COR_PRIMARIA_DARK, secondary: res.ui.COR_SECUNDARIA_DARK, accent: res.ui.COR_DE_DESTAQUE_DARK, logo: res.ui.LOGO_DARK };
 
-      // NOVO: Firebase Config Dinâmico "White-Label"
+      // Firebase Config Dinâmico "White-Label"
       if (res.firebase) {
         window.FIREBASE_CONFIG = {
           apiKey: res.firebase.API_KEY,
@@ -60,7 +58,6 @@ async function bootSystem() {
     console.warn("A arrancar em modo offline persistente.");
   }
 
-  // NOVO: Lê a última tela da memória (ou vai para o Hub se for a primeira vez)
   const lastView = sessionStorage.getItem('MAESTRO_LAST_VIEW') || 'view-hub';
   switchView(lastView);
 
@@ -68,7 +65,6 @@ async function bootSystem() {
   verificarSessaoAtiva();
   restaurarSessaoEstudante();
 
-  // Levanta a cortina DEPOIS de a tela correta estar montada
   ocultarSplashScreen();
 }
 
@@ -84,10 +80,7 @@ function initPWA() {
   if (!window.PWA_NOME) return;
 
   if ('serviceWorker' in navigator) {
-    // Verifica se as chaves da planilha já chegaram
     if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
-
-      // Monta a URL com os parâmetros dinâmicos
       const swUrl = `./sw.js?apiKey=${window.FIREBASE_CONFIG.apiKey}&projectId=${window.FIREBASE_CONFIG.projectId}&senderId=${window.FIREBASE_CONFIG.messagingSenderId}&appId=${window.FIREBASE_CONFIG.appId}`;
 
       navigator.serviceWorker.register(swUrl)
@@ -99,7 +92,6 @@ function initPWA() {
         });
 
     } else {
-      // Fallback: regista sem chaves só para o cache offline funcionar caso não haja Firebase
       navigator.serviceWorker.register('./sw.js')
         .then(() => console.log('SW registado em modo apenas-offline.'));
     }
@@ -126,7 +118,7 @@ function switchView(viewId) {
   const views = document.querySelectorAll('.view-section');
   views.forEach(v => {
     v.classList.remove('active-view');
-    v.classList.remove('slide-in-right'); // Se tiver a animação
+    v.classList.remove('slide-in-right');
     v.style.display = 'none';
   });
 
@@ -138,7 +130,6 @@ function switchView(viewId) {
       target.classList.add('slide-in-right');
     }, 10);
 
-    // NOVO: Guarda a última tela na memória RAM (Session Storage)
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
@@ -210,7 +201,6 @@ function showToast(msg, type = 'info') {
   toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 3500);
 }
 
-// Inicialização das Push Notifications foi adaptada para ser chamada após consentimento (no estudante.js)
 async function inicializarPushNotifications() {
   const desligarTogglePush = (mensagem) => {
     localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
@@ -219,10 +209,8 @@ async function inicializarPushNotifications() {
     if (mensagem) showToast(mensagem, "error");
   };
 
-  // Bloqueio de Privacidade
   if (localStorage.getItem('MAESTRO_PREF_PUSH') === 'false') return;
 
-  // Usa as configurações que chegaram da Planilha
   if (!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey) {
     console.warn("Chaves do Firebase não configuradas na planilha.");
     desligarTogglePush("Chaves do Firebase ausentes no sistema.");
@@ -249,23 +237,14 @@ async function inicializarPushNotifications() {
     const permission = await Notification.requestPermission();
 
     if (permission === 'granted') {
-
-      // NOVO: Espera o nosso sw.js estar pronto...
       const swRegistration = await navigator.serviceWorker.ready;
-
-      // ... e obriga o Firebase a usá-lo em vez de procurar o "firebase-messaging-sw.js" (Evita o Erro 404)
       messaging.useServiceWorker(swRegistration);
 
-      // NOVO: Captura notificações com a App ABERTA no ecrã (Compatível com HTTP v1)
       messaging.onMessage((payload) => {
         console.log('Mensagem recebida em primeiro plano:', payload);
-
-        // Na HTTP v1, extraímos do nó notification ou do nó data para maior resiliência
         const notificationObj = payload.notification || payload.data || {};
-
         const titulo = notificationObj.title || "Novo Aviso";
         const corpo = notificationObj.body || "Você tem uma nova mensagem.";
-
         showToast(`🔔 ${titulo}: ${corpo}`, "info");
       });
 
@@ -291,7 +270,6 @@ async function inicializarPushNotifications() {
 async function registrarTokenPush(token) {
   if (!currentWalletId) return;
   try {
-    // Enviamos o token nas duas variáveis conhecidas para garantir que a planilha preenche todas as colunas
     const res = await apiCall("registrarPushToken", {
       idEstudante: currentWalletId,
       pushToken: token,
@@ -309,32 +287,25 @@ function toggleDarkMode() {
   document.body.classList.toggle('dark-theme');
   const isDark = document.body.classList.contains('dark-theme');
   localStorage.setItem('MAESTRO_DARK_MODE', isDark ? 'true' : 'false');
-
-  // Atualiza as cores e o logótipo em tempo real
   if (typeof aplicarTemaAtual === 'function') aplicarTemaAtual();
 }
 
-// NOVA FUNÇÃO: Motor injetor de CSS e Logo
 function aplicarTemaAtual() {
   if (!window.THEME_LIGHT || !window.THEME_DARK) return;
 
   const isDark = document.body.classList.contains('dark-theme');
   const theme = isDark ? window.THEME_DARK : window.THEME_LIGHT;
 
-  // Aplicar diretamente no BODY com 'important' para sobrepor o style.css
   document.body.style.setProperty('--primary', theme.primary, 'important');
   document.body.style.setProperty('--secondary', theme.secondary, 'important');
   document.body.style.setProperty('--accent', theme.accent, 'important');
 
-  // Salva para o cache offline da Carteira
   window.THEME_COLOR = theme.primary;
   window.BG_COLOR = theme.secondary;
 
-  // Atualiza a cor da barra de status do telemóvel
   const metaThemeColor = document.getElementById('meta-theme-color');
   if (metaThemeColor) metaThemeColor.content = theme.primary;
 
-  // Alterna o Logótipo (Claro/Escuro)
   if (theme.logo && theme.logo !== "") {
     const logoEl = document.getElementById('ui-logo');
     const splashLogo = document.getElementById('splash-logo');
@@ -348,7 +319,7 @@ window.onload = function () {
     document.body.classList.add('dark-theme');
   }
 
-  checkClientGateway();
+  if(typeof checkClientGateway === 'function') checkClientGateway();
 
   const urlParams = new URLSearchParams(window.location.search);
   const idParam = urlParams.get('id');
@@ -356,12 +327,11 @@ window.onload = function () {
   const validarParam = urlParams.get('validar');
 
   if (validarParam) {
-    // Cartório Digital: Auto-validação via QR Code / Link direto
     setTimeout(() => {
       switchView('view-validador');
       const inputHash = document.getElementById('input-hash-validador');
       if (inputHash) inputHash.value = validarParam.toUpperCase();
-      verificarHashPublico();
+      if(typeof verificarHashPublico === 'function') verificarHashPublico();
     }, 800);
   } else if (idParam || authParam === 'login') {
     setTimeout(() => {
@@ -373,147 +343,6 @@ window.onload = function () {
 };
 
 // ========================================================================
-// CARTÓRIO DIGITAL — VERIFICAÇÃO PÚBLICA DE DOCUMENTOS (V10.1)
-// ========================================================================
-
-let scannerPublico = null;
-
-function iniciarScannerPublico() {
-  const container = document.getElementById('leitor-qr-publico-container');
-  const btn = document.getElementById('btn-scanner-publico');
-
-  if (container) container.classList.remove('hidden');
-  if (btn) btn.classList.add('hidden');
-
-  if (typeof Html5QrcodeScanner !== 'undefined') {
-    scannerPublico = new Html5QrcodeScanner(
-      "leitor-qr-publico", { fps: 10, qrbox: 250 }, false);
-
-    scannerPublico.render((decodedText, decodedResult) => {
-      // Sucesso na leitura
-      fecharScannerPublico();
-      const input = document.getElementById('input-hash-validador');
-      if (input) {
-        input.value = decodedText;
-        verificarHashPublico();
-      }
-    }, (error) => {
-      // Ignorar erros de scan contínuo
-    });
-  } else {
-    showToast("Módulo de leitura QR não carregado.", "error");
-    fecharScannerPublico();
-  }
-}
-
-function fecharScannerPublico() {
-  const container = document.getElementById('leitor-qr-publico-container');
-  const btn = document.getElementById('btn-scanner-publico');
-
-  if (scannerPublico) {
-    scannerPublico.clear().catch(error => console.error("Falha a limpar scanner público", error));
-    scannerPublico = null;
-  }
-
-  if (container) container.classList.add('hidden');
-  if (btn) btn.classList.remove('hidden');
-}
-
-function verificarHashPublico() {
-  const input = document.getElementById('input-hash-validador');
-  const container = document.getElementById('res-validador');
-  if (!input || !container) return;
-
-  const hash = input.value.trim().toUpperCase();
-  if (!hash) {
-    showToast("Informe o código de validação.", "error");
-    return;
-  }
-
-  container.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loader" style="margin: 0 auto;"></div><p style="font-size: 12px; color: var(--text-sub); margin-top: 10px;">A verificar autenticidade...</p></div>';
-
-  apiCall("validarDocumentoPublico", { hash: hash })
-    .then(res => {
-      if (res.sucesso && res.tipo === "CARTEIRA") {
-        if (res.valido) {
-          container.innerHTML = `
-              <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center;">
-                <div style="font-size: 42px; margin-bottom: 8px;">✅</div>
-                <h3 style="color: #15803d; margin: 0 0 5px 0; font-size: 16px;">Carteira de Estudante Válida</h3>
-                <div style="text-align: left; font-size: 14px; line-height: 1.8; color: #1e293b; margin-top: 15px;">
-                  <div><strong>Nome:</strong> ${res.nome}</div>
-                  <div><strong>Status:</strong> <span style="color: #22c55e; font-weight: 700;">● ${res.status}</span></div>
-                </div>
-              </div>`;
-        } else {
-          const corStatus = res.status === 'CANCELADO' ? '#dc2626' : '#f59e0b';
-          container.innerHTML = `
-              <div style="background: #fefce8; border: 2px solid ${corStatus}; border-radius: 12px; padding: 20px; text-align: center;">
-                <div style="font-size: 42px; margin-bottom: 8px;">⚠️</div>
-                <h3 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">Carteira Inativa</h3>
-                <div style="text-align: left; font-size: 14px; line-height: 1.8; color: #1e293b; margin-top: 15px;">
-                  <div><strong>Nome:</strong> ${res.nome}</div>
-                  <div><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: 700;">● ${res.status}</span></div>
-                </div>
-              </div>`;
-        }
-      } else if (res.sucesso && res.tipo === "DECLARACAO") {
-        if (res.valido) {
-          // DOCUMENTO VÁLIDO E ATIVO
-          container.innerHTML = `
-              <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center;">
-                <div style="font-size: 42px; margin-bottom: 8px;">✅</div>
-                <h3 style="color: #15803d; margin: 0 0 5px 0; font-size: 16px;">Documento Autêntico e Ativo</h3>
-                <p style="font-size: 11px; color: #166534; margin-bottom: 15px;">Verificação realizada com sucesso.</p>
-                <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
-                  <div><strong>Nome:</strong> ${res.nome}</div>
-                  <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
-                  <div><strong>Instituição:</strong> ${res.instituicao}</div>
-                  <div><strong>Status:</strong> <span style="color: #22c55e; font-weight: 700;">● ${res.status}</span></div>
-                  <div><strong>Emissão:</strong> ${res.emissao || 'N/D'}</div>
-                  <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #d1fae5;">Código: <code style="background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
-                </div>
-              </div>`;
-        } else {
-          // DOCUMENTO ENCONTRADO MAS INATIVO / REVOGADO
-          const corStatus = res.status === 'CANCELADO' ? '#dc2626' : '#f59e0b';
-          const labelStatus = res.status === 'CANCELADO' ? 'Cancelado' : res.status === 'SUSPENSO' ? 'Suspenso' : 'Inativo';
-          container.innerHTML = `
-              <div style="background: #fefce8; border: 2px solid ${corStatus}; border-radius: 12px; padding: 20px; text-align: center;">
-                <div style="font-size: 42px; margin-bottom: 8px;">⚠️</div>
-                <h3 style="color: #92400e; margin: 0 0 5px 0; font-size: 16px;">Documento Revogado</h3>
-                <p style="font-size: 11px; color: #78350f; margin-bottom: 15px;">Este documento não é mais válido.</p>
-                <div style="text-align: left; font-size: 13px; line-height: 2; color: #1e293b;">
-                  <div><strong>Nome:</strong> ${res.nome}</div>
-                  <div><strong>CPF:</strong> ${res.cpfMascarado}</div>
-                  <div><strong>Instituição:</strong> ${res.instituicao}</div>
-                  <div><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: 700;">● ${labelStatus}</span></div>
-                  <div style="font-size: 11px; color: #6b7280; margin-top: 8px; padding-top: 8px; border-top: 1px solid #fde68a;">Código: <code style="background: #fef9c3; padding: 2px 6px; border-radius: 4px;">${res.hash}</code></div>
-                </div>
-              </div>`;
-        }
-      } else {
-        // HASH NÃO ENCONTRADO
-        container.innerHTML = `
-          <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
-            <div style="font-size: 42px; margin-bottom: 8px;">❌</div>
-            <h3 style="color: #991b1b; margin: 0 0 5px 0; font-size: 16px;">Documento Não Encontrado</h3>
-            <p style="font-size: 12px; color: #7f1d1d; margin: 0;">O código informado não corresponde a nenhuma declaração válida no sistema. Verifique se digitou corretamente.</p>
-          </div>`;
-      }
-    })
-    .catch(err => {
-      console.error("Erro na validação:", err);
-      container.innerHTML = `
-        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
-          <div style="font-size: 42px; margin-bottom: 8px;">⚡</div>
-          <h3 style="color: #991b1b; margin: 0 0 5px 0; font-size: 16px;">Erro de Conexão</h3>
-          <p style="font-size: 12px; color: #7f1d1d; margin: 0;">Não foi possível contactar o servidor. Verifique a sua ligação e tente novamente.</p>
-        </div>`;
-    });
-}
-
-// ========================================================================
 // MENU DE CONFIGURAÇÕES (BOTTOM SHEET)
 // ========================================================================
 
@@ -522,23 +351,16 @@ function abrirMenuConfiguracoes() {
   if (!modal) return;
   modal.classList.remove('hidden');
 
-  // 1. Modo Escuro
   document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
 
-  // 2. Notificações: Só fica ligado se ativou nas configurações E o navegador/telemóvel permitiu
   const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
   document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
 
-  // 3. GPS: Padrão Desligado (Opt-in)
   document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
-
-  // 4. Câmara: Padrão Ligado (É essencial para a foto 3x4 na inscrição)
   document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
-
-  // 5. Offline: Padrão Desligado
   document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
 
-  void modal.offsetWidth; // force reflow
+  void modal.offsetWidth;
   modal.classList.add('active');
 }
 
@@ -554,7 +376,6 @@ async function togglePref(tipo, elemento) {
       localStorage.setItem('MAESTRO_PREF_PUSH', 'false');
       showToast("Notificações silenciadas.", "info");
 
-      // Apaga o token localmente e envia o comando vazio para a API apagar na planilha
       const tokenLocal = localStorage.getItem("MAESTRO_FCM_TOKEN");
       if (tokenLocal && typeof currentWalletId !== 'undefined' && currentWalletId) {
         try { await apiCall("registrarPushToken", { idEstudante: currentWalletId, pushToken: "" }); } catch (e) { }
@@ -577,7 +398,7 @@ async function togglePref(tipo, elemento) {
     showToast(isLigado ? "Modo Offline Forçado ativo." : "Modo Online restaurado.", "warning");
     if (isLigado && typeof abrirTelaCofreOuEntrarDireto === 'function') {
       fecharMenuConfiguracoes();
-      abrirTelaCofreOuEntrarDireto(); // Leva o aluno direto para a carteira salva
+      abrirTelaCofreOuEntrarDireto();
     }
   }
 }
@@ -600,17 +421,19 @@ function navegarPeloMenu(viewId) {
 
 /**
  * ============================================================================
- * MÓDULO LOGÍSTICA: NÓ MESTRE (MOTORISTA)
- * Comunicação híbrida: Chama o Back-end (GAS) e aciona a ponte nativa (Flutter)
+ * MÓDULO LOGÍSTICA: NÓ MESTRE (MOTORISTA) - PWA ONLY (Wake Lock)
  * ============================================================================
  */
+
+let watchIdMotorista = null;
+let wakeLockMotorista = null;
+let ultimaTransmissaoMestre = 0;
 
 /**
  * Acionado quando o motorista clica em "Iniciar Rota" na interface.
  * @param {string} idOnibus - A placa do ônibus (ex: ABC-1234)
  */
 async function btnIniciarRotaMotorista(idOnibus) {
-    // Presume-se que o e-mail do operador logado está guardado na sessão/localStorage
     const emailMotorista = localStorage.getItem("MAESTRO_OPERADOR_EMAIL") || "motorista@desconhecido.com";
 
     // 1. Avisa o Back-end (Google Apps Script)
@@ -620,19 +443,12 @@ async function btnIniciarRotaMotorista(idOnibus) {
     });
 
     if (res.sucesso) {
-        showToast("Rota iniciada com sucesso! Transmissão Mestre ativada.", "success");
+        showToast("Rota iniciada! Modo Viagem ativado.", "success");
 
-        // 2. A MÁGICA DA PONTE: Avisa o App Nativo (Flutter) para ligar o GPS em background
-        if (window.MaestroNativo) {
-            console.log("[Ponte Flutter] Acordando o serviço de Background...");
-            window.MaestroNativo.postMessage(`INICIAR|${idOnibus}|${emailMotorista}`);
-        } else {
-            console.log("[Fallback Web] App nativo não detetado. Iniciando Wake Lock de ecrã.");
-            // Futura função de fallback visual para quem usar direto no Safari/Chrome
-            // ativarModoTelaPretaWakeLock(); 
-        }
+        // 2. Aciona o Modo Viagem 100% Web PWA
+        await ativarModoViagemPWA(idOnibus, emailMotorista);
 
-        // 3. Atualizar a Interface (Ex: Esconder botão de iniciar, mostrar botão de SOS e Finalizar)
+        // 3. Atualizar a Interface Visual do Motorista
         // renderizarEstadoPainelMotorista(true, idOnibus);
     } else {
         showToast("Erro ao iniciar rota: " + res.erro, "error");
@@ -652,15 +468,97 @@ async function btnFinalizarRotaMotorista(idOnibus) {
     if (res.sucesso) {
         showToast("Rota encerrada com sucesso.", "info");
 
-        // 2. Avisa o App Nativo (Flutter) para desligar o GPS e poupar bateria
-        if (window.MaestroNativo) {
-            console.log("[Ponte Flutter] Desligando serviço de Background...");
-            window.MaestroNativo.postMessage('FINALIZAR');
-        }
+        // 2. Desativa o Modo Viagem Web
+        desativarModoViagemPWA();
 
         // 3. Atualizar a Interface
         // renderizarEstadoPainelMotorista(false, null);
     } else {
         showToast("Erro ao finalizar rota: " + res.erro, "error");
+    }
+}
+
+/**
+ * Ativa o "Modo Viagem" no Front-end para o Motorista.
+ * Mantém o ecrã ligado e transmite o GPS a cada 10 segundos.
+ */
+async function ativarModoViagemPWA(idOnibus, emailMotorista) {
+    // 1. Aplicar a "Tela Preta" para poupar bateria e evitar burn-in
+    document.body.classList.add('modo-viagem-ativo');
+    
+    // 2. Solicitar Wake Lock (Manter ecrã ligado)
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLockMotorista = await navigator.wakeLock.request('screen');
+            console.log("Wake Lock ativado: Ecrã permanecerá ligado.");
+            
+            // Se o utilizador minimizar e voltar, precisamos de pedir o Wake Lock novamente
+            document.addEventListener('visibilitychange', lidarComMudancaVisibilidade);
+        }
+    } catch (err) {
+        console.warn("Wake Lock não suportado ou falhou:", err);
+        showToast("Atenção: O ecrã poderá apagar-se neste dispositivo.", "warning");
+    }
+
+    // 3. Iniciar Transmissão Contínua de GPS
+    if (navigator.geolocation) {
+        watchIdMotorista = navigator.geolocation.watchPosition(
+            (pos) => {
+                const agora = Date.now();
+                // Throttle: Só envia para a API a cada 10 segundos (10000 ms)
+                if (agora - ultimaTransmissaoMestre > 10000) {
+                    apiCall("atualizarGPSOnibus", {
+                        idOnibus: idOnibus,
+                        usuarioLogadoId: emailMotorista,
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude
+                    });
+                    ultimaTransmissaoMestre = agora;
+                    
+                    // Feedback visual discreto de que está a transmitir
+                    const indicador = document.getElementById('indicador-gps-mestre');
+                    if(indicador) indicador.style.opacity = (indicador.style.opacity == '1' ? '0.5' : '1');
+                }
+            },
+            (err) => console.error("Erro no GPS do Mestre:", err),
+            { enableHighAccuracy: true, maximumAge: 0 }
+        );
+    } else {
+        showToast("Geolocalização não suportada neste navegador.", "error");
+    }
+}
+
+/**
+ * Encerra o "Modo Viagem", limpa rastreios e liberta o ecrã.
+ */
+function desativarModoViagemPWA() {
+    // Remover Tela Preta
+    document.body.classList.remove('modo-viagem-ativo');
+    
+    // Parar GPS
+    if (watchIdMotorista !== null) {
+        navigator.geolocation.clearWatch(watchIdMotorista);
+        watchIdMotorista = null;
+    }
+    
+    // Libertar Wake Lock
+    if (wakeLockMotorista !== null) {
+        wakeLockMotorista.release().then(() => {
+            wakeLockMotorista = null;
+            console.log("Wake Lock libertado.");
+        });
+    }
+    document.removeEventListener('visibilitychange', lidarComMudancaVisibilidade);
+}
+
+// Reativa o Wake Lock caso a aba fique em background e volte
+async function lidarComMudancaVisibilidade() {
+    if (wakeLockMotorista === null && document.visibilityState === 'visible' && document.body.classList.contains('modo-viagem-ativo')) {
+        try {
+            wakeLockMotorista = await navigator.wakeLock.request('screen');
+            console.log("Wake Lock restaurado.");
+        } catch (err) {
+            console.warn("Falha ao restaurar Wake Lock:", err);
+        }
     }
 }
