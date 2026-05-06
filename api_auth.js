@@ -14,6 +14,7 @@ async function checkClientGateway() {
   const gateway = document.getElementById("view-gateway");
 
   if (savedUrl) {
+    // Utilizador já tem cliente salvo. Força a tela de splash.
     if (splash) {
       splash.style.display = "flex";
       splash.style.opacity = "1";
@@ -26,23 +27,60 @@ async function checkClientGateway() {
     GAS_URL = savedUrl;
     if (typeof bootSystem === "function") bootSystem();
   } else {
-    if (splash) splash.classList.add("hidden");
+    // Novo utilizador. Esconde splash suavemente e mostra seleção.
+    if (splash) {
+      splash.style.opacity = "0";
+      setTimeout(() => { splash.style.display = "none"; }, 300);
+    }
+
+    document.querySelectorAll(".view-section").forEach(sec => {
+      sec.classList.remove("active-view");
+      sec.style.display = "none";
+    });
+
     if (gateway) {
       gateway.style.display = "block";
-      gateway.classList.add("active-view");
+      setTimeout(() => gateway.classList.add("active-view"), 10);
+    }
+
+    // RESTAURADO: Povoa a caixa de seleção com as cidades
+    const select = document.getElementById("client-select");
+    if (select) {
+      select.innerHTML = "";
+      for (const client in CLIENT_DIRECTORY) {
+        const option = document.createElement("option");
+        option.value = CLIENT_DIRECTORY[client];
+        option.textContent = client;
+        select.appendChild(option);
+      }
     }
   }
 }
 
-function selecionarCliente(municipio) {
-  const url = CLIENT_DIRECTORY[municipio];
-  if (url) {
-    localStorage.setItem("MAESTRO_CLIENT_URL", url);
-    localStorage.setItem("MAESTRO_MUNICIPIO", municipio);
-    window.location.reload();
+// RESTAURADO: Função ativada pelo botão "Acessar Sistema"
+function salvarCliente() {
+  const select = document.getElementById("client-select");
+  if (!select) return;
+  const selectedUrl = select.value;
+  if (!selectedUrl) return;
+
+  localStorage.setItem("MAESTRO_CLIENT_URL", selectedUrl);
+  GAS_URL = selectedUrl;
+
+  const gateway = document.getElementById("view-gateway");
+  if (gateway) {
+    gateway.classList.remove("active-view");
+    gateway.style.display = "none";
   }
+
+  const splash = document.getElementById("splash-screen");
+  if (splash) splash.classList.remove("hidden");
+
+  if (typeof bootSystem === "function") bootSystem();
 }
 
+// ========================================================================
+// A partir daqui, mantenha a função apiCall e todo o resto do ficheiro intacto:
 async function apiCall(action, payload = {}) {
   const token = localStorage.getItem("MAESTRO_TOKEN") || localStorage.getItem("MAESTRO_EST_TOKEN");
 
