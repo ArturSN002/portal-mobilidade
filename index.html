@@ -2,31 +2,33 @@
 ---
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
+
   <title>Portal Maestro</title>
   <meta id="meta-theme-color" name="theme-color" content="#0A3D6B">
-  
+
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Maestro">
   <meta name="application-name" content="Maestro">
-  
+
   <link rel="manifest" href="manifest.json">
   <link id="apple-touch-icon" rel="apple-touch-icon" href="icone.png">
   <link rel="icon" type="image/png" href="icone.png">
-  
+
   <link rel="stylesheet" href="style.css?v=12.2">
-  
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js" defer></script>
 </head>
+
 <body>
 
   {% include modais.html %}
@@ -36,16 +38,17 @@
       <img id="ui-logo" src="icone.png" alt="Logo" class="hidden">
       <h1 id="ui-nome-sistema" class="brand-title">PORTAL MAESTRO</h1>
       <p id="ui-nome-setor" class="brand-subtitle">Acesso Estudantil</p>
-      
-      <button id="btn-config" class="icon-btn" onclick="abrirMenuConfiguracoes()" title="Configurações do Sistema">
+
+      <button id="btn-config" class="icon-btn" style="display: none;" onclick="abrirMenuConfiguracoes()" title="Configurações do Sistema">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-           <path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49-.12-.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+          <path
+            d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49-.12-.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" />
         </svg>
       </button>
     </header>
 
     <main class="app-content">
-      
+
       <div id="mural-avisos-header" class="section-title hidden">📌 AVISOS DA SEMANA</div>
       <div id="mural-avisos" class="avisos-container hidden"></div>
 
@@ -53,68 +56,68 @@
       {% include portal_estudante.html %}
       {% include portal_admin.html %}
 
-      <div id="view-painel-motorista" class="view-section hidden">
-          <div class="welcome-text">Central Logística do Motorista</div>
+      <div id="view-painel-motorista" class="view-section" style="display: none;">
+        <div class="welcome-text">Central Logística do Motorista</div>
 
-          <div class="menu-card primary-card" onclick="abrirModalSelecaoRota()">
-              <div class="icon">🚌</div>
-              <div class="info">
-                  <strong>Fluxo de Rotas</strong>
-                  <span>Iniciar ou finalizar viagem rastreada</span>
-              </div>
+        <div class="menu-card primary-card" onclick="abrirModalSelecaoRota()">
+          <div class="icon">🚌</div>
+          <div class="info">
+            <strong>Fluxo de Rotas</strong>
+            <span>Iniciar ou finalizar viagem rastreada</span>
           </div>
+        </div>
 
-          <div class="menu-card outline-card text-danger" onclick="uiDeclararSOS()">
-              <div class="icon">🚨</div>
-              <div class="info">
-                  <strong class="text-danger">SOS Avaria</strong>
-                  <span>Reportar problemas na frota</span>
-              </div>
+        <div class="menu-card outline-card text-danger" onclick="abrirModalSOS()">
+          <div class="icon">🚨</div>
+          <div class="info">
+            <strong class="text-danger">SOS Avaria</strong>
+            <span>Reportar problemas na frota</span>
           </div>
+        </div>
 
-          <div class="menu-card dark-card" onclick="iniciarScanner()">
-              <div class="icon">📷</div>
-              <div class="info">
-                  <strong>Modo Fiscalização</strong>
-                  <span>Ler QR Code do Estudante</span>
-              </div>
+        <div class="menu-card dark-card" onclick="iniciarScanner()">
+          <div class="icon">📷</div>
+          <div class="info">
+            <strong>Modo Fiscalização</strong>
+            <span>Ler QR Code do Estudante</span>
           </div>
+        </div>
       </div>
 
     </main>
 
     <footer class="app-footer">
-      <p id="ui-endereco" class="hidden"></p> 
-      <p id="ui-email" class="hidden"></p> 
-      <p id="ui-cnpj" class="hidden"></p> 
+      <p id="ui-endereco" class="hidden"></p>
+      <p id="ui-email" class="hidden"></p>
+      <p id="ui-cnpj" class="hidden"></p>
       <div class="watermark">⚡ POWERED BY MAESTRO</div>
     </footer>
   </div>
 
   <div id="modal-selecao-rota" class="bottom-sheet-overlay hidden">
-      <div class="bottom-sheet-content">
-          <div class="form-header">
-              <h2>Selecione o Veículo</h2>
-              <p>Apenas rotas do seu turno atual estão disponíveis.</p>
-          </div>
-          <label class="input-label">VEÍCULO / ROTA:</label>
-          <select id="select-frota-motorista" class="input-field"></select>
-          <button onclick="uiIniciarRota()" class="btn-solid" style="margin-top: 10px;">▶ INICIAR ROTA</button>
-          <button onclick="fecharModalSelecaoRota()" class="btn-text">Cancelar</button>
+    <div class="bottom-sheet-content">
+      <div class="form-header">
+        <h2>Selecione o Veículo</h2>
+        <p>Apenas rotas do seu turno atual estão disponíveis.</p>
       </div>
+      <label class="input-label">VEÍCULO / ROTA:</label>
+      <select id="select-frota-motorista" class="input-field"></select>
+      <button onclick="uiIniciarRota()" class="btn-solid" style="margin-top: 10px;">▶ INICIAR ROTA</button>
+      <button onclick="fecharModalSelecaoRota()" class="btn-text">Cancelar</button>
+    </div>
   </div>
 
   <div id="painel-viagem-ativa" style="display: none;">
-      <div class="viagem-status-container">
-          <div id="indicador-gps-mestre" class="bolinha-pulsante-verde"></div>
-          <p style="font-weight: 600; letter-spacing: 1px;">TRANSMISSÃO GPS MESTRE ATIVA</p>
-          <h1 id="viagem-placa-display">ABC-1234</h1>
-      </div>
+    <div class="viagem-status-container">
+      <div id="indicador-gps-mestre" class="bolinha-pulsante-verde"></div>
+      <p style="font-weight: 600; letter-spacing: 1px;">TRANSMISSÃO GPS MESTRE ATIVA</p>
+      <h1 id="viagem-placa-display">ABC-1234</h1>
+    </div>
 
-      <div class="viagem-botoes-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-          <button onclick="uiDeclararSOS()" class="btn-sos-gigante">🚨 SOS AVARIA</button>
-          <button onclick="uiFinalizarRota()" class="btn-finalizar-gigante">⏹ FINALIZAR ROTA</button>
-      </div>
+    <div class="viagem-botoes-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <button onclick="abrirModalSOS()" class="btn-sos-gigante">🚨 SOS AVARIA</button>
+      <button onclick="uiFinalizarRota()" class="btn-finalizar-gigante">⏹ FINALIZAR ROTA</button>
+    </div>
   </div>
 
   <div id="toast"></div>
@@ -130,37 +133,50 @@
 
   <div id="modal-configuracoes" class="bottom-sheet-overlay hidden">
     <div class="bottom-sheet-content" style="padding-bottom: 30px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
         <h3 style="margin: 0; font-size: 18px; color: var(--primary);">Configurações</h3>
-        <button onclick="fecharMenuConfiguracoes()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-sub);">✖</button>
+        <button onclick="fecharMenuConfiguracoes()"
+          style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-sub);">✖</button>
       </div>
-      
-      <div class="prefs-group" style="margin-top: 20px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+
+      <div class="prefs-group"
+        style="margin-top: 20px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
         <p class="input-label" style="margin-bottom: 15px; text-align: left;">PREFERÊNCIAS DO SISTEMA</p>
-        
-        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+
+        <div class="switch-row"
+          style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
           <p class="desc-xs" style="margin: 0; font-weight: 600;">🌗 Modo Escuro</p>
-          <label class="switch"><input type="checkbox" id="pref-dark" onchange="toggleDarkMode()"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="pref-dark" onchange="toggleDarkMode()"><span
+              class="slider"></span></label>
         </div>
-        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <div class="switch-row"
+          style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
           <p class="desc-xs" style="margin: 0; font-weight: 600;">🔔 Notificações da Secretaria</p>
-          <label class="switch"><input type="checkbox" id="pref-push" onchange="togglePref('push', this)"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="pref-push" onchange="togglePref('push', this)"><span
+              class="slider"></span></label>
         </div>
-        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <div class="switch-row"
+          style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
           <p class="desc-xs" style="margin: 0; font-weight: 600;">📍 Partilhar GPS (Ao Embarcar)</p>
-          <label class="switch"><input type="checkbox" id="pref-gps" onchange="togglePref('gps', this)"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="pref-gps" onchange="togglePref('gps', this)"><span
+              class="slider"></span></label>
         </div>
-        <div class="switch-row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+        <div class="switch-row"
+          style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
           <p class="desc-xs" style="margin: 0; font-weight: 600;">📷 Acesso à Câmera (Inscrição)</p>
-          <label class="switch"><input type="checkbox" id="pref-camera" onchange="togglePref('camera', this)"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="pref-camera" onchange="togglePref('camera', this)"><span
+              class="slider"></span></label>
         </div>
         <div class="switch-row" style="padding-bottom: 5px;">
           <p class="desc-xs" style="margin: 0; font-weight: 700; color: var(--accent);">✈️ Forçar Modo Offline</p>
-          <label class="switch"><input type="checkbox" id="pref-offline" onchange="togglePref('offline', this)"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="pref-offline" onchange="togglePref('offline', this)"><span
+              class="slider"></span></label>
         </div>
       </div>
 
-      <button class="menu-card outline-card" onclick="navegarPeloMenu('view-validador')" style="border-color: #0d9488; background: rgba(13,148,136,0.04); margin-top: 15px; margin-bottom: 10px; padding: 12px;">
+      <button class="menu-card outline-card" onclick="navegarPeloMenu('view-validador')"
+        style="border-color: #0d9488; background: rgba(13,148,136,0.04); margin-top: 15px; margin-bottom: 10px; padding: 12px;">
         <span class="icon" style="font-size: 24px; margin-right: 12px;">🛡️</span>
         <div class="info">
           <strong style="color: #0d9488; font-size: 14px;">Validar Documento</strong>
@@ -168,7 +184,8 @@
         </div>
       </button>
 
-      <button class="menu-card dark-card" onclick="navegarPeloMenu('view-login-fiscal')" style="margin-bottom: 15px; padding: 12px;">
+      <button class="menu-card dark-card" onclick="navegarPeloMenu('view-login-fiscal')"
+        style="margin-bottom: 15px; padding: 12px;">
         <span class="icon" style="font-size: 24px; margin-right: 12px;">🔐</span>
         <div class="info">
           <strong style="font-size: 14px;">Acesso da Secretaria</strong>
@@ -176,15 +193,17 @@
         </div>
       </button>
 
-      <div id="pwa-install-banner" class="banner-pwa" onclick="instalarPWA()" style="margin-top: 15px; margin-bottom: 0;">
-          <div class="icon">📱</div>
-          <div class="text">
-              <strong>Instalar Maestro</strong>
-              <span>Adicionar ao ecrã inicial</span>
-          </div>
+      <div id="pwa-install-banner" class="banner-pwa" onclick="instalarPWA()"
+        style="margin-top: 15px; margin-bottom: 0;">
+        <div class="icon">📱</div>
+        <div class="text">
+          <strong>Instalar Maestro</strong>
+          <span>Adicionar ao ecrã inicial</span>
+        </div>
       </div>
 
     </div>
   </div>
 </body>
+
 </html>
