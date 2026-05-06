@@ -17,11 +17,9 @@ async function bootSystem() {
       window.PWA_NOME = res.pwa.NOME;
       window.PWA_ICONE = res.pwa.ICONE;
 
-      // Temas Light/Dark
       window.THEME_LIGHT = { primary: res.ui.COR_PRIMARIA_LIGHT, secondary: res.ui.COR_SECUNDARIA_LIGHT, accent: res.ui.COR_DE_DESTAQUE_LIGHT, logo: res.ui.LOGO_LIGHT };
       window.THEME_DARK = { primary: res.ui.COR_PRIMARIA_DARK, secondary: res.ui.COR_SECUNDARIA_DARK, accent: res.ui.COR_DE_DESTAQUE_DARK, logo: res.ui.LOGO_DARK };
 
-      // Firebase Config Dinâmico "White-Label"
       if (res.firebase) {
         window.FIREBASE_CONFIG = {
           apiKey: res.firebase.API_KEY,
@@ -133,11 +131,21 @@ function switchView(viewId) {
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
+  // Ocultar Engrenagem no Hub e Login
+  const btnConfig = document.getElementById('btn-config');
+  if (btnConfig) {
+      if (viewId === 'view-hub' || viewId === 'view-login') {
+          btnConfig.classList.add('hidden');
+      } else {
+          btnConfig.classList.remove('hidden');
+      }
+  }
+
   const muralAvisos = document.getElementById('mural-avisos');
   const muralHeader = document.getElementById('mural-avisos-header');
 
   if (muralAvisos && muralAvisos.innerHTML.trim() !== '') {
-    if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu') {
+    if (viewId === 'view-hub' || viewId === 'view-admin-hub' || viewId === 'view-aluno-menu' || viewId === 'view-painel-motorista') {
       muralAvisos.classList.remove('hidden');
       if (muralHeader) muralHeader.classList.remove('hidden');
     } else {
@@ -319,7 +327,7 @@ window.onload = function () {
     document.body.classList.add('dark-theme');
   }
 
-  if(typeof checkClientGateway === 'function') checkClientGateway();
+  if (typeof checkClientGateway === 'function') checkClientGateway();
 
   const urlParams = new URLSearchParams(window.location.search);
   const idParam = urlParams.get('id');
@@ -331,7 +339,7 @@ window.onload = function () {
       switchView('view-validador');
       const inputHash = document.getElementById('input-hash-validador');
       if (inputHash) inputHash.value = validarParam.toUpperCase();
-      if(typeof verificarHashPublico === 'function') verificarHashPublico();
+      if (typeof verificarHashPublico === 'function') verificarHashPublico();
     }, 800);
   } else if (idParam || authParam === 'login') {
     setTimeout(() => {
@@ -429,136 +437,98 @@ let watchIdMotorista = null;
 let wakeLockMotorista = null;
 let ultimaTransmissaoMestre = 0;
 
-/**
- * Acionado quando o motorista clica em "Iniciar Rota" na interface.
- * @param {string} idOnibus - A placa do ônibus (ex: ABC-1234)
- */
 async function btnIniciarRotaMotorista(idOnibus) {
-    const emailMotorista = localStorage.getItem("MAESTRO_OPERADOR_EMAIL") || "motorista@desconhecido.com";
+  const emailMotorista = localStorage.getItem("MAESTRO_OPERADOR_EMAIL") || "motorista@desconhecido.com";
 
-    // 1. Avisa o Back-end (Google Apps Script)
-    const res = await apiCall("iniciarRotaMotorista", {
-        idOnibus: idOnibus,
-        usuarioLogadoId: emailMotorista
-    });
+  const res = await apiCall("iniciarRotaMotorista", {
+    idOnibus: idOnibus,
+    usuarioLogadoId: emailMotorista
+  });
 
-    if (res.sucesso) {
-        showToast("Rota iniciada! Modo Viagem ativado.", "success");
-
-        // 2. Aciona o Modo Viagem 100% Web PWA
-        await ativarModoViagemPWA(idOnibus, emailMotorista);
-
-        // 3. Atualizar a Interface Visual do Motorista
-        // renderizarEstadoPainelMotorista(true, idOnibus);
-    } else {
-        showToast("Erro ao iniciar rota: " + res.erro, "error");
-    }
+  if (res.sucesso) {
+    showToast("Rota iniciada! Modo Viagem ativado.", "success");
+    await ativarModoViagemPWA(idOnibus, emailMotorista);
+  } else {
+    showToast("Erro ao iniciar rota: " + res.erro, "error");
+  }
 }
 
-/**
- * Acionado quando o motorista clica em "Finalizar Rota".
- * @param {string} idOnibus - A placa do ônibus
- */
 async function btnFinalizarRotaMotorista(idOnibus) {
-    // 1. Avisa o Back-end para encerrar a viagem
-    const res = await apiCall("encerrarRotaManual", {
-        idOnibus: idOnibus
-    });
+  const res = await apiCall("encerrarRotaManual", {
+    idOnibus: idOnibus
+  });
 
-    if (res.sucesso) {
-        showToast("Rota encerrada com sucesso.", "info");
-
-        // 2. Desativa o Modo Viagem Web
-        desativarModoViagemPWA();
-
-        // 3. Atualizar a Interface
-        // renderizarEstadoPainelMotorista(false, null);
-    } else {
-        showToast("Erro ao finalizar rota: " + res.erro, "error");
-    }
+  if (res.sucesso) {
+    showToast("Rota encerrada com sucesso.", "info");
+    desativarModoViagemPWA();
+  } else {
+    showToast("Erro ao finalizar rota: " + res.erro, "error");
+  }
 }
 
-/**
- * Ativa o "Modo Viagem" no Front-end para o Motorista.
- * Mantém o ecrã ligado e transmite o GPS a cada 10 segundos.
- */
 async function ativarModoViagemPWA(idOnibus, emailMotorista) {
-    // 1. Aplicar a "Tela Preta" para poupar bateria e evitar burn-in
-    document.body.classList.add('modo-viagem-ativo');
-    
-    // 2. Solicitar Wake Lock (Manter ecrã ligado)
-    try {
-        if ('wakeLock' in navigator) {
-            wakeLockMotorista = await navigator.wakeLock.request('screen');
-            console.log("Wake Lock ativado: Ecrã permanecerá ligado.");
-            
-            // Se o utilizador minimizar e voltar, precisamos de pedir o Wake Lock novamente
-            document.addEventListener('visibilitychange', lidarComMudancaVisibilidade);
-        }
-    } catch (err) {
-        console.warn("Wake Lock não suportado ou falhou:", err);
-        showToast("Atenção: O ecrã poderá apagar-se neste dispositivo.", "warning");
-    }
+  document.body.classList.add('modo-viagem-ativo');
 
-    // 3. Iniciar Transmissão Contínua de GPS
-    if (navigator.geolocation) {
-        watchIdMotorista = navigator.geolocation.watchPosition(
-            (pos) => {
-                const agora = Date.now();
-                // Throttle: Só envia para a API a cada 10 segundos (10000 ms)
-                if (agora - ultimaTransmissaoMestre > 10000) {
-                    apiCall("atualizarGPSOnibus", {
-                        idOnibus: idOnibus,
-                        usuarioLogadoId: emailMotorista,
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude
-                    });
-                    ultimaTransmissaoMestre = agora;
-                    
-                    // Feedback visual discreto de que está a transmitir
-                    const indicador = document.getElementById('indicador-gps-mestre');
-                    if(indicador) indicador.style.opacity = (indicador.style.opacity == '1' ? '0.5' : '1');
-                }
-            },
-            (err) => console.error("Erro no GPS do Mestre:", err),
-            { enableHighAccuracy: true, maximumAge: 0 }
-        );
-    } else {
-        showToast("Geolocalização não suportada neste navegador.", "error");
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLockMotorista = await navigator.wakeLock.request('screen');
+      console.log("Wake Lock ativado: Ecrã permanecerá ligado.");
+      document.addEventListener('visibilitychange', lidarComMudancaVisibilidade);
     }
+  } catch (err) {
+    console.warn("Wake Lock não suportado ou falhou:", err);
+    showToast("Atenção: O ecrã poderá apagar-se neste dispositivo.", "warning");
+  }
+
+  if (navigator.geolocation) {
+    watchIdMotorista = navigator.geolocation.watchPosition(
+      (pos) => {
+        const agora = Date.now();
+        if (agora - ultimaTransmissaoMestre > 10000) {
+          apiCall("atualizarGPSOnibus", {
+            idOnibus: idOnibus,
+            usuarioLogadoId: emailMotorista,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          });
+          ultimaTransmissaoMestre = agora;
+
+          const indicador = document.getElementById('indicador-gps-mestre');
+          if (indicador) indicador.style.opacity = (indicador.style.opacity == '1' ? '0.5' : '1');
+        }
+      },
+      (err) => console.error("Erro no GPS do Mestre:", err),
+      { enableHighAccuracy: true, maximumAge: 0 }
+    );
+  } else {
+    showToast("Geolocalização não suportada neste navegador.", "error");
+  }
 }
 
-/**
- * Encerra o "Modo Viagem", limpa rastreios e liberta o ecrã.
- */
 function desativarModoViagemPWA() {
-    // Remover Tela Preta
-    document.body.classList.remove('modo-viagem-ativo');
-    
-    // Parar GPS
-    if (watchIdMotorista !== null) {
-        navigator.geolocation.clearWatch(watchIdMotorista);
-        watchIdMotorista = null;
-    }
-    
-    // Libertar Wake Lock
-    if (wakeLockMotorista !== null) {
-        wakeLockMotorista.release().then(() => {
-            wakeLockMotorista = null;
-            console.log("Wake Lock libertado.");
-        });
-    }
-    document.removeEventListener('visibilitychange', lidarComMudancaVisibilidade);
+  document.body.classList.remove('modo-viagem-ativo');
+
+  if (watchIdMotorista !== null) {
+    navigator.geolocation.clearWatch(watchIdMotorista);
+    watchIdMotorista = null;
+  }
+
+  if (wakeLockMotorista !== null) {
+    wakeLockMotorista.release().then(() => {
+      wakeLockMotorista = null;
+      console.log("Wake Lock libertado.");
+    });
+  }
+  document.removeEventListener('visibilitychange', lidarComMudancaVisibilidade);
 }
 
-// Reativa o Wake Lock caso a aba fique em background e volte
 async function lidarComMudancaVisibilidade() {
-    if (wakeLockMotorista === null && document.visibilityState === 'visible' && document.body.classList.contains('modo-viagem-ativo')) {
-        try {
-            wakeLockMotorista = await navigator.wakeLock.request('screen');
-            console.log("Wake Lock restaurado.");
-        } catch (err) {
-            console.warn("Falha ao restaurar Wake Lock:", err);
-        }
+  if (wakeLockMotorista === null && document.visibilityState === 'visible' && document.body.classList.contains('modo-viagem-ativo')) {
+    try {
+      wakeLockMotorista = await navigator.wakeLock.request('screen');
+      console.log("Wake Lock restaurado.");
+    } catch (err) {
+      console.warn("Falha ao restaurar Wake Lock:", err);
     }
+  }
 }
