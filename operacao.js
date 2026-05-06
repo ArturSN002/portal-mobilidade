@@ -314,11 +314,8 @@ let html5QrcodeScanner = null;
 
 function iniciarScanner() {
     document.getElementById('leitor-qr-container').classList.remove('hidden');
-    
-    const btnScanner = document.getElementById('btn-scanner');
-    const btnScannerNativo = document.getElementById('btn-scanner-nativo');
-    if (btnScanner) btnScanner.classList.add('hidden');
-    if (btnScannerNativo) btnScannerNativo.classList.add('hidden');
+    document.getElementById('btn-scanner').classList.add('hidden');
+    document.getElementById('btn-scanner-nativo').classList.add('hidden');
 
     if (html5QrcodeScanner) {
         html5QrcodeScanner.clear().catch(() => { });
@@ -334,11 +331,8 @@ function fecharScanner() {
         html5QrcodeScanner = null;
     }
     document.getElementById('leitor-qr-container').classList.add('hidden');
-    
-    const btnScanner = document.getElementById('btn-scanner');
-    const btnScannerNativo = document.getElementById('btn-scanner-nativo');
-    if (btnScanner) btnScanner.classList.remove('hidden');
-    if (btnScannerNativo) btnScannerNativo.classList.remove('hidden');
+    document.getElementById('btn-scanner').classList.remove('hidden');
+    document.getElementById('btn-scanner-nativo').classList.remove('hidden');
 }
 
 function aoLerQRCode(textoLido) {
@@ -398,7 +392,7 @@ async function lerQRCodePorFoto(event) {
 
 function fecharModoFiscalizacao() {
     fecharScanner();
-    switchView('view-admin-hub'); // Para Fiscais
+    switchView('view-admin-hub');
 }
 
 async function validarFiscal() {
@@ -701,6 +695,7 @@ async function enviarMensagemParaMural() {
 function abrirModalAvisosFiscal() {
     document.getElementById('modal-novo-aviso-fiscal').classList.remove('hidden');
 
+    // Reseta os campos
     document.getElementById('aviso-titulo-mural').value = '';
     document.getElementById('aviso-msg-mural').value = '';
     document.getElementById('aviso-titulo-direto').value = '';
@@ -1154,78 +1149,11 @@ function desenharGraficos(graficos) {
 }
 
 // ========================================================================
-// 12. MÓDULO DO MOTORISTA (PONTE VISUAL PWA E LÓGICA DE ROTAS)
+// 12. MÓDULO DO MOTORISTA (PONTE VISUAL PWA)
 // ========================================================================
 
+// Variável global temporária para guardar a placa do veículo em condução
 let veiculoConducaoAtual = "";
-
-/**
- * LÓGICA DE TURNOS: Identifica os turnos válidos com base na hora atual.
- */
-function obterTurnosAtuais() {
-    const agora = new Date();
-    const horaMinuto = (agora.getHours() * 60) + agora.getMinutes();
-    let turnos = [];
-
-    const dentro = (inicioH, inicioM, fimH, fimM) => {
-        return horaMinuto >= (inicioH * 60 + inicioM) && horaMinuto <= (fimH * 60 + fimM);
-    };
-
-    // Manhã: 04:30 às 07:00 || 12:00 às 13:30
-    if (dentro(4, 30, 7, 0) || dentro(12, 0, 13, 30)) turnos.push("MANHÃ");
-    
-    // Tarde: 11:00 às 13:30 || 18:00 às 19:30
-    if (dentro(11, 0, 13, 30) || dentro(18, 0, 19, 30)) turnos.push("TARDE");
-    
-    // Noite: 17:00 às 18:30 || 22:00 às 23:59 (cobre os turnos das 22h e das 23h)
-    if (dentro(17, 0, 18, 30) || dentro(22, 0, 23, 59)) turnos.push("NOITE");
-
-    return turnos;
-}
-
-function abrirModalSelecaoRota() {
-    document.getElementById('modal-selecao-rota').classList.add('active');
-    document.getElementById('modal-selecao-rota').classList.remove('hidden');
-    popularSelectFrotaMotorista();
-}
-
-function fecharModalSelecaoRota() {
-    document.getElementById('modal-selecao-rota').classList.remove('active');
-    setTimeout(() => {
-        document.getElementById('modal-selecao-rota').classList.add('hidden');
-    }, 300);
-}
-
-async function popularSelectFrotaMotorista() {
-    const select = document.getElementById("select-frota-motorista");
-    if (!select) return;
-
-    select.innerHTML = '<option value="" disabled selected>A verificar rotas do seu turno...</option>';
-    
-    const turnosValidos = obterTurnosAtuais();
-    
-    if (turnosValidos.length === 0) {
-        select.innerHTML = '<option value="" disabled selected>Fora do horário de operação.</option>';
-        return;
-    }
-
-    try {
-        const res = await apiCall("getFiltrosPush"); 
-        
-        select.innerHTML = '<option value="" disabled selected>Escolha o seu veículo...</option>';
-
-        if (res.sucesso && res.filtros && res.filtros.rotas) {
-            res.filtros.rotas.forEach(rota => {
-                const opt = document.createElement("option");
-                opt.value = rota;
-                opt.innerText = `${rota} (${turnosValidos.join(' / ')})`;
-                select.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        select.innerHTML = '<option value="" disabled selected>Erro ao carregar rotas.</option>';
-    }
-}
 
 async function uiIniciarRota() {
     const select = document.getElementById("select-frota-motorista");
@@ -1237,33 +1165,42 @@ async function uiIniciarRota() {
     }
 
     veiculoConducaoAtual = placa;
-    fecharModalSelecaoRota();
 
+    // 1. Chama a função central (que já criámos no main_core.js)
     await btnIniciarRotaMotorista(placa);
 
+    // 2. Atualiza a UI para o ecrã de viagem (Tela Preta)
     document.getElementById("viagem-placa-display").innerText = placa;
+
+    // 3. Esconde o painel normal e mostra o ecrã gigante do modo viagem
     document.getElementById("view-painel-motorista").style.display = "none";
     document.getElementById("painel-viagem-ativa").style.display = "flex";
 }
 
 async function uiFinalizarRota() {
     if (confirm("Tem a certeza que deseja finalizar a rota? O rastreio será interrompido e os alunos notificados.")) {
+
+        // 1. Chama a função central
         await btnFinalizarRotaMotorista(veiculoConducaoAtual);
 
+        // 2. Restaura a UI normal
         document.getElementById("painel-viagem-ativa").style.display = "none";
         document.getElementById("view-painel-motorista").style.display = "block";
 
+        // Limpa a placa e reseta o select
         veiculoConducaoAtual = "";
         document.getElementById("select-frota-motorista").value = "";
     }
 }
 
 function uiDeclararSOS() {
+    // Reutiliza o modal de SOS já existente no sistema do Fiscal
     if (typeof abrirModalSOS === "function") {
         abrirModalSOS();
+        // Pré-preenche a placa
         const inputSosOnibus = document.getElementById('sos-id-onibus');
-        if (inputSosOnibus) inputSosOnibus.value = veiculoConducaoAtual || '';
-        showToast("Selecione o motivo da avaria no painel.", "warning");
+        if (inputSosOnibus) inputSosOnibus.value = veiculoConducaoAtual;
+        showToast("Por favor, selecione o motivo da avaria no painel.", "warning");
     } else {
         showToast("Função de SOS acionada para " + veiculoConducaoAtual, "info");
     }
