@@ -1205,3 +1205,75 @@ function uiDeclararSOS() {
         showToast("Função de SOS acionada para " + veiculoConducaoAtual, "info");
     }
 }
+
+// ========================================================================
+// CORREÇÕES DO MODAL DE ROTAS (Resolver o Botão Estático)
+// ========================================================================
+function abrirModalSelecaoRota() {
+    const modal = document.getElementById('modal-selecao-rota');
+    if (!modal) return;
+    
+    // 1. Remove o hidden para o HTML existir na tela
+    modal.classList.remove('hidden');
+    
+    // 2. Força o navegador a recalcular o layout (Reflow) antes de animar
+    void modal.offsetWidth; 
+    
+    // 3. Aplica a classe que faz o modal subir suavemente
+    modal.classList.add('active');
+    
+    popularSelectFrotaMotorista();
+}
+
+function fecharModalSelecaoRota() {
+    const modal = document.getElementById('modal-selecao-rota');
+    if (!modal) return;
+    
+    modal.classList.remove('active'); // Desce o modal
+    
+    // Aguarda a animação terminar para esconder completamente
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+// ========================================================================
+// CORREÇÕES DO MODO FISCALIZAÇÃO (Reaproveitamento de Modelo)
+// ========================================================================
+
+// Esta função leva o Motorista/Moderador para o mesmo "terreno" do Fiscal antes de ligar a câmera
+function abrirModoFiscalizacaoGlobal() {
+    switchView('view-admin-hub'); // Entra no modelo existente
+    iniciarScanner();             // Liga a câmera
+}
+
+// Atualize a função de fechar existente para ter "memória" de onde o usuário veio
+function fecharModoFiscalizacao() {
+    fecharScanner();
+    
+    // Lê a patente do usuário para devolvê-lo ao painel correto
+    const nivel = localStorage.getItem("MAESTRO_OPERADOR_NIVEL") || "";
+    
+    if (nivel === "MOTORISTA") {
+        switchView('view-painel-motorista');
+    } else if (nivel === "MODERADOR") {
+        switchView('view-moderador');
+    } else {
+        switchView('view-admin-hub'); // Fiscais, Operadores e Supervisores
+    }
+}
+
+// ========================================================================
+// FUNÇÃO GLOBAL DE SAÍDA (LOGOUT)
+// ========================================================================
+function logoutOperadorGlobal() {
+    if (confirm("Tem certeza que deseja encerrar a sua sessão de trabalho?")) {
+        localStorage.removeItem("MAESTRO_TOKEN");
+        localStorage.removeItem("MAESTRO_OPERADOR_NIVEL");
+        localStorage.removeItem("MAESTRO_OPERADOR_NOME");
+        localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
+        
+        // Dá refresh na página para limpar a memória por completo
+        window.location.href = window.location.pathname; 
+    }
+}
