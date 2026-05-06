@@ -1212,25 +1212,25 @@ function uiDeclararSOS() {
 function abrirModalSelecaoRota() {
     const modal = document.getElementById('modal-selecao-rota');
     if (!modal) return;
-    
+
     // 1. Remove o hidden para o HTML existir na tela
     modal.classList.remove('hidden');
-    
+
     // 2. Força o navegador a recalcular o layout (Reflow) antes de animar
-    void modal.offsetWidth; 
-    
+    void modal.offsetWidth;
+
     // 3. Aplica a classe que faz o modal subir suavemente
     modal.classList.add('active');
-    
+
     popularSelectFrotaMotorista();
 }
 
 function fecharModalSelecaoRota() {
     const modal = document.getElementById('modal-selecao-rota');
     if (!modal) return;
-    
+
     modal.classList.remove('active'); // Desce o modal
-    
+
     // Aguarda a animação terminar para esconder completamente
     setTimeout(() => {
         modal.classList.add('hidden');
@@ -1238,95 +1238,116 @@ function fecharModalSelecaoRota() {
 }
 
 // ========================================================================
-// CORREÇÕES DO MODO FISCALIZAÇÃO (Reaproveitamento de Modelo)
-// ========================================================================
-
-// Esta função leva o Motorista/Moderador para o mesmo "terreno" do Fiscal antes de ligar a câmera
-// ========================================================================
-// CORREÇÃO: MODO FISCALIZAÇÃO (Redirecionamento Direto para a Câmara)
+// CORREÇÃO: MODO FISCALIZAÇÃO (Redirecionamento Global)
 // ========================================================================
 
 function abrirModoFiscalizacaoGlobal() {
-    // ERRO ANTERIOR: switchView('view-admin-hub');
-    // CORREÇÃO: Abre a tela isolada da câmara
-    switchView('view-fiscal'); 
+    // Leva qualquer operador para a tela isolada da câmara
+    switchView('view-fiscal');
     iniciarScanner();
 }
 
 function fecharModoFiscalizacao() {
     fecharScanner();
-    
-    // Lê a patente do operador para o devolver à tela de origem
-    const nivel = localStorage.getItem("MAESTRO_OPERADOR_NIVEL") || "";
-    
+
+    // Devolve o utilizador à tela correta baseada no nível guardado no login
+    const nivel = localStorage.getItem("MAESTRO_OP_NIVEL") || "";
+
     if (nivel === "MOTORISTA") {
         switchView('view-painel-motorista');
     } else if (nivel === "MODERADOR") {
         switchView('view-moderador');
     } else {
-        switchView('view-admin-hub');
+        switchView('view-admin-hub'); // Fiscais e Supervisores
     }
 }
 
 // ========================================================================
-// MELHORIA: SELEÇÃO DE ROTAS (Bloqueio Visual por Horário)
+// CONTROLO DO MODAL DE SELEÇÃO DE ROTA (Animação Corrigida)
 // ========================================================================
 
+function abrirModalSelecaoRota() {
+    const modal = document.getElementById('modal-selecao-rota');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    void modal.offsetWidth; // Força reflow para animação CSS
+    modal.classList.add('active');
+
+    popularSelectFrotaMotorista();
+}
+
+function fecharModalSelecaoRota() {
+    const modal = document.getElementById('modal-selecao-rota');
+    if (!modal) return;
+    modal.classList.remove('active');
+    setTimeout(() => { modal.classList.add('hidden'); }, 300);
+}
+
 // ========================================================================
-// MELHORIA: SELEÇÃO DE ROTAS ABSOLUTA E BLOQUEIO POR HORÁRIO
+// LOGÍSTICA DE ROTAS: Filtro por E-mail e Turno (Horário)
 // ========================================================================
+
+function obterTurnosAtuais() {
+    const agora = new Date();
+    const horaMinuto = (agora.getHours() * 60) + agora.getMinutes();
+    let turnos = [];
+
+    const dentro = (inicioH, inicioM, fimH, fimM) => {
+        return horaMinuto >= (inicioH * 60 + inicioM) && horaMinuto <= (fimH * 60 + fimM);
+    };
+
+    if (dentro(4, 30, 7, 0) || dentro(12, 0, 13, 30)) turnos.push("MANHÃ");
+    if (dentro(11, 0, 13, 30) || dentro(18, 0, 19, 30)) turnos.push("TARDE");
+    if (dentro(17, 0, 18, 30) || dentro(22, 0, 23, 59)) turnos.push("NOITE");
+
+    return turnos;
+}
 
 async function popularSelectFrotaMotorista() {
     const select = document.getElementById("select-frota-motorista");
     if (!select) return;
 
-    select.innerHTML = '<option value="" disabled selected>A consultar as suas rotas no servidor...</option>';
-    
-    const turnosValidos = obterTurnosAtuais(); // Ex: ["MANHÃ"]
+    select.innerHTML = '<option value="" disabled selected>A consultar veículos...</option>';
+
+    const turnosValidos = obterTurnosAtuais();
     const emailMotorista = localStorage.getItem("MAESTRO_OPERADOR_EMAIL");
 
-    if (!emailMotorista) {
-        select.innerHTML = '<option value="" disabled selected>Erro: E-mail não identificado.</option>';
-        return;
-    }
-
     try {
-        // AGORA CHAMA A NOVA ROTA DO BACK-END
-        const res = await apiCall("getRotasMotorista", { usuarioLogadoId: emailMotorista }); 
-        
+        // Chamada ao back-end filtrando pelo e-mail logado
+        const res = await apiCall("getRotasMotorista", { usuarioLogadoId: emailMotorista });
+
         select.innerHTML = '<option value="" disabled selected>Escolha o seu veículo...</option>';
 
         if (res.sucesso && res.rotas && res.rotas.length > 0) {
             res.rotas.forEach(rota => {
                 const rotaUpper = rota.toUpperCase();
                 let turnoDaRota = "";
-                
-                // Inferir o turno pelo nome da rota (ex: "MZJ-3059 (Noite)")
+
                 if (rotaUpper.includes("MANHÃ") || rotaUpper.includes("MANHA")) turnoDaRota = "MANHÃ";
                 else if (rotaUpper.includes("TARDE")) turnoDaRota = "TARDE";
                 else if (rotaUpper.includes("NOITE")) turnoDaRota = "NOITE";
-                
+
                 const opt = document.createElement("option");
-                opt.value = rota; 
-                
-                // Aplica a lógica visual de bloqueio/disponibilidade
+                opt.value = rota;
+
                 if (turnoDaRota === "" || turnosValidos.includes(turnoDaRota)) {
                     opt.innerText = `🟢 [DISPONÍVEL] ${rota}`;
                     opt.disabled = false;
                 } else {
                     opt.innerText = `🔴 [FORA DO HORÁRIO] ${rota}`;
-                    opt.disabled = true; // Impede a seleção
+                    opt.disabled = true;
                 }
-                
                 select.appendChild(opt);
             });
         } else {
-            select.innerHTML = '<option value="" disabled selected>Nenhum veículo vinculado ao seu e-mail.</option>';
+            select.innerHTML = '<option value="" disabled selected>Nenhum veículo vinculado a si.</option>';
         }
     } catch (e) {
-        select.innerHTML = '<option value="" disabled selected>Erro ao carregar as suas rotas.</option>';
+        select.innerHTML = '<option value="" disabled selected>Erro ao carregar rotas.</option>';
     }
 }
+
 
 // ========================================================================
 // FUNÇÃO GLOBAL DE SAÍDA (LOGOUT)
@@ -1337,8 +1358,8 @@ function logoutOperadorGlobal() {
         localStorage.removeItem("MAESTRO_OPERADOR_NIVEL");
         localStorage.removeItem("MAESTRO_OPERADOR_NOME");
         localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
-        
+
         // Dá refresh na página para limpar a memória por completo
-        window.location.href = window.location.pathname; 
+        window.location.href = window.location.pathname;
     }
 }
