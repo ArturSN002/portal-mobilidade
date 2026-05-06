@@ -1272,35 +1272,44 @@ function fecharModoFiscalizacao() {
 // MELHORIA: SELEÇÃO DE ROTAS (Bloqueio Visual por Horário)
 // ========================================================================
 
+// ========================================================================
+// MELHORIA: SELEÇÃO DE ROTAS ABSOLUTA E BLOQUEIO POR HORÁRIO
+// ========================================================================
+
 async function popularSelectFrotaMotorista() {
     const select = document.getElementById("select-frota-motorista");
     if (!select) return;
 
-    select.innerHTML = '<option value="" disabled selected>A verificar as suas rotas...</option>';
+    select.innerHTML = '<option value="" disabled selected>A consultar as suas rotas no servidor...</option>';
     
-    const turnosValidos = obterTurnosAtuais(); // Ex: ["MANHÃ"], ou ["TARDE", "NOITE"]
+    const turnosValidos = obterTurnosAtuais(); // Ex: ["MANHÃ"]
     const emailMotorista = localStorage.getItem("MAESTRO_OPERADOR_EMAIL");
 
+    if (!emailMotorista) {
+        select.innerHTML = '<option value="" disabled selected>Erro: E-mail não identificado.</option>';
+        return;
+    }
+
     try {
-        // Futuramente: apiCall("getRotasMotorista", { email: emailMotorista }) para trazer só as do motorista logado
-        const res = await apiCall("getFiltrosPush"); 
+        // AGORA CHAMA A NOVA ROTA DO BACK-END
+        const res = await apiCall("getRotasMotorista", { usuarioLogadoId: emailMotorista }); 
         
         select.innerHTML = '<option value="" disabled selected>Escolha o seu veículo...</option>';
 
-        if (res.sucesso && res.filtros && res.filtros.rotas) {
-            res.filtros.rotas.forEach(rota => {
+        if (res.sucesso && res.rotas && res.rotas.length > 0) {
+            res.rotas.forEach(rota => {
                 const rotaUpper = rota.toUpperCase();
                 let turnoDaRota = "";
                 
-                // Inferir o turno pelo nome da rota
+                // Inferir o turno pelo nome da rota (ex: "MZJ-3059 (Noite)")
                 if (rotaUpper.includes("MANHÃ") || rotaUpper.includes("MANHA")) turnoDaRota = "MANHÃ";
                 else if (rotaUpper.includes("TARDE")) turnoDaRota = "TARDE";
                 else if (rotaUpper.includes("NOITE")) turnoDaRota = "NOITE";
                 
                 const opt = document.createElement("option");
-                opt.value = rota;
+                opt.value = rota; 
                 
-                // Verifica se a rota pertence ao turno atual
+                // Aplica a lógica visual de bloqueio/disponibilidade
                 if (turnoDaRota === "" || turnosValidos.includes(turnoDaRota)) {
                     opt.innerText = `🟢 [DISPONÍVEL] ${rota}`;
                     opt.disabled = false;
@@ -1311,9 +1320,11 @@ async function popularSelectFrotaMotorista() {
                 
                 select.appendChild(opt);
             });
+        } else {
+            select.innerHTML = '<option value="" disabled selected>Nenhum veículo vinculado ao seu e-mail.</option>';
         }
     } catch (e) {
-        select.innerHTML = '<option value="" disabled selected>Erro ao carregar rotas.</option>';
+        select.innerHTML = '<option value="" disabled selected>Erro ao carregar as suas rotas.</option>';
     }
 }
 
