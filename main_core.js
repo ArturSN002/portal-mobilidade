@@ -132,14 +132,16 @@ function switchView(viewId) {
   }
 
   // LÓGICA DA ENGRENAGEM: Ocultar APENAS nas telas de município ou login. 
-  // Nunca ocultar no 'view-hub' (que é o menu principal).
+  // Usa-se style.display para forçar a renderização sobre classes.
   const btnConfig = document.getElementById('btn-config');
   if (btnConfig) {
-      if (viewId === 'view-gateway' || viewId === 'view-municipio' || viewId === 'view-login') {
-          btnConfig.classList.add('hidden');
-      } else {
-          btnConfig.classList.remove('hidden');
-      }
+    if (viewId === 'view-gateway' || viewId === 'view-municipio' || viewId === 'view-login') {
+      btnConfig.style.display = 'none';
+      btnConfig.classList.remove('hidden'); 
+    } else {
+      btnConfig.style.display = 'flex';
+      btnConfig.classList.remove('hidden');
+    }
   }
 
   const muralAvisos = document.getElementById('mural-avisos');
