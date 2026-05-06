@@ -73,8 +73,8 @@ body {
   background: none;
   border: none;
   color: var(--primary);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +84,7 @@ body {
   position: absolute;
   right: 10px;
   top: 10px;
-  z-index: 10;
+  z-index: 100;
 }
 
 .icon-btn:hover {
@@ -92,8 +92,11 @@ body {
 }
 
 .icon-btn svg {
-  width: 24px;
-  height: 24px;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px;
+  min-height: 26px;
+  flex-shrink: 0;
 }
 
 body.dark-theme .icon-btn {
