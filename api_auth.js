@@ -1,5 +1,5 @@
 // ========================================================================
-// 0. CONFIGURAÇÕES DA API V9.2.8 (SALA DAS MÁQUINAS E RBAC)
+// 0. CONFIGURAÇÕES DA API V11.1 (SALA DAS MÁQUINAS E RBAC)
 // ========================================================================
 
 // ⚠️ ATENÇÃO: COLE AQUI O LINK DO SEU DEPLOY DO GOOGLE APPS SCRIPT (/exec)
@@ -85,7 +85,7 @@ async function apiCall(action, payload = {}) {
   }
 
   let tokenToUse = localStorage.getItem("MAESTRO_OP_TOKEN");
-  // ... resto do código da função
+  // Se houver um token de estudante na chamada, a lógica nativa injeta-o no payload. 
   
   try {
     const response = await fetch(GAS_URL, {
@@ -135,7 +135,7 @@ async function apiCall(action, payload = {}) {
 }
 
 // ========================================================================
-// 3. MÓDULO DE SEGURANÇA SAAS & RBAC (V9.2.8)
+// 3. MÓDULO DE SEGURANÇA SAAS & RBAC (V11.1)
 // ========================================================================
 const TOKEN_KEY = "MAESTRO_OP_TOKEN";
 const CACHE_LISTA_KEY = "MAESTRO_CACHE_FISCAL"; 
@@ -143,7 +143,6 @@ const CACHE_STATS_KEY = "MAESTRO_DASH_STATS_V9";
 const NIVEL_KEY = "MAESTRO_OP_NIVEL";
 let timeoutSessaoID = null;
 
-// V9.2.8: Correção visual. Se for só "OPERADOR", não deve ver os botões de Campo (Fiscalização, SOS)
 function aplicarFiltrosRBAC() {
     const nivelAtual = localStorage.getItem(NIVEL_KEY) || "FISCAL";
     const nivelUpper = nivelAtual.toUpperCase().trim();
@@ -197,30 +196,51 @@ async function fazerLoginOperador() {
       return;
     }
 
+    // Grava credenciais básicas
     localStorage.setItem(TOKEN_KEY, resAuth.token);
     localStorage.setItem(NIVEL_KEY, resAuth.nivel);
-    document.getElementById('nome-operador-logado').innerText = resAuth.nome;
+    localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email); // NOVO: Essencial para o GPS Mestre
+    
+    const elNomeOperador = document.getElementById('nome-operador-logado');
+    if (elNomeOperador) elNomeOperador.innerText = resAuth.nome;
     
     if (resAuth.stats) {
       localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(resAuth.stats));
     }
     
-    btn.innerText = "A BAIXAR DADOS...";
-
-    const resCache = await apiCall("sincronizarCacheFiscal");
-    if (resCache.sucesso) {
-       localStorage.setItem(CACHE_LISTA_KEY, JSON.stringify(resCache.dados));
-       if (resCache.sementeDia) localStorage.setItem("MAESTRO_SEMENTE_FISCAL", resCache.sementeDia);
-       
+    const nivel = String(resAuth.nivel).toUpperCase().trim();
+    
+    // --------------------------------------------------------
+    // NOVO: REDIRECIONAMENTO POR PATENTE (MOTORISTA VS SECRETARIA)
+    // --------------------------------------------------------
+    if (nivel === "MOTORISTA") {
        btn.innerText = "AUTENTICAR";
        btn.disabled = false;
        document.getElementById('fiscal-email').value = "";
        document.getElementById('fiscal-senha').value = "";
        
        armarRelogioSessaoLocal();
-       aplicarFiltrosRBAC(); 
-       switchView('view-admin-hub');
-       showToast("Sessão iniciada como: " + resAuth.nivel, "success");
+       switchView('view-painel-motorista');
+       popularSelectFrotaMotorista(email);
+       showToast("Sessão iniciada como: MOTORISTA", "success");
+       
+    } else {
+       btn.innerText = "A BAIXAR DADOS...";
+       const resCache = await apiCall("sincronizarCacheFiscal");
+       if (resCache.sucesso) {
+          localStorage.setItem(CACHE_LISTA_KEY, JSON.stringify(resCache.dados));
+          if (resCache.sementeDia) localStorage.setItem("MAESTRO_SEMENTE_FISCAL", resCache.sementeDia);
+          
+          btn.innerText = "AUTENTICAR";
+          btn.disabled = false;
+          document.getElementById('fiscal-email').value = "";
+          document.getElementById('fiscal-senha').value = "";
+          
+          armarRelogioSessaoLocal();
+          aplicarFiltrosRBAC(); 
+          switchView('view-admin-hub');
+          showToast("Sessão iniciada como: " + resAuth.nivel, "success");
+       }
     }
 
   } catch(err) {
@@ -240,11 +260,18 @@ async function verificarSessaoAtiva() {
     if (sessao.sucesso && sessao.valido) {
       armarRelogioSessaoLocal();
       aplicarFiltrosRBAC(); 
-      if(document.getElementById('id-fiscal') && document.getElementById('id-fiscal').value !== "") {
-        switchView('view-fiscal'); 
-        validarFiscal();
+      
+      const nivel = String(localStorage.getItem(NIVEL_KEY) || "").toUpperCase().trim();
+      
+      // NOVO: Avalia se o restauro da sessão foi de um Motorista
+      if (nivel === "MOTORISTA") {
+          switchView('view-painel-motorista');
+          popularSelectFrotaMotorista(localStorage.getItem("MAESTRO_OPERADOR_EMAIL"));
+      } else if(document.getElementById('id-fiscal') && document.getElementById('id-fiscal').value !== "") {
+          switchView('view-fiscal'); 
+          validarFiscal();
       } else {
-        switchView('view-admin-hub'); 
+          switchView('view-admin-hub'); 
       }
     }
   } catch(e) {}
@@ -265,20 +292,28 @@ async function encerrarSessaoOperador(silencioso = false) {
   localStorage.removeItem(CACHE_LISTA_KEY);
   localStorage.removeItem(CACHE_STATS_KEY);
   localStorage.removeItem(NIVEL_KEY); 
-  localStorage.removeItem("MAESTRO_SEMENTE_FISCAL"); 
+  localStorage.removeItem("MAESTRO_SEMENTE_FISCAL");
+  localStorage.removeItem("MAESTRO_OPERADOR_EMAIL"); 
   if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
-  fecharScanner();
   
-  document.getElementById('nome-operador-logado').innerText = "Operador";
-  document.getElementById('res-fiscal').innerHTML = "";
-  document.getElementById('id-fiscal').value = "";
+  if (typeof fecharScanner === "function") fecharScanner();
+  if (typeof desativarModoViagemPWA === "function") desativarModoViagemPWA(); // Garante o fim do GPS se o motorista der logout
+  
+  const elNome = document.getElementById('nome-operador-logado');
+  if (elNome) elNome.innerText = "Operador";
+  
+  const elResFis = document.getElementById('res-fiscal');
+  if (elResFis) elResFis.innerHTML = "";
+  
+  const elIdFis = document.getElementById('id-fiscal');
+  if (elIdFis) elIdFis.value = "";
   
   switchView('view-hub');
   if(!silencioso) showToast("Sessão encerrada.", "info");
 }
 
 // ========================================================================
-// 4. RECUPERAÇÃO DE SENHA (OPERADOR)
+// 4. RECUPERAÇÃO DE SENHA E UTILITÁRIOS (OPERADOR)
 // ========================================================================
 let emailRecuperacaoTemporario = "";
 
@@ -371,3 +406,34 @@ async function confirmarRedefinicaoSenha() {
   }
 }
 
+/**
+ * ----------------------------------------------------------------------------
+ * AUXILIAR: Popula o Select de Veículos no Painel do Motorista
+ * ----------------------------------------------------------------------------
+ * Procura na base de dados as rotas ativas chamando "getFiltrosPush".
+ * @param {string} email - E-mail do motorista logado
+ */
+async function popularSelectFrotaMotorista(email) {
+    const select = document.getElementById("select-frota-motorista");
+    if (!select) return;
+
+    try {
+        const res = await apiCall("getFiltrosPush"); 
+        
+        if (res.sucesso && res.filtros && res.filtros.rotas && res.filtros.rotas.length > 0) {
+            select.innerHTML = '<option value="" disabled selected>Escolha o seu veículo...</option>';
+            
+            res.filtros.rotas.forEach(rota => {
+                const opt = document.createElement("option");
+                opt.value = rota; // Valor enviado para o back-end (Placa ou Rota)
+                opt.innerText = rota;
+                select.appendChild(opt);
+            });
+        } else {
+            select.innerHTML = '<option value="" disabled selected>Nenhum veículo disponível</option>';
+        }
+    } catch (e) {
+        console.error("Erro ao carregar a frota:", e);
+        select.innerHTML = '<option value="" disabled selected>Erro ao carregar frota</option>';
+    }
+}
