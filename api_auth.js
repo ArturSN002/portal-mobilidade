@@ -14,7 +14,6 @@ async function checkClientGateway() {
   const gateway = document.getElementById("view-gateway");
 
   if (savedUrl) {
-    // Utilizador já tem cliente salvo. Força a tela de splash.
     if (splash) {
       splash.style.display = "flex";
       splash.style.opacity = "1";
@@ -27,7 +26,6 @@ async function checkClientGateway() {
     GAS_URL = savedUrl;
     if (typeof bootSystem === "function") bootSystem();
   } else {
-    // Novo utilizador. Esconde splash suavemente e mostra seleção.
     if (splash) {
       splash.style.opacity = "0";
       setTimeout(() => { splash.style.display = "none"; }, 300);
@@ -43,7 +41,6 @@ async function checkClientGateway() {
       setTimeout(() => gateway.classList.add("active-view"), 10);
     }
 
-    // RESTAURADO: Povoa a caixa de seleção com as cidades
     const select = document.getElementById("client-select");
     if (select) {
       select.innerHTML = "";
@@ -57,7 +54,6 @@ async function checkClientGateway() {
   }
 }
 
-// RESTAURADO: Função ativada pelo botão "Acessar Sistema"
 function salvarCliente() {
   const select = document.getElementById("client-select");
   if (!select) return;
@@ -79,10 +75,14 @@ function salvarCliente() {
   if (typeof bootSystem === "function") bootSystem();
 }
 
-// ========================================================================
-// A partir daqui, mantenha a função apiCall e todo o resto do ficheiro intacto:
 async function apiCall(action, payload = {}) {
-  const token = localStorage.getItem("MAESTRO_TOKEN") || localStorage.getItem("MAESTRO_EST_TOKEN");
+  let token = localStorage.getItem("MAESTRO_TOKEN") || localStorage.getItem("MAESTRO_EST_TOKEN");
+  
+  // Proteção Estrita contra corrupção de Token no LocalStorage
+  if (token === "undefined" || token === "null") {
+    token = null;
+    localStorage.removeItem("MAESTRO_TOKEN");
+  }
 
   const body = {
     action: action,
@@ -96,13 +96,15 @@ async function apiCall(action, payload = {}) {
       body: JSON.stringify(body)
     });
     const data = await response.json();
-
+    
+    // O Intercetor que dispara a Ejeção apenas em casos reais de 401
     if (data.status === 401) {
-      showToast("Sessão expirada. Por favor, entre novamente.", "error");
+      console.error("401 Unauthorized na rota:", action);
+      showToast("Sessão expirada por segurança. Entre novamente.", "error");
       encerrarSessaoOperador();
       return { sucesso: false, erro: "Sessão expirada" };
     }
-
+    
     return data;
   } catch (error) {
     console.error("Erro na chamada API:", error);
@@ -133,15 +135,27 @@ async function fazerLoginOperador() {
     const res = await apiCall("fazerLoginOperador", { email, senha });
 
     if (res.sucesso) {
-      // PADRONIZAÇÃO DE VARIÁVEIS DE SESSÃO
-      localStorage.setItem("MAESTRO_TOKEN", res.token);
-      localStorage.setItem("MAESTRO_OP_NOME", res.nome);
-      localStorage.setItem("MAESTRO_OP_NIVEL", res.nivel.toUpperCase());
+      // Captura inteligente do token (Cobre múltiplas versões possíveis do seu Apps Script)
+      const tokenValido = res.token || res.tokenSessao || res.hashAcesso || res.sessionToken;
+      
+      if (!tokenValido) {
+        showToast("Erro Crítico: O servidor não gerou o token.", "error");
+        resBox.innerText = "Falha de comunicação com o autorizador. Token ausente.";
+        resBox.classList.remove('hidden');
+        btn.innerText = "AUTENTICAR";
+        btn.disabled = false;
+        return;
+      }
+
+      localStorage.setItem("MAESTRO_TOKEN", tokenValido);
+      localStorage.setItem("MAESTRO_OP_NOME", res.nome || "Operador");
+      localStorage.setItem("MAESTRO_OP_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
       localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email);
 
-      document.getElementById('nome-operador-logado').innerText = res.nome;
-
-      configurarInterfacePorNivel(res.nivel.toUpperCase());
+      const elNome = document.getElementById('nome-operador-logado');
+      if (elNome) elNome.innerText = res.nome || "Operador";
+      
+      configurarInterfacePorNivel(String(res.nivel || "OPERADOR").toUpperCase());
       showToast("Acesso concedido!", "success");
     } else {
       resBox.innerText = res.erro || "Login Inválido.";
@@ -167,16 +181,16 @@ function configurarInterfacePorNivel(nivel) {
   if (nivel === "MOTORISTA") {
     switchView('view-painel-motorista');
     if (typeof popularSelectFrotaMotorista === 'function') popularSelectFrotaMotorista();
-  }
+  } 
   else if (nivel === "FISCAL") {
     switchView('view-admin-hub');
     if (mCampo) mCampo.classList.remove('hidden');
-  }
+  } 
   else if (nivel === "OPERADOR" || nivel === "SUPERVISOR") {
     switchView('view-admin-hub');
     if (mCampo) mCampo.classList.remove('hidden');
     if (mSecretaria) mSecretaria.classList.remove('hidden');
-  }
+  } 
   else if (nivel === "MODERADOR") {
     switchView('view-admin-hub');
     if (mCampo) mCampo.classList.remove('hidden');
@@ -190,10 +204,13 @@ function verificarSessaoAtiva() {
   const nivel = localStorage.getItem("MAESTRO_OP_NIVEL");
   const nome = localStorage.getItem("MAESTRO_OP_NOME");
 
-  if (token && nivel) {
+  if (token && nivel && token !== "undefined" && token !== "null") {
     const elNome = document.getElementById('nome-operador-logado');
     if (elNome) elNome.innerText = nome || "Operador";
     configurarInterfacePorNivel(nivel);
+  } else {
+    // Se detetar lixo na verificação de arranque, limpa proativamente
+    localStorage.removeItem("MAESTRO_TOKEN");
   }
 }
 
@@ -202,8 +219,7 @@ function encerrarSessaoOperador() {
   localStorage.removeItem("MAESTRO_OP_NOME");
   localStorage.removeItem("MAESTRO_OP_NIVEL");
   localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
-
-  // Limpeza total e reset de visualização
+  
   window.location.reload();
 }
 
