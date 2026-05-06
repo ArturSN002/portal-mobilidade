@@ -814,3 +814,64 @@ body.modo-viagem-ativo #painel-viagem-ativa {
     height: 100vh;
     width: 100vw;
 }
+
+/* ======================================================================== */
+/* 15. ESTILOS PARA O MODO VIAGEM DO MOTORISTA (TELA PRETA ANTI BURN-IN)    */
+/* ======================================================================== */
+
+.bolinha-pulsante-verde {
+    width: 20px;
+    height: 20px;
+    background-color: #00ff00;
+    border-radius: 50%;
+    margin-bottom: 15px;
+    box-shadow: 0 0 15px #00ff00;
+    animation: piscar 2s infinite;
+}
+
+@keyframes piscar {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.viagem-status-container {
+    color: #444; /* Escuro para evitar marca d'água no ecrã OLED */
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.viagem-status-container h1 {
+    color: #555;
+    font-size: 3.5em;
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
+.btn-sos-gigante, .btn-finalizar-gigante {
+    width: 90vw;
+    max-width: 400px;
+    padding: 25px;
+    font-size: 1.3em;
+    font-weight: 800;
+    border-radius: 12px;
+    border: none;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.btn-sos-gigante:active, .btn-finalizar-gigante:active {
+    transform: scale(0.95);
+}
+
+.btn-sos-gigante {
+    background-color: #6b0000;
+    color: #ff9999;
+}
+
+.btn-finalizar-gigante {
+    background-color: #222;
+    color: #888;
+    border: 2px solid #444;
+}
