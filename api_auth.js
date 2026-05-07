@@ -5,7 +5,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbwTfSw-M1f_VP899Zs2dCFbxoikQfc5w1AFdkjR0IIRTmHQdcGTw9sHdYvZHPL_95iRJw/exec",
+  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbxrAFh2o-7f4ClWPxGRttQSlp56lziATBMvux4esN-_ILRr2Vq8ufoRcCTgwfZmbJcswQ/exec",
 };
 
 async function checkClientGateway() {
@@ -97,8 +97,8 @@ async function apiCall(action, payload = {}) {
     });
     const data = await response.json();
     
-    // O Intercetor que dispara a Ejeção apenas em casos reais de 401
-    if (data.status === 401) {
+    // O Intercetor corrigido (dentro de apiCall)
+    if (data.status === 401 && action !== "invalidarTokenSessao") {
       console.error("401 Unauthorized na rota:", action);
       showToast("Sessão expirada por segurança. Entre novamente.", "error");
       encerrarSessaoOperador();
