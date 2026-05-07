@@ -118,59 +118,6 @@ async function apiCall(action, payload = {}) {
 // 1. AUTENTICAÇÃO DE OPERADORES (FISCAL / MOTORISTA / ADMIN)
 // ========================================================================
 
-async function fazerLoginOperador() {
-  const email = document.getElementById('fiscal-email').value.trim();
-  const senha = document.getElementById('fiscal-senha').value.trim();
-  const btn = document.getElementById('btn-login-fiscal');
-  const resBox = document.getElementById('res-login-fiscal');
-
-  if (!email || !senha) {
-    showToast("Preencha todos os campos.", "error");
-    return;
-  }
-
-  btn.innerText = "A AUTENTICAR...";
-  btn.disabled = true;
-  resBox.classList.add('hidden');
-
-  try {
-    const res = await apiCall("fazerLoginOperador", { email, senha });
-
-    if (res.sucesso) {
-      // Captura inteligente do token (Cobre múltiplas versões possíveis do seu Apps Script)
-      const tokenValido = res.token || res.tokenSessao || res.hashAcesso || res.sessionToken;
-      
-      if (!tokenValido) {
-        showToast("Erro Crítico: O servidor não gerou o token.", "error");
-        resBox.innerText = "Falha de comunicação com o autorizador. Token ausente.";
-        resBox.classList.remove('hidden');
-        btn.innerText = "AUTENTICAR";
-        btn.disabled = false;
-        return;
-      }
-
-      localStorage.setItem("MAESTRO_TOKEN", tokenValido);
-      localStorage.setItem("MAESTRO_OP_NOME", res.nome || "Operador");
-      localStorage.setItem("MAESTRO_OP_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
-      localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email);
-
-      const elNome = document.getElementById('nome-operador-logado');
-      if (elNome) elNome.innerText = res.nome || "Operador";
-      
-      configurarInterfacePorNivel(String(res.nivel || "OPERADOR").toUpperCase());
-      showToast("Acesso concedido!", "success");
-    } else {
-      resBox.innerText = res.erro || "Login Inválido.";
-      resBox.classList.remove('hidden');
-    }
-  } catch (e) {
-    showToast("Erro de ligação.", "error");
-  } finally {
-    btn.innerText = "AUTENTICAR";
-    btn.disabled = false;
-  }
-}
-
 function configurarInterfacePorNivel(nivel) {
   const mCampo = document.getElementById('menu-grupo-campo');
   const mSecretaria = document.getElementById('menu-grupo-secretaria');
@@ -333,78 +280,49 @@ async function fazerLoginOperador() {
   const resBox = document.getElementById('res-login-fiscal');
 
   if (!email || !senha) {
-    resBox.innerText = "Preencha o e-mail e a palavra-passe.";
-    resBox.classList.remove('hidden');
+    showToast("Preencha todos os campos.", "error");
     return;
   }
 
-  btn.innerText = "A VALIDAR...";
+  btn.innerText = "A AUTENTICAR...";
   btn.disabled = true;
   resBox.classList.add('hidden');
 
   try {
-    const resAuth = await apiCall("fazerLoginOperador", { email: email, senha: senha });
+    const res = await apiCall("fazerLoginOperador", { email, senha });
 
-    if (!resAuth.sucesso) {
-      btn.innerText = "AUTENTICAR";
-      btn.disabled = false;
-      resBox.innerText = resAuth.erro;
-      resBox.classList.remove('hidden');
-      return;
-    }
-
-    // Grava credenciais básicas
-    localStorage.setItem(TOKEN_KEY, resAuth.token);
-    localStorage.setItem(NIVEL_KEY, resAuth.nivel);
-    localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email); // NOVO: Essencial para o GPS Mestre
-
-    const elNomeOperador = document.getElementById('nome-operador-logado');
-    if (elNomeOperador) elNomeOperador.innerText = resAuth.nome;
-
-    if (resAuth.stats) {
-      localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(resAuth.stats));
-    }
-
-    const nivel = String(resAuth.nivel).toUpperCase().trim();
-
-    // --------------------------------------------------------
-    // NOVO: REDIRECIONAMENTO POR PATENTE (MOTORISTA VS SECRETARIA)
-    // --------------------------------------------------------
-    if (nivel === "MOTORISTA") {
-      btn.innerText = "AUTENTICAR";
-      btn.disabled = false;
-      document.getElementById('fiscal-email').value = "";
-      document.getElementById('fiscal-senha').value = "";
-
-      armarRelogioSessaoLocal();
-      switchView('view-painel-motorista');
-      popularSelectFrotaMotorista(email);
-      showToast("Sessão iniciada como: MOTORISTA", "success");
-
-    } else {
-      btn.innerText = "A BAIXAR DADOS...";
-      const resCache = await apiCall("sincronizarCacheFiscal");
-      if (resCache.sucesso) {
-        localStorage.setItem(CACHE_LISTA_KEY, JSON.stringify(resCache.dados));
-        if (resCache.sementeDia) localStorage.setItem("MAESTRO_SEMENTE_FISCAL", resCache.sementeDia);
-
+    if (res.sucesso) {
+      // Captura inteligente do token
+      const tokenValido = res.token || res.tokenSessao || res.hashAcesso || res.sessionToken;
+      
+      if (!tokenValido) {
+        showToast("Erro Crítico: O servidor não gerou o token.", "error");
+        resBox.innerText = "Falha de comunicação com o autorizador. Token ausente.";
+        resBox.classList.remove('hidden');
         btn.innerText = "AUTENTICAR";
         btn.disabled = false;
-        document.getElementById('fiscal-email').value = "";
-        document.getElementById('fiscal-senha').value = "";
-
-        armarRelogioSessaoLocal();
-        aplicarFiltrosRBAC();
-        switchView('view-admin-hub');
-        showToast("Sessão iniciada como: " + resAuth.nivel, "success");
+        return;
       }
-    }
 
-  } catch (err) {
+      localStorage.setItem("MAESTRO_TOKEN", tokenValido);
+      localStorage.setItem("MAESTRO_OP_NOME", res.nome || "Operador");
+      localStorage.setItem("MAESTRO_OP_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
+      localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email);
+
+      const elNome = document.getElementById('nome-operador-logado');
+      if (elNome) elNome.innerText = res.nome || "Operador";
+      
+      configurarInterfacePorNivel(String(res.nivel || "OPERADOR").toUpperCase());
+      showToast("Acesso concedido!", "success");
+    } else {
+      resBox.innerText = res.erro || "Login Inválido.";
+      resBox.classList.remove('hidden');
+    }
+  } catch (e) {
+    showToast("Erro de ligação.", "error");
+  } finally {
     btn.innerText = "AUTENTICAR";
     btn.disabled = false;
-    resBox.innerText = "Erro de conexão com a API.";
-    resBox.classList.remove('hidden');
   }
 }
 
