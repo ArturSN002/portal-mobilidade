@@ -219,6 +219,9 @@ function encerrarSessaoOperador() {
   localStorage.removeItem("MAESTRO_OP_NIVEL");
   localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
 
+  // CRITICAL FIX: Destroy the view memory to prevent the session loop
+  sessionStorage.removeItem('MAESTRO_LAST_VIEW');
+
   window.location.reload();
 }
 
