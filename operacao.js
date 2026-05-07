@@ -974,8 +974,9 @@ async function carregarDashboard() {
     } else {
         showToast("A extrair dados para o Dashboard...", "info");
         try {
-            const res = await apiCall("getDashboardStats");
-            if (!res.sucesso) return;
+        const res = await apiCall("getDashboardStats");
+        if (!res.sucesso) return; // <--- O ASSASSINO SILENCIOSO
+        // ... gera os gráficos
             localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
             window.dadosBI = res.stats.dataMart || [];
             renderizarDashboardUI(res.stats);
