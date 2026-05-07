@@ -337,3 +337,52 @@
           <button class="btn-solid dark-bg" style="margin-top: 15px;" onclick="switchView('view-admin-hub')">Voltar ao Menu</button>
         </div>
       </section>
+
+      <div id="view-painel-motorista" class="view-section" style="display: none;">
+        <div class="welcome-text">Central Logística do Motorista</div>
+
+        <button class="menu-card primary-card" onclick="abrirModalSelecaoRota()">
+          <div class="icon">🚌</div>
+          <div class="info">
+            <strong>Fluxo de Rotas</strong>
+            <span>Iniciar ou finalizar viagem rastreada</span>
+          </div>
+        </button>
+
+        <button class="menu-card outline-card text-danger" onclick="abrirModalSOS()">
+          <div class="icon">🚨</div>
+          <div class="info">
+            <strong class="text-danger">SOS Avaria</strong>
+            <span>Reportar problemas na frota</span>
+          </div>
+        </button>
+
+        <button class="menu-card dark-card" onclick="abrirModoFiscalizacaoGlobal()">
+          <div class="icon">📷</div>
+          <div class="info">
+            <strong>Modo Fiscalização</strong>
+            <span>Ler QR Code do Estudante</span>
+          </div>
+        </button>
+
+        <button class="menu-card outline-card text-danger" style="margin-top: 15px; border-color: var(--danger); background: rgba(239,68,68,0.04);" onclick="encerrarSessaoOperador()">
+          <div class="icon">🚪</div>
+          <div class="info">
+            <strong class="text-danger">Sair do Sistema</strong>
+            <span>Encerrar sessão de trabalho</span>
+          </div>
+        </button>
+      </div>
+
+      <div id="painel-viagem-ativa" style="display: none;">
+        <div class="viagem-status-container">
+          <div id="indicador-gps-mestre" class="bolinha-pulsante-verde"></div>
+          <p style="font-weight: 600; letter-spacing: 1px;">TRANSMISSÃO GPS MESTRE ATIVA</p>
+          <h1 id="viagem-placa-display">ABC-1234</h1>
+        </div>
+
+        <div class="viagem-botoes-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <button onclick="abrirModalSOS()" class="btn-sos-gigante">🚨 SOS AVARIA</button>
+          <button onclick="uiFinalizarRota()" class="btn-finalizar-gigante">⏹ FINALIZAR ROTA</button>
+        </div>
+      </div>
