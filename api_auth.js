@@ -5,7 +5,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbwtgodaHD-C8zzzLfca8T8HIP_dTiJzpAGQjje7b2QkAYcZ2rTcxu4kwVxt6oPqbpfOHQ/exec",
+  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbyG5vqWLXxU4kLQFPqzRFIwbcKsVlzY6I25wzQ1SSQ4ZYkka-iWL1T1AxzV3aW3H7krAQ/exec",
 };
 
 async function checkClientGateway() {
@@ -97,20 +97,22 @@ async function apiCall(action, payload = {}) {
     });
     const data = await response.json();
     
-    // O Intercetor corrigido (dentro de apiCall)
+    // O Intercetor corrigido para quebrar loops infinitos
     if (data.status === 401 && action !== "invalidarTokenSessao") {
       console.error("401 Unauthorized na rota:", action);
-      showToast("Sessão expirada por segurança. Entre novamente.", "error");
-      encerrarSessaoOperador();
+      
+      // Limpa a memória para evitar que o lixo cause novos erros
+      localStorage.removeItem("MAESTRO_TOKEN");
+      
+      showToast("Sessão encerrada. Por favor, entre novamente.", "error");
+      
+      // Aguarda um pouco para o usuário ler o aviso e reinicia de forma limpa
+      setTimeout(() => {
+          window.location.reload();
+      }, 2000);
+      
       return { sucesso: false, erro: "Sessão expirada" };
     }
-    
-    return data;
-  } catch (error) {
-    console.error("Erro na chamada API:", error);
-    return { sucesso: false, erro: "Falha na ligação ao servidor." };
-  }
-}
 
 // ========================================================================
 // 1. AUTENTICAÇÃO DE OPERADORES (FISCAL / MOTORISTA / ADMIN)
