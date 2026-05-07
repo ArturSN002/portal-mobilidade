@@ -933,84 +933,76 @@ async function votarNoMural(idMensagem, tipoVoto) {
 // ========================================================================
 // 11. MOTOR DO DASHBOARD ANALÍTICO E BI
 // ========================================================================
-let myCharts = {};
+let myCharts = {}; 
 
 function mudarAbaDashboard(aba) {
-    ['logistica', 'noturno', 'inclusao', 'analise'].forEach(t => {
-        document.getElementById('tab-' + t).classList.remove('active');
-        document.getElementById('dash-area-' + t).classList.add('hidden');
-    });
-    document.getElementById('tab-' + aba).classList.add('active');
-    document.getElementById('dash-area-' + aba).classList.remove('hidden');
-
-    if (aba === 'analise') {
-        renderizarDashboardBI();
-    }
+  ['logistica', 'noturno', 'inclusao', 'analise'].forEach(t => {
+    document.getElementById('tab-' + t).classList.remove('active');
+    document.getElementById('dash-area-' + t).classList.add('hidden');
+  });
+  document.getElementById('tab-' + aba).classList.add('active');
+  document.getElementById('dash-area-' + aba).classList.remove('hidden');
+  
+  if (aba === 'analise') {
+     renderizarDashboardBI(); 
+  }
 }
 
-const CACHE_STATS_KEY = "MAESTRO_DASH_STATS";
-
 async function carregarDashboard() {
-    const cachedStatsRaw = localStorage.getItem(CACHE_STATS_KEY);
-
-    if (cachedStatsRaw) {
-        const st = JSON.parse(cachedStatsRaw);
-        window.dadosBI = st.dataMart || [];
-        renderizarDashboardUI(st);
-        switchView('view-dashboard');
-        gerarChipsDinamicos();
-
-        apiCall("getDashboardStats").then(res => {
-            if (res.sucesso) {
-                localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
-                window.dadosBI = res.stats.dataMart || [];
-                renderizarDashboardUI(res.stats);
-                gerarChipsDinamicos();
-                if (document.getElementById('tab-analise').classList.contains('active')) renderizarDashboardBI();
-            }
-        }).catch(e => {
-            // Silencioso
-        });
-    } else {
-        showToast("A extrair dados para o Dashboard...", "info");
-        try {
-            const res = await apiCall("getDashboardStats");
-            
-            // CORREÇÃO: Tratamento de erro visível na interface em vez de retorno silencioso
-            if (!res.sucesso) { 
-                showToast("Erro no servidor: " + res.erro, "error"); 
-                return; 
-            } 
-            
+  const cachedStatsRaw = localStorage.getItem(CACHE_STATS_KEY);
+  
+  if (cachedStatsRaw) {
+    const st = JSON.parse(cachedStatsRaw);
+    window.dadosBI = st.dataMart || []; 
+    renderizarDashboardUI(st);
+    switchView('view-dashboard');
+    gerarChipsDinamicos(); 
+    
+    apiCall("getDashboardStats").then(res => {
+        if (res.sucesso) {
             localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
             window.dadosBI = res.stats.dataMart || [];
-            renderizarDashboardUI(res.stats);
-            switchView('view-dashboard');
-            gerarChipsDinamicos();
-        } catch (err) {
-            showToast("Falha de conexão com os dados analíticos.", "error");
+            renderizarDashboardUI(res.stats); 
+            gerarChipsDinamicos(); 
+            if (document.getElementById('tab-analise').classList.contains('active')) renderizarDashboardBI();
         }
+    }).catch(e => {
+        // Silencioso
+    });
+  } else {
+    showToast("A extrair dados para o Dashboard...", "info");
+    try {
+      const res = await apiCall("getDashboardStats");
+      if (!res.sucesso) return;
+      localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
+      window.dadosBI = res.stats.dataMart || [];
+      renderizarDashboardUI(res.stats);
+      switchView('view-dashboard');
+      gerarChipsDinamicos();
+    } catch(err) {
+      showToast("Falha de conexão com os dados analíticos.", "error");
     }
+  }
 }
 
 function renderizarDashboardUI(stats) {
-    document.getElementById('kpi-ativos').innerText = stats.kpis.ativos;
-    document.getElementById('kpi-pendentes').innerText = stats.kpis.pendentes;
-    document.getElementById('kpi-retidos').innerText = stats.kpis.retidos;
-    document.getElementById('kpi-suspensos').innerText = stats.kpis.suspensos;
+  document.getElementById('kpi-ativos').innerText = stats.kpis.ativos;
+  document.getElementById('kpi-pendentes').innerText = stats.kpis.pendentes;
+  document.getElementById('kpi-retidos').innerText = stats.kpis.retidos;
+  document.getElementById('kpi-suspensos').innerText = stats.kpis.suspensos;
 
-    const ocrUsado = stats.consumo?.ocr?.usado || 0;
-    const ocrLimite = stats.consumo?.ocr?.limite || 100;
-    const pctIA = Math.round((ocrUsado / ocrLimite) * 100);
+  const ocrUsado = stats.consumo?.ocr?.usado || 0;
+  const ocrLimite = stats.consumo?.ocr?.limite || 100;
+  const pctIA = Math.round((ocrUsado / ocrLimite) * 100);
+  
+  const barraIA = document.getElementById('bar-ia-usage');
+  if (document.getElementById('kpi-ia-text')) {
+      document.getElementById('kpi-ia-text').innerText = `${ocrUsado} / ${ocrLimite}`;
+      barraIA.style.width = Math.min(pctIA, 100) + "%";
+      barraIA.style.background = pctIA > 80 ? "var(--danger)" : "var(--accent)";
+  }
 
-    const barraIA = document.getElementById('bar-ia-usage');
-    if (document.getElementById('kpi-ia-text')) {
-        document.getElementById('kpi-ia-text').innerText = `${ocrUsado} / ${ocrLimite}`;
-        barraIA.style.width = Math.min(pctIA, 100) + "%";
-        barraIA.style.background = pctIA > 80 ? "var(--danger)" : "var(--accent)";
-    }
-
-    desenharGraficos(stats.graficos);
+  desenharGraficos(stats.graficos);
 }
 
 const mapaDias = {
@@ -1027,7 +1019,7 @@ function normalizarDia(texto) {
     for (let chave in mapaDias) {
         if (t.includes(chave)) return mapaDias[chave];
     }
-    return texto.trim();
+    return texto.trim(); 
 }
 
 function gerarChipsDinamicos() {
@@ -1038,12 +1030,12 @@ function gerarChipsDinamicos() {
     let dias = new Set();
 
     window.dadosBI.forEach(aluno => {
-        if (aluno.i) aluno.i.split(',').forEach(v => { if (v.trim()) instituicoes.add(v.trim()); });
-        if (aluno.t) aluno.t.split(',').forEach(v => { if (v.trim()) turnos.add(v.trim()); });
-        if (aluno.d) {
+        if(aluno.i) aluno.i.split(',').forEach(v => { if(v.trim()) instituicoes.add(v.trim()); });
+        if(aluno.t) aluno.t.split(',').forEach(v => { if(v.trim()) turnos.add(v.trim()); });
+        if(aluno.d) {
             aluno.d.split(',').forEach(v => {
                 let diaLimpo = normalizarDia(v);
-                if (diaLimpo) dias.add(diaLimpo);
+                if(diaLimpo) dias.add(diaLimpo);
             });
         }
     });
@@ -1059,13 +1051,13 @@ function gerarChipsDinamicos() {
     };
 
     const contInst = document.getElementById('container-chips-inst');
-    if (contInst) contInst.innerHTML = criarHTMLChips(instituicoes, "bi_inst");
+    if(contInst) contInst.innerHTML = criarHTMLChips(instituicoes, "bi_inst");
 
     const contTurno = document.getElementById('container-chips-turno');
-    if (contTurno) contTurno.innerHTML = criarHTMLChips(turnos, "bi_turno");
+    if(contTurno) contTurno.innerHTML = criarHTMLChips(turnos, "bi_turno");
 
     const contDia = document.getElementById('container-chips-dia');
-    if (contDia) contDia.innerHTML = criarHTMLChips(dias, "bi_dia");
+    if(contDia) contDia.innerHTML = criarHTMLChips(dias, "bi_dia");
 }
 
 function toggleChip(element) {
@@ -1075,86 +1067,87 @@ function toggleChip(element) {
 
 function renderizarDashboardBI() {
     if (!window.dadosBI || window.dadosBI.length === 0) return;
-
+    
     const getActiveChips = (name) => Array.from(document.querySelectorAll(`span.chip-filter[data-group="${name}"].chip-active`)).map(el => el.getAttribute('data-value'));
-
+    
     const fInst = getActiveChips("bi_inst");
     const fTurno = getActiveChips("bi_turno");
     const fDia = getActiveChips("bi_dia");
     const eixoX = document.getElementById("bi_eixo_x") ? document.getElementById("bi_eixo_x").value : "i";
-
+    
     let dadosFiltrados = window.dadosBI.filter(aluno => {
         let passaInst = fInst.length === 0 || fInst.some(i => (aluno.i || "").includes(i));
         let passaTurno = fTurno.length === 0 || fTurno.some(t => (aluno.t || "").includes(t));
-
+        
         let passaDia = fDia.length === 0;
         if (!passaDia && aluno.d) {
-            let diasDoAlunoNormalizados = aluno.d.split(',').map(d => normalizarDia(d));
-            passaDia = fDia.some(diaEscolhido => diasDoAlunoNormalizados.includes(diaEscolhido));
+             let diasDoAlunoNormalizados = aluno.d.split(',').map(d => normalizarDia(d));
+             passaDia = fDia.some(diaEscolhido => diasDoAlunoNormalizados.includes(diaEscolhido));
         }
-
+        
         return passaInst && passaTurno && passaDia;
     });
-
+    
     document.getElementById("bi_total").innerText = dadosFiltrados.length;
-
+    
     let contagemGrafico = {};
     dadosFiltrados.forEach(aluno => {
         let stringBruta = aluno[eixoX] || "Sem Registo";
         let partes = stringBruta.split(',').map(p => p.trim()).filter(p => p !== "");
-
+        
         if (partes.length === 0) {
-            contagemGrafico["Sem Registo"] = (contagemGrafico["Sem Registo"] || 0) + 1;
+             contagemGrafico["Sem Registo"] = (contagemGrafico["Sem Registo"] || 0) + 1;
         } else {
-            partes.forEach(parte => {
-                let chaveFinal = (eixoX === 'd') ? normalizarDia(parte) : parte;
-                contagemGrafico[chaveFinal] = (contagemGrafico[chaveFinal] || 0) + 1;
-            });
+             partes.forEach(parte => {
+                 let chaveFinal = (eixoX === 'd') ? normalizarDia(parte) : parte;
+                 contagemGrafico[chaveFinal] = (contagemGrafico[chaveFinal] || 0) + 1;
+             });
         }
     });
-
+    
     const dadosOrdenados = extrairEOrdenar(contagemGrafico);
     renderChart('chart-bi', 'bar', dadosOrdenados.labels, dadosOrdenados.data, '#F59E0B', { indexAxis: 'x' });
 }
 
 function renderChart(canvasId, type, labels, data, colors, options = {}) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return;
-    if (myCharts[canvasId]) {
-        myCharts[canvasId].destroy();
-    }
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (myCharts[canvasId]) {
+      myCharts[canvasId].destroy();
+  }
+  
+  Chart.defaults.color = '#aaaaaa';
+  Chart.defaults.borderColor = '#333333';
 
-    Chart.defaults.color = '#aaaaaa';
-    Chart.defaults.borderColor = '#333333';
-
-    const defaultOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } };
-    myCharts[canvasId] = new Chart(ctx, { type: type, data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderRadius: (type === 'bar' ? 4 : 0), borderWidth: 0 }] }, options: Object.assign(defaultOptions, options) });
+  const defaultOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } };
+  myCharts[canvasId] = new Chart(ctx, { type: type, data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderRadius: (type === 'bar' ? 4 : 0), borderWidth: 0 }] }, options: Object.assign(defaultOptions, options) });
 }
 
 function extrairEOrdenar(obj) {
-    const arr = Object.keys(obj).map(key => ({ label: key, value: obj[key] }));
-    arr.sort((a, b) => b.value - a.value);
-    return { labels: arr.map(item => item.label), data: arr.map(item => item.value) };
+  const arr = Object.keys(obj).map(key => ({ label: key, value: obj[key] }));
+  arr.sort((a, b) => b.value - a.value);
+  return { labels: arr.map(item => item.label), data: arr.map(item => item.value) };
 }
 
 function desenharGraficos(graficos) {
-    const baseColor = '#3B82F6';
-    const st = graficos.status;
-    renderChart('chart-status', 'doughnut', ["Ativos", "Pendentes", "Retidos (Humana)", "Cancelados/Suspensos"], [st["Ativos"] || 0, st["Pendentes"] || 0, st["Retidos (Humana)"] || 0, st["Cancelados/Suspensos"] || 0], ['#10B981', '#FBBF24', '#F97316', '#EF4444'], { plugins: { legend: { display: true, position: 'right', labels: { color: '#ddd', boxWidth: 12 } } } });
-    const inst = extrairEOrdenar(graficos.instituicoes); renderChart('chart-instituicoes', 'bar', inst.labels, inst.data, baseColor, { indexAxis: 'y' });
-    const dias = extrairEOrdenar(graficos.dias); renderChart('chart-dias', 'bar', dias.labels, dias.data, baseColor, { indexAxis: 'y' });
-    const rotas = extrairEOrdenar(graficos.rotas); renderChart('chart-rotas', 'bar', rotas.labels, rotas.data, baseColor, { indexAxis: 'y' });
-    const turnos = extrairEOrdenar(graficos.turnos); renderChart('chart-turnos', 'bar', turnos.labels, turnos.data, baseColor);
+  const baseColor = '#3B82F6'; 
+  const st = graficos.status;
+  renderChart('chart-status', 'doughnut', ["Ativos", "Pendentes", "Retidos (Humana)", "Cancelados/Suspensos"], [st["Ativos"]||0, st["Pendentes"]||0, st["Retidos (Humana)"]||0, st["Cancelados/Suspensos"]||0], ['#10B981', '#FBBF24', '#F97316', '#EF4444'], { plugins: { legend: { display: true, position: 'right', labels: {color: '#ddd', boxWidth: 12} } } });
+  const inst = extrairEOrdenar(graficos.instituicoes); renderChart('chart-instituicoes', 'bar', inst.labels, inst.data, baseColor, { indexAxis: 'y' });
+  const dias = extrairEOrdenar(graficos.dias); renderChart('chart-dias', 'bar', dias.labels, dias.data, baseColor, { indexAxis: 'y' });
+  const rotas = extrairEOrdenar(graficos.rotas); renderChart('chart-rotas', 'bar', rotas.labels, rotas.data, baseColor, { indexAxis: 'y' });
+  const turnos = extrairEOrdenar(graficos.turnos); renderChart('chart-turnos', 'bar', turnos.labels, turnos.data, baseColor); 
 
-    if (graficos.noturno) {
-        const adesao = extrairEOrdenar(graficos.noturno.adesao); renderChart('chart-adesao-23h', 'doughnut', adesao.labels, adesao.data, ['#FBBF24', '#333333'], { plugins: { legend: { display: true, position: 'bottom', labels: { color: '#ddd', boxWidth: 12 } } } });
-        const bairros = extrairEOrdenar(graficos.noturno.bairros); renderChart('chart-bairros-23h', 'bar', bairros.labels, bairros.data, '#F97316', { indexAxis: 'y' });
-    }
+  if(graficos.noturno) {
+    const adesao = extrairEOrdenar(graficos.noturno.adesao); renderChart('chart-adesao-23h', 'doughnut', adesao.labels, adesao.data, ['#FBBF24', '#333333'], { plugins: { legend: { display: true, position: 'bottom', labels: {color: '#ddd', boxWidth: 12} } } });
+    const bairros = extrairEOrdenar(graficos.noturno.bairros); renderChart('chart-bairros-23h', 'bar', bairros.labels, bairros.data, '#F97316', { indexAxis: 'y' }); 
+  }
 
-    const renderInclusao = (canvas, objData) => renderChart(canvas, 'bar', ['Sim', 'Não'], [objData['Sim'] || 0, objData['Não'] || 0], ['#10B981', '#333']);
-    renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
-    renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
+  const renderInclusao = (canvas, objData) => renderChart(canvas, 'bar', ['Sim', 'Não'], [objData['Sim'] || 0, objData['Não'] || 0], ['#10B981', '#333']);
+  renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
+  renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
+
 
 // ========================================================================
 // 12. MÓDULO DO MOTORISTA (PONTE VISUAL PWA)
