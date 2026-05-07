@@ -948,6 +948,8 @@ function mudarAbaDashboard(aba) {
     }
 }
 
+const CACHE_STATS_KEY = "MAESTRO_DASH_STATS";
+
 async function carregarDashboard() {
     const cachedStatsRaw = localStorage.getItem(CACHE_STATS_KEY);
 
