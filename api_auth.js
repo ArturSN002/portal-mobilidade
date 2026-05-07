@@ -148,30 +148,6 @@ function configurarInterfacePorNivel(nivel) {
   }
 }
 
-function verificarSessaoAtiva() {
-  const token = localStorage.getItem("MAESTRO_TOKEN");
-  const nivel = localStorage.getItem("MAESTRO_OP_NIVEL");
-  const nome = localStorage.getItem("MAESTRO_OP_NOME");
-
-  if (token && nivel && token !== "undefined" && token !== "null") {
-    const elNome = document.getElementById('nome-operador-logado');
-    if (elNome) elNome.innerText = nome || "Operador";
-    configurarInterfacePorNivel(nivel);
-  } else {
-    // Se detetar lixo na verificação de arranque, limpa proativamente
-    localStorage.removeItem("MAESTRO_TOKEN");
-  }
-}
-
-function encerrarSessaoOperador() {
-  localStorage.removeItem("MAESTRO_TOKEN");
-  localStorage.removeItem("MAESTRO_OP_NOME");
-  localStorage.removeItem("MAESTRO_OP_NIVEL");
-  localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
-  
-  window.location.reload();
-}
-
 // ========================================================================
 // 2. RECUPERAÇÃO DE SENHA
 // ========================================================================
@@ -326,30 +302,28 @@ async function fazerLoginOperador() {
   }
 }
 
-async function verificarSessaoAtiva() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return;
+function verificarSessaoAtiva() {
+  const token = localStorage.getItem("MAESTRO_TOKEN");
+  const nivel = localStorage.getItem("MAESTRO_OP_NIVEL");
+  const nome = localStorage.getItem("MAESTRO_OP_NOME");
 
-  try {
-    const sessao = await apiCall("validarTokenSessao");
-    if (sessao.sucesso && sessao.valido) {
-      armarRelogioSessaoLocal();
-      aplicarFiltrosRBAC();
+  if (token && nivel && token !== "undefined" && token !== "null") {
+    const elNome = document.getElementById('nome-operador-logado');
+    if (elNome) elNome.innerText = nome || "Operador";
+    configurarInterfacePorNivel(nivel);
+  } else {
+    // Se detetar lixo na verificação de arranque, limpa proativamente
+    localStorage.removeItem("MAESTRO_TOKEN");
+  }
+}
 
-      const nivel = String(localStorage.getItem(NIVEL_KEY) || "").toUpperCase().trim();
-
-      // NOVO: Avalia se o restauro da sessão foi de um Motorista
-      if (nivel === "MOTORISTA") {
-        switchView('view-painel-motorista');
-        popularSelectFrotaMotorista(localStorage.getItem("MAESTRO_OPERADOR_EMAIL"));
-      } else if (document.getElementById('id-fiscal') && document.getElementById('id-fiscal').value !== "") {
-        switchView('view-fiscal');
-        validarFiscal();
-      } else {
-        switchView('view-admin-hub');
-      }
-    }
-  } catch (e) { }
+function encerrarSessaoOperador() {
+  localStorage.removeItem("MAESTRO_TOKEN");
+  localStorage.removeItem("MAESTRO_OP_NOME");
+  localStorage.removeItem("MAESTRO_OP_NIVEL");
+  localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
+  
+  window.location.reload();
 }
 
 function armarRelogioSessaoLocal() {
