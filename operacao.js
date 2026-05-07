@@ -974,9 +974,14 @@ async function carregarDashboard() {
     } else {
         showToast("A extrair dados para o Dashboard...", "info");
         try {
-        const res = await apiCall("getDashboardStats");
-        if (!res.sucesso) return; // <--- O ASSASSINO SILENCIOSO
-        // ... gera os gráficos
+            const res = await apiCall("getDashboardStats");
+            
+            // CORREÇÃO: Tratamento de erro visível na interface em vez de retorno silencioso
+            if (!res.sucesso) { 
+                showToast("Erro no servidor: " + res.erro, "error"); 
+                return; 
+            } 
+            
             localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
             window.dadosBI = res.stats.dataMart || [];
             renderizarDashboardUI(res.stats);
