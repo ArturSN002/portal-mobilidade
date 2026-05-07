@@ -78,7 +78,6 @@ function salvarCliente() {
 async function apiCall(action, payload = {}) {
   let token = localStorage.getItem("MAESTRO_TOKEN") || localStorage.getItem("MAESTRO_EST_TOKEN");
   
-  // Proteção Estrita contra corrupção de Token no LocalStorage
   if (token === "undefined" || token === "null") {
     token = null;
     localStorage.removeItem("MAESTRO_TOKEN");
@@ -97,26 +96,78 @@ async function apiCall(action, payload = {}) {
     });
     const data = await response.json();
     
-    // O Intercetor corrigido para quebrar loops infinitos
     if (data.status === 401 && action !== "invalidarTokenSessao") {
       console.error("401 Unauthorized na rota:", action);
-      
-      // Limpa a memória para evitar que o lixo cause novos erros
       localStorage.removeItem("MAESTRO_TOKEN");
-      
       showToast("Sessão encerrada. Por favor, entre novamente.", "error");
-      
-      // Aguarda um pouco para o usuário ler o aviso e reinicia de forma limpa
       setTimeout(() => {
           window.location.reload();
       }, 2000);
-      
       return { sucesso: false, erro: "Sessão expirada" };
     }
+    
+    return data;
+  } catch (error) {
+    console.error("Erro na chamada API:", error);
+    return { sucesso: false, erro: "Falha na ligação ao servidor." };
+  }
+}
 
 // ========================================================================
 // 1. AUTENTICAÇÃO DE OPERADORES (FISCAL / MOTORISTA / ADMIN)
 // ========================================================================
+
+async function fazerLoginOperador() {
+  const email = document.getElementById('fiscal-email').value.trim();
+  const senha = document.getElementById('fiscal-senha').value.trim();
+  const btn = document.getElementById('btn-login-fiscal');
+  const resBox = document.getElementById('res-login-fiscal');
+
+  if (!email || !senha) {
+    showToast("Preencha todos os campos.", "error");
+    return;
+  }
+
+  btn.innerText = "A AUTENTICAR...";
+  btn.disabled = true;
+  resBox.classList.add('hidden');
+
+  try {
+    const res = await apiCall("fazerLoginOperador", { email, senha });
+
+    if (res.sucesso) {
+      const tokenValido = res.token || res.tokenSessao || res.hashAcesso || res.sessionToken;
+      
+      if (!tokenValido) {
+        showToast("Erro Crítico: O servidor não gerou o token.", "error");
+        resBox.innerText = "Falha de comunicação com o autorizador. Token ausente.";
+        resBox.classList.remove('hidden');
+        btn.innerText = "AUTENTICAR";
+        btn.disabled = false;
+        return;
+      }
+
+      localStorage.setItem("MAESTRO_TOKEN", tokenValido);
+      localStorage.setItem("MAESTRO_OP_NOME", res.nome || "Operador");
+      localStorage.setItem("MAESTRO_OP_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
+      localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email);
+
+      const elNome = document.getElementById('nome-operador-logado');
+      if (elNome) elNome.innerText = res.nome || "Operador";
+      
+      configurarInterfacePorNivel(String(res.nivel || "OPERADOR").toUpperCase());
+      showToast("Acesso concedido!", "success");
+    } else {
+      resBox.innerText = res.erro || "Login Inválido.";
+      resBox.classList.remove('hidden');
+    }
+  } catch (e) {
+    showToast("Erro de ligação.", "error");
+  } finally {
+    btn.innerText = "AUTENTICAR";
+    btn.disabled = false;
+  }
+}
 
 function configurarInterfacePorNivel(nivel) {
   const mCampo = document.getElementById('menu-grupo-campo');
@@ -146,6 +197,29 @@ function configurarInterfacePorNivel(nivel) {
     if (mSecretaria) mSecretaria.classList.remove('hidden');
     if (mModerador) mModerador.classList.remove('hidden');
   }
+}
+
+function verificarSessaoAtiva() {
+  const token = localStorage.getItem("MAESTRO_TOKEN");
+  const nivel = localStorage.getItem("MAESTRO_OP_NIVEL");
+  const nome = localStorage.getItem("MAESTRO_OP_NOME");
+
+  if (token && nivel && token !== "undefined" && token !== "null") {
+    const elNome = document.getElementById('nome-operador-logado');
+    if (elNome) elNome.innerText = nome || "Operador";
+    configurarInterfacePorNivel(nivel);
+  } else {
+    localStorage.removeItem("MAESTRO_TOKEN");
+  }
+}
+
+function encerrarSessaoOperador() {
+  localStorage.removeItem("MAESTRO_TOKEN");
+  localStorage.removeItem("MAESTRO_OP_NOME");
+  localStorage.removeItem("MAESTRO_OP_NIVEL");
+  localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
+  
+  window.location.reload();
 }
 
 // ========================================================================
@@ -211,278 +285,5 @@ async function confirmarRedefinicaoSenha() {
   } finally {
     btn.innerText = "REDEFINIR SENHA";
     btn.disabled = false;
-  }
-}
-
-// ========================================================================
-// 3. MÓDULO DE SEGURANÇA SAAS & RBAC (V11.1)
-// ========================================================================
-const TOKEN_KEY = "MAESTRO_OP_TOKEN";
-const CACHE_LISTA_KEY = "MAESTRO_CACHE_FISCAL";
-const CACHE_STATS_KEY = "MAESTRO_DASH_STATS_V9";
-const NIVEL_KEY = "MAESTRO_OP_NIVEL";
-let timeoutSessaoID = null;
-
-function aplicarFiltrosRBAC() {
-  const nivelAtual = localStorage.getItem(NIVEL_KEY) || "FISCAL";
-  const nivelUpper = nivelAtual.toUpperCase().trim();
-
-  const grupoCampo = document.getElementById('menu-grupo-campo');
-  const grupoSec = document.getElementById('menu-grupo-secretaria');
-  const grupoMod = document.getElementById('menu-grupo-moderador');
-
-  if (grupoCampo) grupoCampo.classList.remove('hidden'); // Padrão
-  if (grupoSec) grupoSec.classList.add('hidden');
-  if (grupoMod) grupoMod.classList.add('hidden');
-
-  // Se for estritamente Operador de Secretaria, esconde as ferramentas de rua.
-  if (nivelUpper === "OPERADOR") {
-    if (grupoCampo) grupoCampo.classList.add('hidden');
-  }
-
-  if (nivelUpper === "OPERADOR" || nivelUpper === "SUPERVISOR" || nivelUpper === "MODERADOR") {
-    if (grupoSec) grupoSec.classList.remove('hidden');
-  }
-
-  if (nivelUpper === "MODERADOR") {
-    if (grupoMod) grupoMod.classList.remove('hidden');
-  }
-}
-
-async function fazerLoginOperador() {
-  const email = document.getElementById('fiscal-email').value.trim();
-  const senha = document.getElementById('fiscal-senha').value.trim();
-  const btn = document.getElementById('btn-login-fiscal');
-  const resBox = document.getElementById('res-login-fiscal');
-
-  if (!email || !senha) {
-    showToast("Preencha todos os campos.", "error");
-    return;
-  }
-
-  btn.innerText = "A AUTENTICAR...";
-  btn.disabled = true;
-  resBox.classList.add('hidden');
-
-  try {
-    const res = await apiCall("fazerLoginOperador", { email, senha });
-
-    if (res.sucesso) {
-      // Captura inteligente do token
-      const tokenValido = res.token || res.tokenSessao || res.hashAcesso || res.sessionToken;
-      
-      if (!tokenValido) {
-        showToast("Erro Crítico: O servidor não gerou o token.", "error");
-        resBox.innerText = "Falha de comunicação com o autorizador. Token ausente.";
-        resBox.classList.remove('hidden');
-        btn.innerText = "AUTENTICAR";
-        btn.disabled = false;
-        return;
-      }
-
-      localStorage.setItem("MAESTRO_TOKEN", tokenValido);
-      localStorage.setItem("MAESTRO_OP_NOME", res.nome || "Operador");
-      localStorage.setItem("MAESTRO_OP_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
-      localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email);
-
-      const elNome = document.getElementById('nome-operador-logado');
-      if (elNome) elNome.innerText = res.nome || "Operador";
-      
-      configurarInterfacePorNivel(String(res.nivel || "OPERADOR").toUpperCase());
-      showToast("Acesso concedido!", "success");
-    } else {
-      resBox.innerText = res.erro || "Login Inválido.";
-      resBox.classList.remove('hidden');
-    }
-  } catch (e) {
-    showToast("Erro de ligação.", "error");
-  } finally {
-    btn.innerText = "AUTENTICAR";
-    btn.disabled = false;
-  }
-}
-
-function verificarSessaoAtiva() {
-  const token = localStorage.getItem("MAESTRO_TOKEN");
-  const nivel = localStorage.getItem("MAESTRO_OP_NIVEL");
-  const nome = localStorage.getItem("MAESTRO_OP_NOME");
-
-  if (token && nivel && token !== "undefined" && token !== "null") {
-    const elNome = document.getElementById('nome-operador-logado');
-    if (elNome) elNome.innerText = nome || "Operador";
-    configurarInterfacePorNivel(nivel);
-  } else {
-    // Se detetar lixo na verificação de arranque, limpa proativamente
-    localStorage.removeItem("MAESTRO_TOKEN");
-  }
-}
-
-function encerrarSessaoOperador() {
-  localStorage.removeItem("MAESTRO_TOKEN");
-  localStorage.removeItem("MAESTRO_OP_NOME");
-  localStorage.removeItem("MAESTRO_OP_NIVEL");
-  localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
-  
-  window.location.reload();
-}
-
-function armarRelogioSessaoLocal() {
-  if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
-  timeoutSessaoID = setTimeout(() => {
-    encerrarSessaoOperador(true);
-    showToast("Sessão encerrada (8h limite).", "info");
-  }, 28800000);
-}
-
-async function encerrarSessaoOperador(silencioso = false) {
-  try { await apiCall("invalidarTokenSessao"); } catch (e) { }
-
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(CACHE_LISTA_KEY);
-  localStorage.removeItem(CACHE_STATS_KEY);
-  localStorage.removeItem(NIVEL_KEY);
-  localStorage.removeItem("MAESTRO_SEMENTE_FISCAL");
-  localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
-  if (timeoutSessaoID) clearTimeout(timeoutSessaoID);
-
-  if (typeof fecharScanner === "function") fecharScanner();
-  if (typeof desativarModoViagemPWA === "function") desativarModoViagemPWA(); // Garante o fim do GPS se o motorista der logout
-
-  const elNome = document.getElementById('nome-operador-logado');
-  if (elNome) elNome.innerText = "Operador";
-
-  const elResFis = document.getElementById('res-fiscal');
-  if (elResFis) elResFis.innerHTML = "";
-
-  const elIdFis = document.getElementById('id-fiscal');
-  if (elIdFis) elIdFis.value = "";
-
-  switchView('view-hub');
-  if (!silencioso) showToast("Sessão encerrada.", "info");
-}
-
-// ========================================================================
-// 4. RECUPERAÇÃO DE SENHA E UTILITÁRIOS (OPERADOR)
-// ========================================================================
-let emailRecuperacaoTemporario = "";
-
-function abrirRecuperacaoSenha() {
-  document.getElementById('recuperar-email').value = "";
-  switchView('view-recuperar-senha');
-}
-
-async function solicitarRecuperacaoSenha() {
-  const email = document.getElementById('recuperar-email').value.trim();
-  const btn = document.getElementById('btn-solicitar-recuperacao');
-
-  if (!email) {
-    if (typeof showToast === 'function') showToast("Por favor, insira o seu e-mail operacional.", "error");
-    return;
-  }
-
-  btn.innerText = "A ENVIAR...";
-  btn.disabled = true;
-
-  try {
-    const res = await apiCall("recuperarSenhaOperador", { email: email });
-
-    if (res.sucesso) {
-      emailRecuperacaoTemporario = email;
-      if (typeof showToast === 'function') showToast("PIN enviado para o seu e-mail com sucesso!", "success");
-
-      document.getElementById('redefinir-pin').value = "";
-      document.getElementById('redefinir-nova-senha').value = "";
-      document.getElementById('redefinir-confirmar-senha').value = "";
-
-      switchView('view-redefinir-senha');
-    } else {
-      if (typeof showToast === 'function') showToast(res.erro || "Erro ao solicitar recuperação.", "error");
-    }
-  } catch (err) {
-    if (typeof showToast === 'function') showToast("Erro de conexão ao solicitar recuperação.", "error");
-  } finally {
-    btn.innerText = "ENVIAR CÓDIGO PIN";
-    btn.disabled = false;
-  }
-}
-
-async function confirmarRedefinicaoSenha() {
-  const pin = document.getElementById('redefinir-pin').value.trim();
-  const novaSenha = document.getElementById('redefinir-nova-senha').value.trim();
-  const confirmarSenha = document.getElementById('redefinir-confirmar-senha').value.trim();
-  const btn = document.getElementById('btn-confirmar-redefinicao');
-
-  if (!pin || !novaSenha || !confirmarSenha) {
-    if (typeof showToast === 'function') showToast("Por favor, preencha todos os campos.", "error");
-    return;
-  }
-
-  if (novaSenha.length < 6) {
-    if (typeof showToast === 'function') showToast("A nova senha deve ter no mínimo 6 caracteres.", "error");
-    return;
-  }
-
-  if (novaSenha !== confirmarSenha) {
-    if (typeof showToast === 'function') showToast("As senhas não coincidem.", "error");
-    return;
-  }
-
-  btn.innerText = "A REDEFINIR...";
-  btn.disabled = true;
-
-  try {
-    const res = await apiCall("redefinirSenhaComToken", {
-      email: emailRecuperacaoTemporario,
-      token: pin,
-      novaSenha: novaSenha
-    });
-
-    if (res.sucesso) {
-      if (typeof showToast === 'function') showToast("Senha redefinida com sucesso! Pode entrar.", "success");
-      emailRecuperacaoTemporario = "";
-      document.getElementById('redefinir-pin').value = "";
-      document.getElementById('redefinir-nova-senha').value = "";
-      document.getElementById('redefinir-confirmar-senha').value = "";
-      switchView('view-login-fiscal');
-    } else {
-      if (typeof showToast === 'function') showToast(res.erro || "PIN inválido ou expirado.", "error");
-    }
-  } catch (err) {
-    if (typeof showToast === 'function') showToast("Erro de conexão ao redefinir a senha.", "error");
-  } finally {
-    btn.innerText = "REDEFINIR SENHA";
-    btn.disabled = false;
-  }
-}
-
-/**
- * ----------------------------------------------------------------------------
- * AUXILIAR: Popula o Select de Veículos no Painel do Motorista
- * ----------------------------------------------------------------------------
- * Procura na base de dados as rotas ativas chamando "getFiltrosPush".
- * @param {string} email - E-mail do motorista logado
- */
-async function popularSelectFrotaMotorista(email) {
-  const select = document.getElementById("select-frota-motorista");
-  if (!select) return;
-
-  try {
-    const res = await apiCall("getFiltrosPush");
-
-    if (res.sucesso && res.filtros && res.filtros.rotas && res.filtros.rotas.length > 0) {
-      select.innerHTML = '<option value="" disabled selected>Escolha o seu veículo...</option>';
-
-      res.filtros.rotas.forEach(rota => {
-        const opt = document.createElement("option");
-        opt.value = rota; // Valor enviado para o back-end (Placa ou Rota)
-        opt.innerText = rota;
-        select.appendChild(opt);
-      });
-    } else {
-      select.innerHTML = '<option value="" disabled selected>Nenhum veículo disponível</option>';
-    }
-  } catch (e) {
-    console.error("Erro ao carregar a frota:", e);
-    select.innerHTML = '<option value="" disabled selected>Erro ao carregar frota</option>';
   }
 }
