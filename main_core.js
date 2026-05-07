@@ -132,12 +132,12 @@ function switchView(viewId) {
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
 
- // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM) ULTRA-RESILIENTE
+  // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM) ULTRA-RESILIENTE
   const btnConfig = document.getElementById('btn-config');
   if (btnConfig) {
     // Força a remoção de qualquer classe 'hidden' que possa ter ficado presa no HTML
     btnConfig.classList.remove('hidden');
-    
+
     // Se for ecrã de município ou login, oculta. Se não, força a exibição absoluta!
     if (viewId === 'view-gateway' || viewId === 'view-login-fiscal' || viewId === 'view-login') {
       btnConfig.style.setProperty('display', 'none', 'important');

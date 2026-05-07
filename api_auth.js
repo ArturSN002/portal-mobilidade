@@ -77,7 +77,7 @@ function salvarCliente() {
 
 async function apiCall(action, payload = {}) {
   let token = localStorage.getItem("MAESTRO_TOKEN") || localStorage.getItem("MAESTRO_EST_TOKEN");
-  
+
   if (token === "undefined" || token === "null") {
     token = null;
     localStorage.removeItem("MAESTRO_TOKEN");
@@ -95,17 +95,17 @@ async function apiCall(action, payload = {}) {
       body: JSON.stringify(body)
     });
     const data = await response.json();
-    
+
     if (data.status === 401 && action !== "invalidarTokenSessao") {
       console.error("401 Unauthorized na rota:", action);
       localStorage.removeItem("MAESTRO_TOKEN");
       showToast("Sessão encerrada. Por favor, entre novamente.", "error");
       setTimeout(() => {
-          window.location.reload();
+        window.location.reload();
       }, 2000);
       return { sucesso: false, erro: "Sessão expirada" };
     }
-    
+
     return data;
   } catch (error) {
     console.error("Erro na chamada API:", error);
@@ -137,7 +137,7 @@ async function fazerLoginOperador() {
 
     if (res.sucesso) {
       const tokenValido = res.token || res.tokenSessao || res.hashAcesso || res.sessionToken;
-      
+
       if (!tokenValido) {
         showToast("Erro Crítico: O servidor não gerou o token.", "error");
         resBox.innerText = "Falha de comunicação com o autorizador. Token ausente.";
@@ -154,7 +154,7 @@ async function fazerLoginOperador() {
 
       const elNome = document.getElementById('nome-operador-logado');
       if (elNome) elNome.innerText = res.nome || "Operador";
-      
+
       configurarInterfacePorNivel(String(res.nivel || "OPERADOR").toUpperCase());
       showToast("Acesso concedido!", "success");
     } else {
@@ -181,16 +181,16 @@ function configurarInterfacePorNivel(nivel) {
   if (nivel === "MOTORISTA") {
     switchView('view-painel-motorista');
     if (typeof popularSelectFrotaMotorista === 'function') popularSelectFrotaMotorista();
-  } 
+  }
   else if (nivel === "FISCAL") {
     switchView('view-admin-hub');
     if (mCampo) mCampo.classList.remove('hidden');
-  } 
+  }
   else if (nivel === "OPERADOR" || nivel === "SUPERVISOR") {
     switchView('view-admin-hub');
     if (mCampo) mCampo.classList.remove('hidden');
     if (mSecretaria) mSecretaria.classList.remove('hidden');
-  } 
+  }
   else if (nivel === "MODERADOR") {
     switchView('view-admin-hub');
     if (mCampo) mCampo.classList.remove('hidden');
@@ -218,7 +218,7 @@ function encerrarSessaoOperador() {
   localStorage.removeItem("MAESTRO_OP_NOME");
   localStorage.removeItem("MAESTRO_OP_NIVEL");
   localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
-  
+
   window.location.reload();
 }
 
