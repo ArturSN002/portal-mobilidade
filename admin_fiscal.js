@@ -85,7 +85,7 @@ function fecharModoFiscalizacao() {
     fecharScanner();
 
     // Devolve o utilizador à tela correta baseada no nível guardado no login
-    const nivel = localStorage.getItem("MAESTRO_OP_NIVEL") || "";
+    const nivel = localStorage.getItem("MAESTRO_OPERADOR_NIVEL") || "";
 
     if (nivel === "MOTORISTA") {
         switchView('view-painel-motorista');
@@ -242,3 +242,15 @@ function gerarHtmlFiscal(nome, inst, rota, turno, fotoComponente, statusReal, ob
       <div class="wallet-footer" style="margin-top: 15px;">${statusBadge}${relogioAntiPrint}</div>
     </div>`;
 }
+
+// Export functions to global scope
+window.iniciarScanner = iniciarScanner;
+window.fecharScanner = fecharScanner;
+window.aoLerQRCode = aoLerQRCode;
+window.lerQRCodePorFoto = lerQRCodePorFoto;
+window.fecharModoFiscalizacao = fecharModoFiscalizacao;
+window.abrirModoFiscalizacaoGlobal = abrirModoFiscalizacaoGlobal;
+window.validarFiscal = validarFiscal;
+window.tocarBeep = tocarBeep;
+window.extrairTextoDaTag = extrairTextoDaTag;
+window.gerarHtmlFiscal = gerarHtmlFiscal;
