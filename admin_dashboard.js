@@ -31,17 +31,29 @@ async function carregarDashboard() {
         apiCall("getDashboardStats").then(res => {
             console.warn("🔍 [TELEMETRIA BI] Payload bruto recebido do servidor:");
             console.dir(res);
-            if (res.sucesso) {
-                localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
-                window.dadosBI = res.stats.dataMart || [];
-                renderizarDashboardUI(res.stats);
-                gerarChipsDinamicos();
-                if (document.getElementById('tab-analise').classList.contains('active')) renderizarDashboardBI();
-            } else {
+            
+            if (res && res.sucesso === false) {
                 console.error("Erro BI: ", res.erro, res.stack);
                 showToast("Erro ao carregar os dados analíticos: " + res.erro, "error");
+                return;
+            }
+
+            // Aceita o objeto puro ou encapsulado
+            const statsObj = res.stats || res;
+
+            if (statsObj && statsObj.graficos) {
+                localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(statsObj));
+                window.dadosBI = statsObj.dataMart || [];
+                renderizarDashboardUI(statsObj);
+                gerarChipsDinamicos();
+                
+                const tabAnalise = document.getElementById('tab-analise');
+                if (tabAnalise && tabAnalise.classList.contains('active')) {
+                    if (typeof renderizarDashboardBI === "function") renderizarDashboardBI();
+                }
             }
         }).catch(e => {
+            console.error("Erro de Rede BI:", e);
             showToast("Erro ao carregar os dados analíticos: " + e.message, "error");
         });
     } else {
@@ -51,18 +63,24 @@ async function carregarDashboard() {
             console.warn("🔍 [TELEMETRIA BI] Payload bruto recebido do servidor:");
             console.dir(res);
 
-            if (!res.sucesso) {
-                console.error("Erro BI: ", res.erro, res.stack);
+            if (res && res.sucesso === false) {
+                console.error("Erro BI do Servidor: ", res.erro, res.stack);
                 showToast("Erro no servidor: " + res.erro, "error");
                 return;
             }
 
-            localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
-            window.dadosBI = res.stats.dataMart || [];
-            renderizarDashboardUI(res.stats);
-            switchView('view-dashboard');
-            gerarChipsDinamicos();
+            // Aceita o objeto puro ou encapsulado
+            const statsObj = res.stats || res;
+
+            if (statsObj && statsObj.graficos) {
+                localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(statsObj));
+                window.dadosBI = statsObj.dataMart || [];
+                renderizarDashboardUI(statsObj);
+                switchView('view-dashboard');
+                gerarChipsDinamicos();
+            }
         } catch (err) {
+            console.error("Erro de Rede BI:", err);
             showToast("Erro de ligação aos dados analíticos: " + err.message, "error");
         }
     }
