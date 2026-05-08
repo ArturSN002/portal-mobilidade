@@ -756,7 +756,7 @@ async function carregarListasInscricao() {
  */
 function _popularSelect(selectId, items, labelFallback) {
     const select = document.getElementById(selectId);
-    if (!select || items.length === 0) return;
+    if (!select || !items || !Array.isArray(items) || items.length === 0) return;
 
     // Preservar a primeira opção ("Selecione...")
     const primeiraOpcao = select.options[0];
