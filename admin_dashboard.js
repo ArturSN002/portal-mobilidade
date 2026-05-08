@@ -60,30 +60,107 @@ async function carregarDashboard() {
     }
 }
 
+/**
+ * Renderiza a interface do Dashboard processando os dados e inicializando os gráficos de forma segura.
+ * 
+ * @param {Object} stats Objeto consolidado vindo de getDashboardStats()
+ */
 function renderizarDashboardUI(stats) {
-    if (!stats || !stats.graficos) {
-        console.warn("Dados de BI incompletos ou inexistentes.");
-        return;
+    // 1. Guard Clause: Aborta a renderização caso os dados não estejam disponíveis
+    if (!stats || !stats.graficos) { 
+        showToast("Dados do Dashboard indisponíveis.", "error"); 
+        return; 
     }
-    const graficos = stats.graficos;
-    document.getElementById('kpi-ativos').innerText = stats.kpis.ativos;
-    document.getElementById('kpi-pendentes').innerText = stats.kpis.pendentes;
-    document.getElementById('kpi-retidos').innerText = stats.kpis.retidos;
-    document.getElementById('kpi-suspensos').innerText = stats.kpis.suspensos;
 
+    const graficos = stats.graficos;
+
+    // Atualização dos KPIs superiores
+    document.getElementById('kpi-ativos').innerText = stats.kpis.ativos || 0;
+    document.getElementById('kpi-pendentes').innerText = stats.kpis.pendentes || 0;
+    document.getElementById('kpi-retidos').innerText = stats.kpis.retidos || 0;
+    document.getElementById('kpi-suspensos').innerText = stats.kpis.suspensos || 0;
+
+    // Atualização da barra de Uso de IA
     const ocrUsado = stats.consumo?.ocr?.usado || 0;
     const ocrLimite = stats.consumo?.ocr?.limite || 100;
     const pctIA = Math.round((ocrUsado / ocrLimite) * 100);
 
     const barraIA = document.getElementById('bar-ia-usage');
-    if (document.getElementById('kpi-ia-text')) {
+    if (document.getElementById('kpi-ia-text') && barraIA) {
         document.getElementById('kpi-ia-text').innerText = `${ocrUsado} / ${ocrLimite}`;
         barraIA.style.width = Math.min(pctIA, 100) + "%";
         barraIA.style.background = pctIA > 80 ? "var(--danger)" : "var(--accent)";
     }
 
-    desenharGraficos(stats.graficos);
+    // 2. Prevenção de Memory Leaks: Destrói qualquer gráfico existente
+    if (typeof myCharts !== 'undefined') {
+        Object.values(myCharts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        myCharts = {};
+    }
+
+    // 3. Renderização Segura: Tenta renderizar gráficos evitando travamento total em caso de corrupção
+    try {
+        const baseColor = '#3B82F6';
+
+        // 4. Verificações Condicionais e Renderização (Substitui desenharGraficos)
+        if (graficos.status) {
+            const st = graficos.status;
+            renderChart('chart-status', 'doughnut', 
+                ["Ativos", "Pendentes", "Retidos (Humana)", "Cancelados/Suspensos"], 
+                [st["Ativos"] || 0, st["Pendentes"] || 0, st["Retidos (Humana)"] || 0, st["Cancelados/Suspensos"] || 0], 
+                ['#10B981', '#FBBF24', '#F97316', '#EF4444'], 
+                { plugins: { legend: { display: true, position: 'right', labels: { color: '#ddd', boxWidth: 12 } } } }
+            );
+        }
+
+        if (graficos.instituicoes) {
+            const inst = extrairEOrdenar(graficos.instituicoes); 
+            renderChart('chart-instituicoes', 'bar', inst.labels, inst.data, baseColor, { indexAxis: 'y' });
+        }
+
+        if (graficos.dias) {
+            const dias = extrairEOrdenar(graficos.dias); 
+            renderChart('chart-dias', 'bar', dias.labels, dias.data, baseColor, { indexAxis: 'y' });
+        }
+
+        if (graficos.rotas) {
+            const rotas = extrairEOrdenar(graficos.rotas); 
+            renderChart('chart-rotas', 'bar', rotas.labels, rotas.data, baseColor, { indexAxis: 'y' });
+        }
+
+        if (graficos.turnos) {
+            const turnos = extrairEOrdenar(graficos.turnos); 
+            renderChart('chart-turnos', 'bar', turnos.labels, turnos.data, baseColor);
+        }
+
+        if (graficos.noturno) {
+            if (graficos.noturno.adesao) {
+                const adesao = extrairEOrdenar(graficos.noturno.adesao); 
+                renderChart('chart-adesao-23h', 'doughnut', adesao.labels, adesao.data, ['#FBBF24', '#333333'], { plugins: { legend: { display: true, position: 'bottom', labels: { color: '#ddd', boxWidth: 12 } } } });
+            }
+            if (graficos.noturno.bairros) {
+                const bairros = extrairEOrdenar(graficos.noturno.bairros); 
+                renderChart('chart-bairros-23h', 'bar', bairros.labels, bairros.data, '#F97316', { indexAxis: 'y' });
+            }
+        }
+
+        if (graficos.inclusao) {
+            const renderInclusao = (canvas, objData) => renderChart(canvas, 'bar', ['Sim', 'Não'], [objData['Sim'] || 0, objData['Não'] || 0], ['#10B981', '#333']);
+            
+            if (graficos.inclusao.pcd) renderInclusao('chart-pcd', graficos.inclusao.pcd); 
+            if (graficos.inclusao.menor) renderInclusao('chart-menor', graficos.inclusao.menor);
+            if (graficos.inclusao.acompanhado) renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); 
+            if (graficos.inclusao.estagio) renderInclusao('chart-estagio', graficos.inclusao.estagio);
+        }
+
+    } catch (erro) {
+        console.error("[Dashboard] Ocorreu um erro ao renderizar os gráficos:", erro);
+        showToast("Falha parcial ao carregar os gráficos.", "warning");
+    }
 }
+
 
 const mapaDias = {
     "segunda": "Seg", "seg": "Seg",
@@ -207,25 +284,6 @@ function extrairEOrdenar(obj) {
     const arr = Object.keys(obj).map(key => ({ label: key, value: obj[key] }));
     arr.sort((a, b) => b.value - a.value);
     return { labels: arr.map(item => item.label), data: arr.map(item => item.value) };
-}
-
-function desenharGraficos(graficos) {
-    const baseColor = '#3B82F6';
-    const st = graficos.status;
-    renderChart('chart-status', 'doughnut', ["Ativos", "Pendentes", "Retidos (Humana)", "Cancelados/Suspensos"], [st["Ativos"] || 0, st["Pendentes"] || 0, st["Retidos (Humana)"] || 0, st["Cancelados/Suspensos"] || 0], ['#10B981', '#FBBF24', '#F97316', '#EF4444'], { plugins: { legend: { display: true, position: 'right', labels: { color: '#ddd', boxWidth: 12 } } } });
-    const inst = extrairEOrdenar(graficos.instituicoes); renderChart('chart-instituicoes', 'bar', inst.labels, inst.data, baseColor, { indexAxis: 'y' });
-    const dias = extrairEOrdenar(graficos.dias); renderChart('chart-dias', 'bar', dias.labels, dias.data, baseColor, { indexAxis: 'y' });
-    const rotas = extrairEOrdenar(graficos.rotas); renderChart('chart-rotas', 'bar', rotas.labels, rotas.data, baseColor, { indexAxis: 'y' });
-    const turnos = extrairEOrdenar(graficos.turnos); renderChart('chart-turnos', 'bar', turnos.labels, turnos.data, baseColor);
-
-    if (graficos.noturno) {
-        const adesao = extrairEOrdenar(graficos.noturno.adesao); renderChart('chart-adesao-23h', 'doughnut', adesao.labels, adesao.data, ['#FBBF24', '#333333'], { plugins: { legend: { display: true, position: 'bottom', labels: { color: '#ddd', boxWidth: 12 } } } });
-        const bairros = extrairEOrdenar(graficos.noturno.bairros); renderChart('chart-bairros-23h', 'bar', bairros.labels, bairros.data, '#F97316', { indexAxis: 'y' });
-    }
-
-    const renderInclusao = (canvas, objData) => renderChart(canvas, 'bar', ['Sim', 'Não'], [objData['Sim'] || 0, objData['Não'] || 0], ['#10B981', '#333']);
-    renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
-    renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
 
 // Export functions to global scope
