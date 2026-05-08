@@ -32,9 +32,9 @@ try {
   console.log("Firebase SW já inicializado ou erro na configuração.");
 }
 
-// CACHES DA VERSÃO 10.3
-const CACHE_NAME = 'maestro-cache-v11.0';
-const DYNAMIC_CACHE = 'maestro-dynamic-v11.0';
+// CACHES DA VERSÃO 12.0
+const CACHE_NAME = 'maestro-cache-v12.0';
+const DYNAMIC_CACHE = 'maestro-dynamic-v12.0';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -43,6 +43,9 @@ const ASSETS_TO_CACHE = [
   './api_auth.js',
   './main_core.js',
   './operacao.js',
+  './admin_dashboard.js',
+  './admin_fiscal.js',
+  './admin_sos.js',
   './inscricao.js',
   './consulta.js',
   './carteira.js',
