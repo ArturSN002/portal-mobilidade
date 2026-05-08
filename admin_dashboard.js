@@ -43,12 +43,12 @@ async function carregarDashboard() {
         showToast("A extrair dados para o Dashboard...", "info");
         try {
             const res = await apiCall("getDashboardStats");
-            
-            if (!res.sucesso) { 
-                showToast("Erro no servidor: " + res.erro, "error"); 
-                return; 
-            } 
-            
+
+            if (!res.sucesso) {
+                showToast("Erro no servidor: " + res.erro, "error");
+                return;
+            }
+
             localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(res.stats));
             window.dadosBI = res.stats.dataMart || [];
             renderizarDashboardUI(res.stats);
@@ -61,6 +61,11 @@ async function carregarDashboard() {
 }
 
 function renderizarDashboardUI(stats) {
+    if (!stats || !stats.graficos) {
+        console.warn("Dados de BI incompletos ou inexistentes.");
+        return;
+    }
+    const graficos = stats.graficos;
     document.getElementById('kpi-ativos').innerText = stats.kpis.ativos;
     document.getElementById('kpi-pendentes').innerText = stats.kpis.pendentes;
     document.getElementById('kpi-retidos').innerText = stats.kpis.retidos;
