@@ -222,3 +222,15 @@ function desenharGraficos(graficos) {
     renderInclusao('chart-pcd', graficos.inclusao.pcd); renderInclusao('chart-menor', graficos.inclusao.menor);
     renderInclusao('chart-acompanhado', graficos.inclusao.acompanhado); renderInclusao('chart-estagio', graficos.inclusao.estagio);
 }
+
+// Export functions to global scope
+window.mudarAbaDashboard = mudarAbaDashboard;
+window.carregarDashboard = carregarDashboard;
+window.renderizarDashboardUI = renderizarDashboardUI;
+window.normalizarDia = normalizarDia;
+window.gerarChipsDinamicos = gerarChipsDinamicos;
+window.toggleChip = toggleChip;
+window.renderizarDashboardBI = renderizarDashboardBI;
+window.renderChart = renderChart;
+window.extrairEOrdenar = extrairEOrdenar;
+window.desenharGraficos = desenharGraficos;
