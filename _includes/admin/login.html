@@ -1,5 +1,4 @@
 <!-- COMPONENTE: LOGIN E RECUPERAÇÃO DE SENHA -->
-
 <section id="view-login-fiscal" class="view-section">
   <div class="form-card dark-form">
     <div class="form-header">
@@ -7,9 +6,11 @@
       <h2>Acesso Restrito</h2>
       <p>Identificação Operacional</p>
     </div>
-    <input type="email" id="fiscal-email" class="input-field" placeholder="Login">
-    <input type="password" id="fiscal-senha" class="input-field" placeholder="Senha">
-    <button class="btn-solid accent-bg" id="btn-login-fiscal" onclick="fazerLoginOperador()">AUTENTICAR</button>
+    <form onsubmit="event.preventDefault(); fazerLoginOperador();">
+      <input type="email" id="fiscal-email" class="input-field" placeholder="Login">
+      <input type="password" id="fiscal-senha" class="input-field" placeholder="Senha">
+      <button type="submit" class="btn-solid accent-bg" id="btn-login-fiscal">AUTENTICAR</button>
+    </form>
     <div id="res-login-fiscal" class="error-box hidden" style="margin-top: 10px;"></div>
     <button class="btn-text text-light" style="margin-top: 10px; font-size: 11px;" onclick="abrirRecuperacaoSenha()">Esqueci-me da senha</button>
     <button class="btn-text text-light" onclick="switchView('view-hub')">Cancelar</button>
