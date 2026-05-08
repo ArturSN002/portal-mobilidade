@@ -33,8 +33,8 @@ try {
 }
 
 // CACHES DA VERSÃO 12.0
-const CACHE_NAME = 'maestro-cache-v12.0';
-const DYNAMIC_CACHE = 'maestro-dynamic-v12.0';
+const CACHE_NAME = 'maestro-cache-v12.7';
+const DYNAMIC_CACHE = 'maestro-dynamic-v12.7';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -59,8 +59,14 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (let asset of ASSETS_TO_CACHE) {
+        try {
+          await cache.add(asset);
+        } catch (e) {
+          console.error("Falha ao fazer cache de:", asset, e);
+        }
+      }
     })
   );
 });
