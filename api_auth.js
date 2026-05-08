@@ -5,7 +5,7 @@
 let GAS_URL = "";
 
 const CLIENT_DIRECTORY = {
-  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycbyjop_DaDSuz5lT5_6pQZx1CtYf3j5fkNITfGAP00UQeUzrIUTPYnpSm_Y2SrYhTDGQyA/exec",
+  "Ceará-Mirim": "https://script.google.com/macros/s/AKfycby7TuY8CGkVomH2ZjI0atZm4KjOUark7mOZUpqOEOd6NJf2Db2rP-0ZAlv_RfUV44O27g/exec",
 };
 
 async function checkClientGateway() {
@@ -149,7 +149,7 @@ async function fazerLoginOperador() {
 
       localStorage.setItem("MAESTRO_TOKEN", tokenValido);
       localStorage.setItem("MAESTRO_OP_NOME", res.nome || "Operador");
-      localStorage.setItem("MAESTRO_OP_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
+      localStorage.setItem("MAESTRO_OPERADOR_NIVEL", String(res.nivel || "OPERADOR").toUpperCase());
       localStorage.setItem("MAESTRO_OPERADOR_EMAIL", email);
 
       const elNome = document.getElementById('nome-operador-logado');
@@ -201,7 +201,7 @@ function configurarInterfacePorNivel(nivel) {
 
 function verificarSessaoAtiva() {
   const token = localStorage.getItem("MAESTRO_TOKEN");
-  const nivel = localStorage.getItem("MAESTRO_OP_NIVEL");
+  const nivel = localStorage.getItem("MAESTRO_OPERADOR_NIVEL");
   const nome = localStorage.getItem("MAESTRO_OP_NOME");
 
   if (token && nivel && token !== "undefined" && token !== "null") {
@@ -216,7 +216,7 @@ function verificarSessaoAtiva() {
 function encerrarSessaoOperador() {
   localStorage.removeItem("MAESTRO_TOKEN");
   localStorage.removeItem("MAESTRO_OP_NOME");
-  localStorage.removeItem("MAESTRO_OP_NIVEL");
+  localStorage.removeItem("MAESTRO_OPERADOR_NIVEL");
   localStorage.removeItem("MAESTRO_OPERADOR_EMAIL");
 
   // CRITICAL FIX: Destroy the view memory to prevent the session loop
