@@ -112,3 +112,12 @@ async function enviarAlarmeCriseAPI(idBus, motivo, coords) {
         btn.disabled = false;
     }
 }
+
+// Export functions to global scope
+window.abrirModalEncerrarRota = abrirModalEncerrarRota;
+window.fecharModalEncerrarRota = fecharModalEncerrarRota;
+window.dispararEncerramentoRota = dispararEncerramentoRota;
+window.abrirModalSOS = abrirModalSOS;
+window.fecharModalSOS = fecharModalSOS;
+window.confirmarEmergenciaGPS = confirmarEmergenciaGPS;
+window.enviarAlarmeCriseAPI = enviarAlarmeCriseAPI;
