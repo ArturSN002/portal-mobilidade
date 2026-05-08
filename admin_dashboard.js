@@ -304,4 +304,3 @@ window.toggleChip = toggleChip;
 window.renderizarDashboardBI = renderizarDashboardBI;
 window.renderChart = renderChart;
 window.extrairEOrdenar = extrairEOrdenar;
-window.desenharGraficos = desenharGraficos;
