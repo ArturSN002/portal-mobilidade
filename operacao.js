@@ -706,7 +706,7 @@ function fecharModoFiscalizacao() {
     fecharScanner();
 
     // Devolve o utilizador à tela correta baseada no nível guardado no login
-    const nivel = localStorage.getItem("MAESTRO_OP_NIVEL") || "";
+    const nivel = localStorage.getItem("MAESTRO_OPERADOR_NIVEL") || "";
 
     if (nivel === "MOTORISTA") {
         switchView('view-painel-motorista');
