@@ -445,6 +445,8 @@ async function dispararAvisoPublico() {
         if (res.sucesso) {
             showToast("Aviso afixado e alunos notificados!", "success");
             fecharModalAvisosFiscal();
+            btn.innerHTML = 'PUBLICAR AVISO';
+            btn.disabled = false;
         } else {
             showToast(res.erro || "Falha ao publicar.", "error");
             btn.innerHTML = 'TENTAR NOVAMENTE';
@@ -485,6 +487,8 @@ async function dispararPushSegmentado() {
         if (res.sucesso) {
             showToast(`Lote enviado para ${res.enviados} dispositivos.`, "success");
             fecharModalAvisosFiscal();
+            btn.innerHTML = 'DISPARAR LOTE';
+            btn.disabled = false;
         } else {
             showToast(res.erro || "Nenhum aluno encontrado neste filtro.", "error");
             btn.innerHTML = 'TENTAR NOVAMENTE';
