@@ -390,7 +390,7 @@ function toggleSidebar(side) {
     const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
     document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
     document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
-    document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
+    document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') === 'true';
     document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
   } else if (side === 'right') {
     sidebarRight.classList.add('active');
@@ -419,6 +419,12 @@ async function togglePref(tipo, elemento) {
 
   if (tipo === 'push') {
     if (isLigado) {
+      if (typeof currentWalletId === 'undefined' || !currentWalletId) {
+        elemento.checked = false;
+        showToast("Identifique-se pelo CPF para receber notificações.", "warning");
+        navegarPeloMenu('view-consulta');
+        return;
+      }
       localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
       showToast("A pedir permissão...", "loading");
       if (typeof inicializarPushNotifications === 'function') inicializarPushNotifications();
