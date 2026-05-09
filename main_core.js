@@ -10,6 +10,9 @@ window.firebaseReady = null;
 // Privacidade: câmera desligada por padrão até ação explícita do utilizador
 window.cameraAtiva = false;
 
+// Idempotência: garante que useServiceWorker() é chamado apenas uma vez por sessão
+window.isSwInjected = false;
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -278,8 +281,12 @@ async function inicializarPushNotifications() {
     const permission = await Notification.requestPermission();
 
     if (permission === 'granted') {
-      const swRegistration = await navigator.serviceWorker.ready;
-      messaging.useServiceWorker(swRegistration);
+      // Guarda de idempotência — evita erro 'use-sw-after-get-token' em SPA
+      if (!window.isSwInjected) {
+        const swRegistration = await navigator.serviceWorker.ready;
+        messaging.useServiceWorker(swRegistration);
+        window.isSwInjected = true;
+      }
 
       messaging.onMessage((payload) => {
         console.log('Mensagem recebida em primeiro plano:', payload);
@@ -294,6 +301,7 @@ async function inicializarPushNotifications() {
 
       if (token) {
         localStorage.setItem("MAESTRO_FCM_TOKEN_TEMP", token);
+        localStorage.setItem('MAESTRO_PUSH_ATIVO', 'true');
         if (typeof currentWalletId !== 'undefined' && currentWalletId !== "") {
           if (typeof registrarTokenPush === 'function') await registrarTokenPush(token);
         }
@@ -414,8 +422,19 @@ function toggleSidebar(side) {
     
     // Atualiza os toggles de configurações
     document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
+    // Sincroniza o toggle Push com o estado persistido E a permissão real do navegador
+    const pushPersistido = localStorage.getItem('MAESTRO_PUSH_ATIVO') === 'true';
     const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
-    document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
+    const chkPush = document.getElementById('pref-push');
+    if (chkPush) {
+      if (pushPersistido && pushPermitido) {
+        chkPush.checked = true;
+      } else {
+        chkPush.checked = false;
+        // Autocorreção: limpa estado desincronizado
+        if (!pushPermitido) localStorage.removeItem('MAESTRO_PUSH_ATIVO');
+      }
+    }
     document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
     document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') === 'true';
     document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
@@ -480,6 +499,7 @@ async function togglePref(tipo, elemento) {
       }
       localStorage.removeItem("MAESTRO_FCM_TOKEN");
       localStorage.removeItem("FCM_SYNCED_ID");
+      localStorage.removeItem('MAESTRO_PUSH_ATIVO');
     }
   }
   else if (tipo === 'gps') {
