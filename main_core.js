@@ -357,25 +357,61 @@ window.onload = function () {
 };
 
 // ========================================================================
-// MENU DE CONFIGURAÇÕES (BOTTOM SHEET)
+// MENU DE CONFIGURAÇÕES E SIDEBARS (DUAL SIDEBAR V11)
 // ========================================================================
 
-function abrirMenuConfiguracoes() {
-  const modal = document.getElementById('modal-configuracoes');
-  if (!modal) return;
-  modal.classList.remove('hidden');
+function toggleSidebar(side) {
+  const overlay = document.getElementById('ui-overlay');
+  const sidebarLeft = document.getElementById('sidebar-left');
+  const sidebarRight = document.getElementById('sidebar-right');
 
-  document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
+  if (!overlay || !sidebarLeft || !sidebarRight) return;
 
-  const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
-  document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
+  // Se já está aberto esse lado, fecha tudo
+  if (side === 'left' && sidebarLeft.classList.contains('active')) {
+    closeAllSidebars();
+    return;
+  }
+  if (side === 'right' && sidebarRight.classList.contains('active')) {
+    closeAllSidebars();
+    return;
+  }
 
-  document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
-  document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
-  document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
+  // Fecha todos primeiro
+  sidebarLeft.classList.remove('active');
+  sidebarRight.classList.remove('active');
 
-  void modal.offsetWidth;
-  modal.classList.add('active');
+  // Abre o desejado
+  if (side === 'left') {
+    sidebarLeft.classList.add('active');
+    
+    // Atualiza os toggles de configurações
+    document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
+    const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
+    document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
+    document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
+    document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
+    document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
+  } else if (side === 'right') {
+    sidebarRight.classList.add('active');
+    if (typeof abrirInbox === 'function') {
+      abrirInbox();
+    }
+  }
+
+  overlay.classList.add('active');
+}
+
+function closeAllSidebars() {
+  const overlay = document.getElementById('ui-overlay');
+  const sidebarLeft = document.getElementById('sidebar-left');
+  const sidebarRight = document.getElementById('sidebar-right');
+
+  if (sidebarLeft) sidebarLeft.classList.remove('active');
+  if (sidebarRight) sidebarRight.classList.remove('active');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
 }
 
 async function togglePref(tipo, elemento) {
@@ -411,23 +447,14 @@ async function togglePref(tipo, elemento) {
     localStorage.setItem('MAESTRO_PREF_OFFLINE', isLigado ? 'true' : 'false');
     showToast(isLigado ? "Modo Offline Forçado ativo." : "Modo Online restaurado.", "warning");
     if (isLigado && typeof abrirTelaCofreOuEntrarDireto === 'function') {
-      fecharMenuConfiguracoes();
+      closeAllSidebars();
       abrirTelaCofreOuEntrarDireto();
     }
   }
 }
 
-function fecharMenuConfiguracoes() {
-  const modal = document.getElementById('modal-configuracoes');
-  if (!modal) return;
-  modal.classList.remove('active');
-  setTimeout(() => {
-    modal.classList.add('hidden');
-  }, 300);
-}
-
 function navegarPeloMenu(viewId) {
-  fecharMenuConfiguracoes();
+  closeAllSidebars();
   setTimeout(() => {
     switchView(viewId);
   }, 300);
