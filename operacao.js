@@ -600,6 +600,100 @@ async function votarNoMural(idMensagem, tipoVoto) {
 }
 
 // ========================================================================
+// 15. CAIXA DE MENSAGENS (INBOX / PERSISTÊNCIA 7 DIAS)
+// ========================================================================
+
+function abrirInbox() {
+    switchView('view-notificacoes');
+    renderizarNotificacoes();
+}
+
+function renderizarNotificacoes() {
+    const container = document.getElementById('inbox-container');
+    container.innerHTML = '<div class="loader" style="margin: 0 auto;"></div>';
+
+    const dbRequest = indexedDB.open('MaestroDB', 1);
+    dbRequest.onsuccess = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('notificacoes')) {
+            container.innerHTML = '<div style="text-align: center; padding: 30px; background: #fff; border: 1px dashed #ccc; border-radius: 8px;"><p style="font-size: 12px; color: #666;">Caixa de entrada vazia.</p></div>';
+            return;
+        }
+        const transaction = db.transaction('notificacoes', 'readonly');
+        const store = transaction.objectStore('notificacoes');
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+            const notificacoes = request.result.sort((a, b) => b.timestamp - a.timestamp);
+            if (notificacoes.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 30px; background: #fff; border: 1px dashed #ccc; border-radius: 8px;"><p style="font-size: 12px; color: #666;">Caixa de entrada vazia.</p></div>';
+                return;
+            }
+            
+            let html = '';
+            notificacoes.forEach(n => {
+                const tempo = calcularTempoRelativo(n.timestamp);
+                html += `
+                <div class="form-card" style="padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary); display: flex; gap: 10px; align-items: flex-start; text-align: left;">
+                    <img src="${n.icon || './icone.png'}" style="width: 40px; height: 40px; border-radius: 8px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <strong style="font-size: 13px; color: var(--primary);">${n.title}</strong>
+                            <span style="font-size: 10px; color: var(--text-sub);">${tempo}</span>
+                        </div>
+                        <p style="font-size: 12px; margin: 0; color: #333; line-height: 1.4;">${n.body}</p>
+                        ${(n.link && n.link !== '/') ? `<a href="${n.link}" target="_blank" style="font-size: 11px; display: inline-block; margin-top: 5px; color: var(--accent); font-weight: bold;">Ver Detalhes ➡</a>` : ''}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+            
+            // Remove o red dot após abrir a inbox
+            const badge = document.getElementById('badge-notificacao');
+            if(badge) badge.style.display = 'none';
+        };
+    };
+    dbRequest.onerror = () => {
+        container.innerHTML = '<div class="error-box">Erro ao carregar notificações locais.</div>';
+    };
+}
+
+function limparInbox() {
+    const dbRequest = indexedDB.open('MaestroDB', 1);
+    dbRequest.onsuccess = (e) => {
+        const db = e.target.result;
+        if (db.objectStoreNames.contains('notificacoes')) {
+            const transaction = db.transaction('notificacoes', 'readwrite');
+            const store = transaction.objectStore('notificacoes');
+            store.clear();
+            renderizarNotificacoes();
+            showToast("Caixa de entrada limpa com sucesso.", "success");
+        }
+    };
+}
+
+// Verifica periodicamente se há notificações para acender a badge
+setInterval(() => {
+    try {
+        const dbReq = indexedDB.open('MaestroDB', 1);
+        dbReq.onsuccess = (e) => {
+            const db = e.target.result;
+            if (db.objectStoreNames.contains('notificacoes')) {
+                const tx = db.transaction('notificacoes', 'readonly');
+                const countReq = tx.objectStore('notificacoes').count();
+                countReq.onsuccess = () => {
+                    const badge = document.getElementById('badge-notificacao');
+                    // Mostra a badge se houver itens e a inbox não estiver aberta
+                    if(badge && countReq.result > 0 && !document.getElementById('view-notificacoes').classList.contains('active')) {
+                        badge.style.display = 'block';
+                    }
+                }
+            }
+        };
+    } catch(err) {}
+}, 10000);
+
+// ========================================================================
 // NOTA: O MOTOR DO DASHBOARD ANALÍTICO E BI foi extraído para admin_dashboard.js
 // ========================================================================
 
