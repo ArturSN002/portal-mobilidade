@@ -45,6 +45,11 @@ async function solicitarConsentimentoPushAnonimo(cpf) {
         }
         if (!firebase.messaging.isSupported()) return;
         const messaging = firebase.messaging();
+
+        // Injeta o SW customizado (sw.js) para evitar o erro 404 do firebase-messaging-sw.js
+        const registration = await navigator.serviceWorker.ready;
+        messaging.useServiceWorker(registration);
+
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             const token = await messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY });
