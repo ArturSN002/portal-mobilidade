@@ -604,19 +604,22 @@ async function votarNoMural(idMensagem, tipoVoto) {
 // ========================================================================
 
 function abrirInbox() {
-    switchView('view-notificacoes');
     renderizarNotificacoes();
 }
 
 function renderizarNotificacoes() {
-    const container = document.getElementById('inbox-container');
-    container.innerHTML = '<div class="loader" style="margin: 0 auto;"></div>';
+    const containers = document.querySelectorAll('.inbox-container');
+    containers.forEach(container => {
+        container.innerHTML = '<div class="loader" style="margin: 0 auto;"></div>';
+    });
 
     const dbRequest = indexedDB.open('MaestroDB', 1);
     dbRequest.onsuccess = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains('notificacoes')) {
-            container.innerHTML = '<div style="text-align: center; padding: 30px; background: #fff; border: 1px dashed #ccc; border-radius: 8px;"><p style="font-size: 12px; color: #666;">Caixa de entrada vazia.</p></div>';
+            containers.forEach(container => {
+                container.innerHTML = '<div style="text-align: center; padding: 30px; background: #fff; border: 1px dashed #ccc; border-radius: 8px;"><p style="font-size: 12px; color: #666;">Caixa de entrada vazia.</p></div>';
+            });
             return;
         }
         const transaction = db.transaction('notificacoes', 'readonly');
@@ -626,7 +629,9 @@ function renderizarNotificacoes() {
         request.onsuccess = () => {
             const notificacoes = request.result.sort((a, b) => b.timestamp - a.timestamp);
             if (notificacoes.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 30px; background: #fff; border: 1px dashed #ccc; border-radius: 8px;"><p style="font-size: 12px; color: #666;">Caixa de entrada vazia.</p></div>';
+                containers.forEach(container => {
+                    container.innerHTML = '<div style="text-align: center; padding: 30px; background: #fff; border: 1px dashed #ccc; border-radius: 8px;"><p style="font-size: 12px; color: #666;">Caixa de entrada vazia.</p></div>';
+                });
                 return;
             }
             
@@ -646,15 +651,18 @@ function renderizarNotificacoes() {
                     </div>
                 </div>`;
             });
-            container.innerHTML = html;
+            containers.forEach(container => {
+                container.innerHTML = html;
+            });
             
             // Remove o red dot após abrir a inbox
-            const badge = document.getElementById('badge-notificacao');
-            if(badge) badge.style.display = 'none';
+            document.querySelectorAll('.badge-notificacao').forEach(badge => badge.style.display = 'none');
         };
     };
     dbRequest.onerror = () => {
-        container.innerHTML = '<div class="error-box">Erro ao carregar notificações locais.</div>';
+        containers.forEach(container => {
+            container.innerHTML = '<div class="error-box">Erro ao carregar notificações locais.</div>';
+        });
     };
 }
 
@@ -682,10 +690,12 @@ setInterval(() => {
                 const tx = db.transaction('notificacoes', 'readonly');
                 const countReq = tx.objectStore('notificacoes').count();
                 countReq.onsuccess = () => {
-                    const badge = document.getElementById('badge-notificacao');
-                    // Mostra a badge se houver itens e a inbox não estiver aberta
-                    if(badge && countReq.result > 0 && !document.getElementById('view-notificacoes').classList.contains('active')) {
-                        badge.style.display = 'block';
+                    const viewAdminAtiva = document.getElementById('view-notificacoes') && document.getElementById('view-notificacoes').classList.contains('active');
+                    const sidebarRightAtiva = document.getElementById('sidebar-right') && document.getElementById('sidebar-right').classList.contains('active');
+                    
+                    // Mostra a badge se houver itens e a inbox não estiver aberta (em nenhum dos modos)
+                    if(countReq.result > 0 && !viewAdminAtiva && !sidebarRightAtiva) {
+                        document.querySelectorAll('.badge-notificacao').forEach(badge => badge.style.display = 'block');
                     }
                 }
             }
