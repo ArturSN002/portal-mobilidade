@@ -386,11 +386,13 @@
             <h2>Cofre Digital</h2>
             <p>Insira as credenciais da sua carteira</p>
           </div>
+          <form onsubmit="event.preventDefault(); loginCarteira();">
           <label class="input-label">ID DA CARTEIRA</label>
-          <input type="text" id="login-id" class="input-field uppercase" placeholder="Ex: 2026CM...">
+          <input type="text" id="login-id" class="input-field uppercase" placeholder="Ex: 2026CM..." autocomplete="username">
           <label class="input-label">PIN</label>
-          <input type="password" id="login-senha" class="input-field" placeholder="Últimos 4 dígitos do CPF" maxlength="4">
-          <button class="btn-solid" id="btn-login" onclick="loginCarteira()">ENTRAR NO COFRE</button>
+          <input type="password" id="login-senha" class="input-field" placeholder="Últimos 4 dígitos do CPF" maxlength="4" autocomplete="current-password">
+          <button type="submit" class="btn-solid" id="btn-login">ENTRAR NO COFRE</button>
+          </form>
           <button class="btn-text" onclick="switchView('view-aluno-menu')">Cancelar</button>
         </div>
         <div id="res-login" class="error-box hidden"></div>
