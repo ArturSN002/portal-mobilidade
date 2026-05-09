@@ -115,6 +115,15 @@ function instalarPWA() {
 // ... (Código do Bootstrap e PWA mantido) ...
 
 function switchView(viewId) {
+  closeAllSidebars();
+
+  let target = document.getElementById(viewId);
+  if (!target) {
+    console.warn(`View não encontrada: ${viewId}. Redirecionando para 'view-gateway'.`);
+    viewId = 'view-gateway';
+    target = document.getElementById(viewId);
+  }
+
   const views = document.querySelectorAll('.view-section');
   views.forEach(v => {
     v.classList.remove('active-view');
@@ -122,7 +131,6 @@ function switchView(viewId) {
     v.style.display = 'none';
   });
 
-  const target = document.getElementById(viewId);
   if (target) {
     target.style.display = 'block';
     setTimeout(() => {
@@ -131,6 +139,8 @@ function switchView(viewId) {
     }, 10);
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
+
+  window.scrollTo(0, 0);
 
   // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM) ULTRA-RESILIENTE
   const btnConfig = document.getElementById('btn-config');
@@ -419,10 +429,11 @@ async function togglePref(tipo, elemento) {
 
   if (tipo === 'push') {
     if (isLigado) {
-      if (typeof currentWalletId === 'undefined' || !currentWalletId) {
+      if (!localStorage.getItem('MAESTRO_TOKEN')) {
         elemento.checked = false;
-        showToast("Identifique-se pelo CPF para receber notificações.", "warning");
-        navegarPeloMenu('view-consulta');
+        closeAllSidebars();
+        showToast("Para ativar notificações, identifique-se com o seu CPF primeiro.", "warning");
+        switchView('view-consulta');
         return;
       }
       localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
