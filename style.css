@@ -200,6 +200,7 @@ body.dark-theme .icon-btn:hover {
   padding-bottom: 15px;
   margin-bottom: 20px;
   position: relative;
+  z-index: 9000;
 }
 
 /* CONTROLO DE PROPORÇÃO DA LOGO DA PREFEITURA */
@@ -733,7 +734,8 @@ body.dark-theme { --secondary: #121212; --text-main: #f3f4f6; --form-bg: #1e1e1e
 /* V10.3: MICRO-SPRINT 2 - BOTTOM SHEET MODAL */
 /* ========================================== */
 #global-header { position: relative; }
-.bottom-sheet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); z-index: 99999; display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity 0.3s ease; visibility: hidden; }
+.bottom-sheet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); z-index: 100000; display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity 0.3s ease; visibility: hidden; }
+.modal-overlay { z-index: 100000 !important; }
 .bottom-sheet-overlay.active { opacity: 1; visibility: visible; }
 .bottom-sheet-content { background: var(--secondary); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1); }
 .bottom-sheet-overlay.active .bottom-sheet-content { transform: translateY(0); }
