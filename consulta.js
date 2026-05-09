@@ -36,8 +36,11 @@ async function consultarEstudante() {
 
 async function solicitarConsentimentoPushAnonimo(cpf) {
     try {
+        // Aguarda a inicialização do Firebase (promessa global definida no bootSystem)
+        if (window.firebaseReady) await window.firebaseReady;
+
         if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) { 
-            console.warn("Firebase ainda não inicializado."); 
+            console.warn("Firebase não disponível após aguardar inicialização."); 
             return; 
         }
         if (!firebase.messaging.isSupported()) return;
@@ -48,7 +51,11 @@ async function solicitarConsentimentoPushAnonimo(cpf) {
             if (token) {
                 const cpfLimpo = cpf.replace(/\D/g, '');
                 await apiCall("registrarPushToken", { idEstudante: cpfLimpo, pushToken: token });
+                localStorage.setItem('MAESTRO_FCM_TOKEN', token);
+                showToast("Notificações ativadas com sucesso!", "success");
             }
+        } else {
+            showToast("Permissão de notificações negada pelo dispositivo.", "info");
         }
     } catch (error) {
         console.warn("Push anónimo falhou ou foi bloqueado.", error);
