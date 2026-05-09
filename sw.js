@@ -32,9 +32,9 @@ try {
   console.log("Firebase SW já inicializado ou erro na configuração.");
 }
 
-// CACHES DA VERSÃO 12.0
-const CACHE_NAME = 'maestro-cache-v12.7';
-const DYNAMIC_CACHE = 'maestro-dynamic-v12.7';
+// CACHES DA VERSÃO 12.8
+const CACHE_NAME = 'maestro-cache-v12.8';
+const DYNAMIC_CACHE = 'maestro-dynamic-v12.8';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -137,11 +137,53 @@ try {
       const notificationOptions = {
         body: payload.notification.body,
         icon: payload.notification.icon || './icone.png',
-        badge: './icone.png',
+        badge: payload.data ? payload.data.badge : './icone.png',
         vibrate: [200, 100, 200, 100, 200],
         data: payload.data || { click_action: "/" }, 
         requireInteraction: true 
       };
+
+      // Guardar na IndexedDB (Caixa de Entrada / Inbox 7 dias)
+      const salvarNotificacao = () => {
+         const dbReq = indexedDB.open('MaestroDB', 1);
+         dbReq.onupgradeneeded = (e) => {
+             const db = e.target.result;
+             if (!db.objectStoreNames.contains('notificacoes')) {
+                 const store = db.createObjectStore('notificacoes', { keyPath: 'id', autoIncrement: true });
+                 store.createIndex('timestamp', 'timestamp', { unique: false });
+             }
+         };
+         dbReq.onsuccess = (e) => {
+             const db = e.target.result;
+             if (!db.objectStoreNames.contains('notificacoes')) return;
+             const tx = db.transaction('notificacoes', 'readwrite');
+             const store = tx.objectStore('notificacoes');
+             
+             // Limpeza (> 7 dias)
+             const limite = Date.now() - 604800000;
+             const index = store.index('timestamp');
+             const range = IDBKeyRange.upperBound(limite);
+             index.openCursor(range).onsuccess = (ec) => {
+                 const cursor = ec.target.result;
+                 if (cursor) {
+                     store.delete(cursor.primaryKey);
+                     cursor.continue();
+                 }
+             };
+
+             // Inserir
+             store.add({
+                 title: notificationTitle,
+                 body: notificationOptions.body,
+                 timestamp: Date.now(),
+                 icon: notificationOptions.icon,
+                 link: notificationOptions.data.click_action,
+                 status: 'unread'
+             });
+         };
+      };
+      
+      try { salvarNotificacao(); } catch(err) { console.error("Erro ao guardar Inbox", err); }
 
       self.registration.showNotification(notificationTitle, notificationOptions);
     });
@@ -153,6 +195,10 @@ try {
 // 5. Ação ao CLICAR na Notificação
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const action = event.action;
+  
+  if (action === 'close') return;
+
   const urlToOpen = new URL(event.notification.data.click_action || "/", self.location.origin).href;
 
   event.waitUntil(
