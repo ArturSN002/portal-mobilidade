@@ -4,6 +4,12 @@
 
 let deferredPrompt;
 
+// Promessa global de prontidão do Firebase — consumidores aguardam esta promessa
+window.firebaseReady = null;
+
+// Privacidade: câmera desligada por padrão até ação explícita do utilizador
+window.cameraAtiva = false;
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -30,6 +36,17 @@ async function bootSystem() {
           appId: res.firebase.APP_ID
         };
         window.FIREBASE_VAPID_KEY = res.firebase.VAPID_KEY;
+
+        // Inicialização imediata do Firebase — resolve a promessa global
+        if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
+          window.firebaseReady = new Promise((resolve) => {
+            firebase.initializeApp(window.FIREBASE_CONFIG);
+            console.log('Firebase inicializado com sucesso no bootSystem.');
+            resolve();
+          });
+        } else {
+          window.firebaseReady = Promise.resolve();
+        }
       }
 
       document.title = window.PWA_NOME;
@@ -429,13 +446,27 @@ async function togglePref(tipo, elemento) {
 
   if (tipo === 'push') {
     if (isLigado) {
-      if (!localStorage.getItem('MAESTRO_TOKEN')) {
+      const tokenAdmin = localStorage.getItem('MAESTRO_TOKEN');
+      const tokenEstudante = localStorage.getItem('MAESTRO_EST_TOKEN');
+
+      // Condição C: nenhum token — redireciona para identificação
+      if (!tokenAdmin && !tokenEstudante) {
         elemento.checked = false;
         closeAllSidebars();
         showToast("Para ativar notificações, identifique-se com o seu CPF primeiro.", "warning");
         switchView('view-consult');
         return;
       }
+
+      // Condição A: estudante logado na Wallet — regista via CPF sem redirecionar
+      if (tokenEstudante && typeof currentWalletId !== 'undefined' && currentWalletId) {
+        localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
+        showToast("A pedir permissão...", "loading");
+        solicitarConsentimentoPushAnonimo(currentWalletId);
+        return;
+      }
+
+      // Condição B: operador/admin — fluxo normal
       localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
       showToast("A pedir permissão...", "loading");
       if (typeof inicializarPushNotifications === 'function') inicializarPushNotifications();
