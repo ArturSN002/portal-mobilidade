@@ -46,9 +46,12 @@ async function solicitarConsentimentoPushAnonimo(cpf) {
         if (!firebase.messaging.isSupported()) return;
         const messaging = firebase.messaging();
 
-        // Injeta o SW customizado (sw.js) para evitar o erro 404 do firebase-messaging-sw.js
-        const registration = await navigator.serviceWorker.ready;
-        messaging.useServiceWorker(registration);
+        // Guarda de idempotência — evita erro 'use-sw-after-get-token' em SPA
+        if (!window.isSwInjected) {
+            const registration = await navigator.serviceWorker.ready;
+            messaging.useServiceWorker(registration);
+            window.isSwInjected = true;
+        }
 
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
@@ -57,6 +60,7 @@ async function solicitarConsentimentoPushAnonimo(cpf) {
                 const cpfLimpo = cpf.replace(/\D/g, '');
                 await apiCall("registrarPushToken", { idEstudante: cpfLimpo, pushToken: token });
                 localStorage.setItem('MAESTRO_FCM_TOKEN', token);
+                localStorage.setItem('MAESTRO_PUSH_ATIVO', 'true');
                 showToast("Notificações ativadas com sucesso!", "success");
             }
         } else {
