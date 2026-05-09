@@ -58,7 +58,7 @@ async function solicitarConsentimentoPushAnonimo(cpf) {
 function renderizarTimelineEstudante(dados, container) {
     const nomeLimpo = formatarNomeProprio(dados.nome).split(' ')[0];
     let html = `<h3 style="margin:0 0 15px 0; color:var(--primary);">Olá, ${nomeLimpo}!</h3>`;
-    html += `<div class="timeline">`;
+    html += `<div class="timeline" style="box-sizing: border-box; width: 100%; max-width: 100%;">`;
 
     html += `<div class="timeline-item active-blue">
              <strong style="color: var(--primary);">1. Formulário Recebido</strong><br>
@@ -120,7 +120,7 @@ function renderizarTimelineEstudante(dados, container) {
 
                 if (dados.idAcesso) {
                     html += `
-           <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px solid var(--success); border-radius: 8px; text-align: center;">
+           <div style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px solid var(--success); border-radius: 8px; text-align: center; box-sizing: border-box; width: 100%; max-width: 100%;">
              <span style="font-size: 11px; color: var(--success); display:block; margin-bottom:5px; text-transform: uppercase; font-weight:700;">O seu ID de Acesso é:</span>
              <strong style="font-size: 22px; color: #065F46; letter-spacing: 2px; font-family: monospace;">${dados.idAcesso}</strong>
              <p style="font-size: 11px; color: #065F46; margin: 8px 0 0 0;">Use este ID e os 4 últimos dígitos do seu CPF para abrir o cofre digital.</p>
@@ -135,6 +135,7 @@ function renderizarTimelineEstudante(dados, container) {
 
     html += `</div>`;
     container.innerHTML = html;
+    container.style.cssText = 'box-sizing: border-box; width: 100%; max-width: 100%; margin: 0 auto;';
     container.classList.remove('hidden');
 }
 
