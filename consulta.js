@@ -36,13 +36,18 @@ async function consultarEstudante() {
 
 async function solicitarConsentimentoPushAnonimo(cpf) {
     try {
-        if (typeof firebase === 'undefined' || !firebase.messaging.isSupported()) return;
+        if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) { 
+            console.warn("Firebase ainda não inicializado."); 
+            return; 
+        }
+        if (!firebase.messaging.isSupported()) return;
         const messaging = firebase.messaging();
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             const token = await messaging.getToken({ vapidKey: window.FIREBASE_VAPID_KEY });
             if (token) {
-                await apiCall("registrarPushToken", { idEstudante: cpf, pushToken: token });
+                const cpfLimpo = cpf.replace(/\D/g, '');
+                await apiCall("registrarPushToken", { idEstudante: cpfLimpo, pushToken: token });
             }
         }
     } catch (error) {
