@@ -433,7 +433,7 @@ async function togglePref(tipo, elemento) {
         elemento.checked = false;
         closeAllSidebars();
         showToast("Para ativar notificações, identifique-se com o seu CPF primeiro.", "warning");
-        switchView('view-consulta');
+        switchView('view-consult');
         return;
       }
       localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
