@@ -7,8 +7,8 @@
       <p>Identificação Operacional</p>
     </div>
     <form onsubmit="event.preventDefault(); fazerLoginOperador();">
-      <input type="email" id="fiscal-email" class="input-field" placeholder="Login">
-      <input type="password" id="fiscal-senha" class="input-field" placeholder="Senha">
+      <input type="email" id="fiscal-email" class="input-field" placeholder="Login" autocomplete="username">
+      <input type="password" id="fiscal-senha" class="input-field" placeholder="Senha" autocomplete="current-password">
       <button type="submit" class="btn-solid accent-bg" id="btn-login-fiscal">AUTENTICAR</button>
     </form>
     <div id="res-login-fiscal" class="error-box hidden" style="margin-top: 10px;"></div>
@@ -37,10 +37,12 @@
       <h2>Redefinir Senha</h2>
       <p>Insira o PIN recebido no e-mail e a sua nova senha</p>
     </div>
+    <form onsubmit="event.preventDefault(); confirmarRedefinicaoSenha();">
     <input type="text" id="redefinir-pin" class="input-field uppercase text-center" placeholder="PIN de 6 dígitos" maxlength="6">
-    <input type="password" id="redefinir-nova-senha" class="input-field" placeholder="Nova Senha (Mínimo 6 caracteres)">
-    <input type="password" id="redefinir-confirmar-senha" class="input-field" placeholder="Confirmar Nova Senha">
-    <button class="btn-solid accent-bg" id="btn-confirmar-redefinicao" onclick="confirmarRedefinicaoSenha()">REDEFINIR SENHA</button>
+    <input type="password" id="redefinir-nova-senha" class="input-field" placeholder="Nova Senha (Mínimo 6 caracteres)" autocomplete="new-password">
+    <input type="password" id="redefinir-confirmar-senha" class="input-field" placeholder="Confirmar Nova Senha" autocomplete="new-password">
+    <button type="submit" class="btn-solid accent-bg" id="btn-confirmar-redefinicao">REDEFINIR SENHA</button>
+    </form>
     <button class="btn-text text-light" onclick="switchView('view-login-fiscal')">Cancelar</button>
   </div>
 </section>
