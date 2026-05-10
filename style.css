@@ -738,7 +738,27 @@ body.dark-theme { --secondary: #121212; --text-main: #f3f4f6; --form-bg: #1e1e1e
 /* ========================================== */
 #global-header { position: relative; }
 .bottom-sheet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); z-index: 99999; display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity 0.3s ease; visibility: hidden; }
-.modal-overlay { z-index: 99999 !important; }
+/* ======================================================================== */
+/* style.css - Correção de Camada Z-Index Suprema (Anti-Header Overlap)     */
+/* ======================================================================== */
+
+/* GLOBAL MODAL Z-INDEX OVERRIDE */
+.modal-overlay, 
+.modal-container, 
+.modal, 
+[id^="modal-"] {
+    position: fixed !important;
+    z-index: 999999 !important; /* Camada suprema para derrotar headers sticky e sidebars */
+}
+
+/* Garante que o conteúdo interno dos modais não quebre o layout e herde o contexto com segurança */
+.modal-content,
+.modal-card,
+.splash-overlay[id^="modal-"] > .form-card,
+.splash-overlay[id^="modal-"] > div {
+    position: relative;
+    z-index: auto;
+}
 .bottom-sheet-overlay.active { opacity: 1; visibility: visible; }
 .bottom-sheet-content { background: var(--secondary); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1); }
 .bottom-sheet-overlay.active .bottom-sheet-content { transform: translateY(0); }
