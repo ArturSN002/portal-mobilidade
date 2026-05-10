@@ -460,6 +460,10 @@ function closeAllSidebars() {
   }
 }
 
+// ========================================================================
+// main_core.js - Correção do Bug de Identidade (Ghost Records)
+// ========================================================================
+
 async function togglePref(tipo, elemento) {
   const isLigado = elemento.checked;
 
@@ -477,11 +481,21 @@ async function togglePref(tipo, elemento) {
         return;
       }
 
-      // Condição A: estudante logado na Wallet — regista via CPF sem redirecionar
+      // Condição A: estudante logado na Wallet — regista via CPF (Evita Ghost Record)
       if (tokenEstudante && typeof currentWalletId !== 'undefined' && currentWalletId) {
+        // Extrai o CPF real do cache offline (nunca enviar o ID da carteira como CPF)
+        const walletCache = JSON.parse(localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE") || "{}");
+        const studentCpf = walletCache.cpf || walletCache.cpfAluno;
+
+        if (!studentCpf) {
+          showToast("Erro: CPF não encontrado na sessão. Faça login novamente.", "error");
+          elemento.checked = false;
+          return;
+        }
+
         localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
         showToast("A pedir permissão...", "loading");
-        solicitarConsentimentoPushAnonimo(currentWalletId);
+        solicitarConsentimentoPushAnonimo(studentCpf);
         return;
       }
 
@@ -495,13 +509,19 @@ async function togglePref(tipo, elemento) {
 
       const tokenLocal = localStorage.getItem("MAESTRO_FCM_TOKEN");
       if (tokenLocal && typeof currentWalletId !== 'undefined' && currentWalletId) {
-        try { await apiCall("registrarPushToken", { idEstudante: currentWalletId, pushToken: "" }); } catch (e) { }
+        // Extrai o CPF real para a desativação de push (mesmo padrão da ativação)
+        const walletCacheOff = JSON.parse(localStorage.getItem("MAESTRO_OFFLINE_WALLET") || localStorage.getItem("MAESTRO_WALLET_CACHE") || "{}");
+        const cpfParaDesativar = walletCacheOff.cpf || walletCacheOff.cpfAluno || "";
+        if (cpfParaDesativar) {
+          try { await apiCall("registrarPushToken", { idEstudante: cpfParaDesativar, pushToken: "" }); } catch (e) { }
+        }
       }
       localStorage.removeItem("MAESTRO_FCM_TOKEN");
       localStorage.removeItem("FCM_SYNCED_ID");
       localStorage.removeItem('MAESTRO_PUSH_ATIVO');
     }
   }
+    
   else if (tipo === 'gps') {
     localStorage.setItem('MAESTRO_PREF_GPS', isLigado ? 'true' : 'false');
     if (!isLigado && typeof abdicarSerGuia === 'function') abdicarSerGuia();
