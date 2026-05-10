@@ -629,7 +629,7 @@ function renderizarNotificacoes() {
         const transaction = db.transaction('notificacoes', 'readonly');
         const store = transaction.objectStore('notificacoes');
         const request = store.getAll();
-        
+
         request.onsuccess = () => {
             const notificacoes = request.result.sort((a, b) => b.timestamp - a.timestamp);
             if (notificacoes.length === 0) {
@@ -638,7 +638,7 @@ function renderizarNotificacoes() {
                 });
                 return;
             }
-            
+
             let html = '';
             notificacoes.forEach(n => {
                 const tempo = calcularTempoRelativo(n.timestamp);
@@ -658,7 +658,7 @@ function renderizarNotificacoes() {
             containers.forEach(container => {
                 container.innerHTML = html;
             });
-            
+
             // Remove o red dot após abrir a inbox
             document.querySelectorAll('.badge-notificacao').forEach(badge => badge.style.display = 'none');
         };
@@ -696,15 +696,15 @@ setInterval(() => {
                 countReq.onsuccess = () => {
                     const viewAdminAtiva = document.getElementById('view-notificacoes') && document.getElementById('view-notificacoes').classList.contains('active');
                     const sidebarRightAtiva = document.getElementById('sidebar-right') && document.getElementById('sidebar-right').classList.contains('active');
-                    
+
                     // Mostra a badge se houver itens e a inbox não estiver aberta (em nenhum dos modos)
-                    if(countReq.result > 0 && !viewAdminAtiva && !sidebarRightAtiva) {
+                    if (countReq.result > 0 && !viewAdminAtiva && !sidebarRightAtiva) {
                         document.querySelectorAll('.badge-notificacao').forEach(badge => badge.style.display = 'block');
                     }
                 }
             }
         };
-    } catch(err) {}
+    } catch (err) { }
 }, 10000);
 
 // ========================================================================
