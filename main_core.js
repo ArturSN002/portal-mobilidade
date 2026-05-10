@@ -4,15 +4,6 @@
 
 let deferredPrompt;
 
-// Promessa global de prontidão do Firebase — consumidores aguardam esta promessa
-window.firebaseReady = null;
-
-// Privacidade: câmera desligada por padrão até ação explícita do utilizador
-window.cameraAtiva = false;
-
-// Idempotência: garante que useServiceWorker() é chamado apenas uma vez por sessão
-window.isSwInjected = false;
-
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -39,17 +30,6 @@ async function bootSystem() {
           appId: res.firebase.APP_ID
         };
         window.FIREBASE_VAPID_KEY = res.firebase.VAPID_KEY;
-
-        // Inicialização imediata do Firebase — resolve a promessa global
-        if (typeof firebase !== 'undefined' && (!firebase.apps || firebase.apps.length === 0)) {
-          window.firebaseReady = new Promise((resolve) => {
-            firebase.initializeApp(window.FIREBASE_CONFIG);
-            console.log('Firebase inicializado com sucesso no bootSystem.');
-            resolve();
-          });
-        } else {
-          window.firebaseReady = Promise.resolve();
-        }
       }
 
       document.title = window.PWA_NOME;
@@ -135,15 +115,6 @@ function instalarPWA() {
 // ... (Código do Bootstrap e PWA mantido) ...
 
 function switchView(viewId) {
-  closeAllSidebars();
-
-  let target = document.getElementById(viewId);
-  if (!target) {
-    console.warn(`View não encontrada: ${viewId}. Redirecionando para 'view-gateway'.`);
-    viewId = 'view-gateway';
-    target = document.getElementById(viewId);
-  }
-
   const views = document.querySelectorAll('.view-section');
   views.forEach(v => {
     v.classList.remove('active-view');
@@ -151,6 +122,7 @@ function switchView(viewId) {
     v.style.display = 'none';
   });
 
+  const target = document.getElementById(viewId);
   if (target) {
     target.style.display = 'block';
     setTimeout(() => {
@@ -159,8 +131,6 @@ function switchView(viewId) {
     }, 10);
     sessionStorage.setItem('MAESTRO_LAST_VIEW', viewId);
   }
-
-  window.scrollTo(0, 0);
 
   // CONTROLO DO BOTÃO DE CONFIGURAÇÕES (ENGRENAGEM) ULTRA-RESILIENTE
   const btnConfig = document.getElementById('btn-config');
@@ -281,12 +251,8 @@ async function inicializarPushNotifications() {
     const permission = await Notification.requestPermission();
 
     if (permission === 'granted') {
-      // Guarda de idempotência — evita erro 'use-sw-after-get-token' em SPA
-      if (!window.isSwInjected) {
-        const swRegistration = await navigator.serviceWorker.ready;
-        messaging.useServiceWorker(swRegistration);
-        window.isSwInjected = true;
-      }
+      const swRegistration = await navigator.serviceWorker.ready;
+      messaging.useServiceWorker(swRegistration);
 
       messaging.onMessage((payload) => {
         console.log('Mensagem recebida em primeiro plano:', payload);
@@ -301,7 +267,6 @@ async function inicializarPushNotifications() {
 
       if (token) {
         localStorage.setItem("MAESTRO_FCM_TOKEN_TEMP", token);
-        localStorage.setItem('MAESTRO_PUSH_ATIVO', 'true');
         if (typeof currentWalletId !== 'undefined' && currentWalletId !== "") {
           if (typeof registrarTokenPush === 'function') await registrarTokenPush(token);
         }
@@ -392,72 +357,25 @@ window.onload = function () {
 };
 
 // ========================================================================
-// MENU DE CONFIGURAÇÕES E SIDEBARS (DUAL SIDEBAR V11)
+// MENU DE CONFIGURAÇÕES (BOTTOM SHEET)
 // ========================================================================
 
-function toggleSidebar(side) {
-  const overlay = document.getElementById('ui-overlay');
-  const sidebarLeft = document.getElementById('sidebar-left');
-  const sidebarRight = document.getElementById('sidebar-right');
+function abrirMenuConfiguracoes() {
+  const modal = document.getElementById('modal-configuracoes');
+  if (!modal) return;
+  modal.classList.remove('hidden');
 
-  if (!overlay || !sidebarLeft || !sidebarRight) return;
+  document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
 
-  // Se já está aberto esse lado, fecha tudo
-  if (side === 'left' && sidebarLeft.classList.contains('active')) {
-    closeAllSidebars();
-    return;
-  }
-  if (side === 'right' && sidebarRight.classList.contains('active')) {
-    closeAllSidebars();
-    return;
-  }
+  const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
+  document.getElementById('pref-push').checked = (localStorage.getItem('MAESTRO_PREF_PUSH') === 'true' && pushPermitido);
 
-  // Fecha todos primeiro
-  sidebarLeft.classList.remove('active');
-  sidebarRight.classList.remove('active');
+  document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
+  document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') !== 'false';
+  document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
 
-  // Abre o desejado
-  if (side === 'left') {
-    sidebarLeft.classList.add('active');
-    
-    // Atualiza os toggles de configurações
-    document.getElementById('pref-dark').checked = document.body.classList.contains('dark-theme');
-    // Sincroniza o toggle Push com o estado persistido E a permissão real do navegador
-    const pushPersistido = localStorage.getItem('MAESTRO_PUSH_ATIVO') === 'true';
-    const pushPermitido = ('Notification' in window) && (Notification.permission === 'granted');
-    const chkPush = document.getElementById('pref-push');
-    if (chkPush) {
-      if (pushPersistido && pushPermitido) {
-        chkPush.checked = true;
-      } else {
-        chkPush.checked = false;
-        // Autocorreção: limpa estado desincronizado
-        if (!pushPermitido) localStorage.removeItem('MAESTRO_PUSH_ATIVO');
-      }
-    }
-    document.getElementById('pref-gps').checked = localStorage.getItem('MAESTRO_PREF_GPS') === 'true';
-    document.getElementById('pref-camera').checked = localStorage.getItem('MAESTRO_PREF_CAMERA') === 'true';
-    document.getElementById('pref-offline').checked = localStorage.getItem('MAESTRO_PREF_OFFLINE') === 'true';
-  } else if (side === 'right') {
-    sidebarRight.classList.add('active');
-    if (typeof abrirInbox === 'function') {
-      abrirInbox();
-    }
-  }
-
-  overlay.classList.add('active');
-}
-
-function closeAllSidebars() {
-  const overlay = document.getElementById('ui-overlay');
-  const sidebarLeft = document.getElementById('sidebar-left');
-  const sidebarRight = document.getElementById('sidebar-right');
-
-  if (sidebarLeft) sidebarLeft.classList.remove('active');
-  if (sidebarRight) sidebarRight.classList.remove('active');
-  if (overlay) {
-    overlay.classList.remove('active');
-  }
+  void modal.offsetWidth;
+  modal.classList.add('active');
 }
 
 async function togglePref(tipo, elemento) {
@@ -465,27 +383,6 @@ async function togglePref(tipo, elemento) {
 
   if (tipo === 'push') {
     if (isLigado) {
-      const tokenAdmin = localStorage.getItem('MAESTRO_TOKEN');
-      const tokenEstudante = localStorage.getItem('MAESTRO_EST_TOKEN');
-
-      // Condição C: nenhum token — redireciona para identificação
-      if (!tokenAdmin && !tokenEstudante) {
-        elemento.checked = false;
-        closeAllSidebars();
-        showToast("Para ativar notificações, identifique-se com o seu CPF primeiro.", "warning");
-        switchView('view-consult');
-        return;
-      }
-
-      // Condição A: estudante logado na Wallet — regista via CPF sem redirecionar
-      if (tokenEstudante && typeof currentWalletId !== 'undefined' && currentWalletId) {
-        localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
-        showToast("A pedir permissão...", "loading");
-        solicitarConsentimentoPushAnonimo(currentWalletId);
-        return;
-      }
-
-      // Condição B: operador/admin — fluxo normal
       localStorage.setItem('MAESTRO_PREF_PUSH', 'true');
       showToast("A pedir permissão...", "loading");
       if (typeof inicializarPushNotifications === 'function') inicializarPushNotifications();
@@ -499,7 +396,6 @@ async function togglePref(tipo, elemento) {
       }
       localStorage.removeItem("MAESTRO_FCM_TOKEN");
       localStorage.removeItem("FCM_SYNCED_ID");
-      localStorage.removeItem('MAESTRO_PUSH_ATIVO');
     }
   }
   else if (tipo === 'gps') {
@@ -515,14 +411,23 @@ async function togglePref(tipo, elemento) {
     localStorage.setItem('MAESTRO_PREF_OFFLINE', isLigado ? 'true' : 'false');
     showToast(isLigado ? "Modo Offline Forçado ativo." : "Modo Online restaurado.", "warning");
     if (isLigado && typeof abrirTelaCofreOuEntrarDireto === 'function') {
-      closeAllSidebars();
+      fecharMenuConfiguracoes();
       abrirTelaCofreOuEntrarDireto();
     }
   }
 }
 
+function fecharMenuConfiguracoes() {
+  const modal = document.getElementById('modal-configuracoes');
+  if (!modal) return;
+  modal.classList.remove('active');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+  }, 300);
+}
+
 function navegarPeloMenu(viewId) {
-  closeAllSidebars();
+  fecharMenuConfiguracoes();
   setTimeout(() => {
     switchView(viewId);
   }, 300);
