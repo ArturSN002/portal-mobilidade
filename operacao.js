@@ -425,20 +425,11 @@ async function dispararAvisoPublico() {
     const tipo = document.getElementById('aviso-tipo-mural').value;
     const titulo = document.getElementById('aviso-titulo-mural').value.trim();
     const mensagem = document.getElementById('aviso-msg-mural').value.trim();
-    const campoValidade = [
-        document.getElementById('aviso-validade-mural'),
-        document.getElementById('aviso-validade'),
-        document.querySelector('#ASSUNTO_VALIDADE[type="date"]'),
-        document.querySelector('[name="ASSUNTO_VALIDADE"][type="date"]'),
-        document.querySelector('#area-aviso-mural input[type="date"]')
-    ].find(campo => campo && campo.type === "date");
-    const campoEnviarPush = [
-        document.getElementById('aviso-enviar-push'),
-        document.getElementById('chk-enviar-push'),
-        document.getElementById('check-push-aviso'),
-        document.querySelector('#area-aviso-mural input[type="checkbox"]')
-    ].find(campo => campo && campo.type === "checkbox");
-    const validadeAviso = campoValidade ? campoValidade.value : "";
+    const validadeInformada = document.getElementById('aviso-validade').value;
+    const validadePadrao = new Date();
+    validadePadrao.setDate(validadePadrao.getDate() + 7);
+    const validadeAviso = validadeInformada || validadePadrao.toISOString().slice(0, 10);
+    const campoEnviarPush = document.getElementById('aviso-enviar-push');
     const enviarPush = campoEnviarPush ? campoEnviarPush.checked : true;
     const btn = document.getElementById('btn-publicar-aviso');
 
@@ -456,6 +447,7 @@ async function dispararAvisoPublico() {
             titulo: titulo,
             mensagem: mensagem,
             validade: validadeAviso,
+            validadeAviso: validadeAviso,
             ASSUNTO_VALIDADE: validadeAviso,
             enviarPush: enviarPush
         });
@@ -647,7 +639,7 @@ function renderizarNotificacoes() {
         const transaction = db.transaction('notificacoes', 'readonly');
         const store = transaction.objectStore('notificacoes');
         const request = store.getAll();
-        
+
         request.onsuccess = () => {
             const notificacoes = request.result.sort((a, b) => b.timestamp - a.timestamp);
             if (notificacoes.length === 0) {
@@ -656,7 +648,7 @@ function renderizarNotificacoes() {
                 });
                 return;
             }
-            
+
             let html = '';
             notificacoes.forEach(n => {
                 const tempo = calcularTempoRelativo(n.timestamp);
@@ -676,7 +668,7 @@ function renderizarNotificacoes() {
             containers.forEach(container => {
                 container.innerHTML = html;
             });
-            
+
             // Remove o red dot após abrir a inbox
             document.querySelectorAll('.badge-notificacao').forEach(badge => badge.style.display = 'none');
         };
@@ -714,15 +706,15 @@ setInterval(() => {
                 countReq.onsuccess = () => {
                     const viewAdminAtiva = document.getElementById('view-notificacoes') && document.getElementById('view-notificacoes').classList.contains('active');
                     const sidebarRightAtiva = document.getElementById('sidebar-right') && document.getElementById('sidebar-right').classList.contains('active');
-                    
+
                     // Mostra a badge se houver itens e a inbox não estiver aberta (em nenhum dos modos)
-                    if(countReq.result > 0 && !viewAdminAtiva && !sidebarRightAtiva) {
+                    if (countReq.result > 0 && !viewAdminAtiva && !sidebarRightAtiva) {
                         document.querySelectorAll('.badge-notificacao').forEach(badge => badge.style.display = 'block');
                     }
                 }
             }
         };
-    } catch(err) {}
+    } catch (err) { }
 }, 10000);
 
 // ========================================================================
