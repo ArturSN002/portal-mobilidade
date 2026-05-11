@@ -31,6 +31,12 @@
          <input type="text" id="aviso-titulo-mural" class="input-field" placeholder="Ex: Mudança de Rota...">
          <label class="input-label" style="text-align: left;">CORPO DA MENSAGEM</label>
          <textarea id="aviso-msg-mural" class="input-field" rows="3" placeholder="Detalhes do aviso..."></textarea>
+         <label class="input-label" style="text-align: left;">Data de Validade (Expiração)</label>
+         <input type="date" id="aviso-validade" class="input-field">
+         <label style="display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 12px; color: var(--text-main); text-align: left;">
+            <input type="checkbox" id="aviso-enviar-push" checked>
+            Enviar Notificação Push
+         </label>
          <button class="btn-solid" id="btn-publicar-aviso" style="background: var(--primary); margin-top: 10px;" onclick="dispararAvisoPublico()">PUBLICAR E NOTIFICAR</button>
       </div>
 
