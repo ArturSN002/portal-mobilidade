@@ -5,21 +5,6 @@
 {% include admin/login.html %}
 {% include admin/menu.html %}
 
-      <section id="view-notificacoes" class="view-section hidden">
-         <div class="form-card" style="padding: 15px; margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-               <h2 style="margin:0; font-size: 16px; color: var(--primary);">🔔 CAIXA DE MENSAGENS</h2>
-               <button onclick="limparInbox()" style="background: none; border: none; font-size: 14px; cursor: pointer; color: var(--danger); font-weight: bold;">Limpar Tudo</button>
-            </div>
-            <p style="font-size: 10px; color: var(--text-sub); margin: 0;">O seu histórico de mensagens dos últimos 7 dias guardado localmente (Offline).</p>
-         </div>
-         
-         <div class="inbox-container">
-            <div class="text-center" style="padding: 30px;"><div class="loader" style="margin: 0 auto;"></div></div>
-         </div>
-         
-         <button class="btn-solid dark-bg" style="margin-top: 15px;" onclick="switchView('view-admin-hub')">Voltar ao Menu</button>
-      </section>
 
       <section id="view-auditoria" class="view-section">
          <div class="form-card" style="padding: 15px; margin-bottom: 10px;">
